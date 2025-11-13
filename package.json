@@ -17,5 +17,11 @@
   "bugs": {
     "url": "https://github.com/lyfthora/nts/issues"
   },
-  "homepage": "https://github.com/lyfthora/nts#readme"
+  "homepage": "https://github.com/lyfthora/nts#readme",
+  "devDependencies": {
+    "electron": "^39.1.2"
+  },
+  "dependencies": {
+    "electron-store": "^11.0.2"
+  }
 }
