@@ -10,10 +10,10 @@ let noteWindows = [];
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 300,
-    height: 200,
+    width: 400,
+    height: 115,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: true,
     resizable: false,
     webPreferences: {
