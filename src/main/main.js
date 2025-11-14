@@ -2,8 +2,6 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
 
-require("@electron/remote/main").initialize();
-
 const userDataPath = app.getPath("userData");
 const notesPath = path.join(userDataPath, "notes.json");
 
@@ -19,16 +17,14 @@ function createMainWindow() {
     alwaysOnTop: true,
     resizable: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
-
-  // AGREGAR ESTO
-  require("@electron/remote/main").enable(mainWindow.webContents);
+  // mainWindow.webContents.openDevTools({ mode: "detach" });
 
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -40,22 +36,24 @@ function createMainWindow() {
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
     width: 280,
-    height: 250,
+    height: 280,
+    resizable: true,
+    minWidth: 280,
+    minHeight: 280,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: true,
     x: note.x,
     y: note.y,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
   noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
-
-  // AGREGAR ESTO
-  require("@electron/remote/main").enable(noteWin.webContents);
+  // noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
@@ -142,6 +140,9 @@ ipcMain.on("delete-note", (event, noteId) => {
   notes = notes.filter((n) => n.id !== noteId);
   console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
   saveNotes(notes);
+
+  // const win = BrowserWindow.fromWebContents(event.sender);
+  // if (win) win.destroy();
 });
 
 ipcMain.on("show-all-notes", () => {
@@ -150,6 +151,39 @@ ipcMain.on("show-all-notes", () => {
       win.show();
     }
   });
+});
+
+// Control de ventanas desde preload
+ipcMain.on("window-minimize", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) win.hide();
+});
+
+ipcMain.on("window-close", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) win.hide();
+});
+
+ipcMain.on("window-destroy", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) win.destroy();
+});
+
+ipcMain.on("window-maximize", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) {
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
+  }
+});
+
+// Obtener posición de la ventana (invocable)
+ipcMain.handle("get-window-position", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) {
+    return win.getPosition();
+  }
+  return [0, 0];
 });
 
 app.whenReady().then(() => {
