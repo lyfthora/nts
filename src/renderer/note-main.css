@@ -1,9 +1,4 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <style>
-      * {
+* {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
@@ -113,55 +108,3 @@
       .tool-btn:active {
         transform: translateY(0);
       }
-    </style>
-  </head>
-  <body>
-    <div class="main-pad">
-      <div class="note-window-bar">
-        <div class="window-title">
-          <div class="window-icon"></div>
-          <span>StickyPad</span>
-        </div>
-        <div class="window-controls">
-          <button class="window-btn minimize-btn" id="minimizeBtn"></button>
-          <button class="window-btn close-btn" id="closeBtn"></button>
-        </div>
-      </div>
-
-      <div class="main-content">
-        <div class="buttons-container">
-          <button id="addNote" class="tool-btn">add</button>
-          <button id="listNotes" class="tool-btn">list</button>
-          <button id="reminderNotes" class="tool-btn">reminder</button>
-        </div>
-      </div>
-    </div>
-
-    <script>
-      const { ipcRenderer, remote } = require("electron");
-      const currentWindow = remote.getCurrentWindow();
-
-      document.getElementById("addNote").addEventListener("click", () => {
-        ipcRenderer.send("create-note");
-      });
-
-      document.getElementById("listNotes").addEventListener("click", () => {
-        ipcRenderer.send("show-all-notes");
-      });
-
-      document.getElementById("reminderNotes").addEventListener("click", () => {
-        alert("Recordatorios - próximamente");
-      });
-
-      // Minimizar
-      document.getElementById("minimizeBtn").addEventListener("click", () => {
-        currentWindow.hide();
-      });
-
-      // Cerrar (ocultar en lugar de cerrar)
-      document.getElementById("closeBtn").addEventListener("click", () => {
-        currentWindow.hide();
-      });
-    </script>
-  </body>
-</html>

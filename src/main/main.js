@@ -1,6 +1,8 @@
-const { app, BrowserWindow } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const fs = require("fs");
 const path = require("path");
+
+require("@electron/remote/main").initialize();
 
 const userDataPath = app.getPath("userData");
 const notesPath = path.join(userDataPath, "notes.json");
@@ -13,7 +15,7 @@ function createMainWindow() {
     width: 400,
     height: 115,
     frame: false,
-    transparent: false,
+    transparent: true,
     alwaysOnTop: true,
     resizable: false,
     webPreferences: {
@@ -22,14 +24,16 @@ function createMainWindow() {
     },
   });
 
-  mainWindow.loadFile("main.html");
+  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
 
-  // Posicionar en la esquina inferior derecha
+  // AGREGAR ESTO
+  require("@electron/remote/main").enable(mainWindow.webContents);
+
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
 
-  mainWindow.setPosition(width - 320, height - 220);
+  mainWindow.setPosition(width - 420, height - 135);
 }
 
 function createNoteWindow(note) {
@@ -47,9 +51,11 @@ function createNoteWindow(note) {
     },
   });
 
-  noteWin.loadFile("note.html");
+  noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
 
-  // Enviar datos de la nota cuando esté lista
+  // AGREGAR ESTO
+  require("@electron/remote/main").enable(noteWin.webContents);
+
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
   });
@@ -95,8 +101,6 @@ function getAllNotes() {
 }
 
 // IPC handlers
-const { ipcMain } = require("electron");
-
 ipcMain.on("create-note", (event) => {
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -128,8 +132,11 @@ ipcMain.on("update-note", (event, noteData) => {
 });
 
 ipcMain.on("delete-note", (event, noteId) => {
+  console.log("Eliminando nota:", noteId);
   let notes = getAllNotes();
+  const originalLength = notes.length;
   notes = notes.filter((n) => n.id !== noteId);
+  console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
   saveNotes(notes);
 });
 

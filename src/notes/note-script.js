@@ -1,11 +1,13 @@
-const { ipcRenderer, remote } = require("electron");
-const currentWindow = remote.getCurrentWindow();
+const { ipcRenderer } = require("electron");
+const { BrowserWindow } = require("@electron/remote");
+const currentWindow = BrowserWindow.getFocusedWindow();
 
 let noteData = null;
 
 // Recibir datos de la nota
 ipcRenderer.on("note-data", (event, data) => {
   noteData = data;
+  console.log("Nota cargada:", noteData);
   document.getElementById("noteContent").value = data.content || "";
 
   // Aplicar color
@@ -22,17 +24,46 @@ ipcRenderer.on("note-data", (event, data) => {
   document.getElementById("noteContentArea").style.background = data.color;
 });
 
-// Botones de ventana
-document.getElementById("minimizeBtn").addEventListener("click", () => {
+// BOTÓN CERRAR
+document.getElementById("closeBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log("Botón cerrar clickeado");
+  closeNote();
+});
+
+// Botón minimizar
+document.getElementById("minimizeBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  console.log("Minimizando ventana");
   currentWindow.hide();
 });
 
-document.getElementById("closeBtn").addEventListener("click", () => {
+// Maximizar
+document.getElementById("maximizeBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  if (currentWindow.isMaximized()) {
+    currentWindow.unmaximize();
+  } else {
+    currentWindow.maximize();
+  }
+});
+
+// Interceptar cierre de ventana
+currentWindow.on("close", (e) => {
+  e.preventDefault();
+  closeNote();
+});
+
+function closeNote() {
+  console.log("Cerrando nota con ID:", noteData ? noteData.id : "sin datos");
   if (noteData) {
     ipcRenderer.send("delete-note", noteData.id);
   }
-  currentWindow.close();
-});
+  currentWindow.destroy();
+}
 
 // Cambiar color
 document.querySelectorAll(".color-btn").forEach((btn) => {
@@ -54,7 +85,7 @@ document.querySelectorAll(".color-btn").forEach((btn) => {
   });
 });
 
-// Guardar contenido
+// Guardar contenido automáticamente
 document.getElementById("noteContent").addEventListener("input", (e) => {
   if (noteData) {
     noteData.content = e.target.value;
@@ -62,9 +93,15 @@ document.getElementById("noteContent").addEventListener("input", (e) => {
   }
 });
 
+// Botón Save
 document.getElementById("saveBtn").addEventListener("click", () => {
   saveNote();
-  alert("Nota guardada");
+  const btn = document.getElementById("saveBtn");
+  const originalText = btn.textContent;
+  btn.textContent = "✓ Saved";
+  setTimeout(() => {
+    btn.textContent = originalText;
+  }, 1000);
 });
 
 function saveNote() {
@@ -73,9 +110,11 @@ function saveNote() {
     noteData.x = x;
     noteData.y = y;
     ipcRenderer.send("update-note", noteData);
+    console.log("Nota guardada:", noteData);
   }
 }
 
+// Botón Reminder
 document.getElementById("reminderBtn").addEventListener("click", () => {
   alert("Recordatorio - próximamente");
 });
