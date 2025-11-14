@@ -1,7 +1,9 @@
-const { ipcRenderer, remote } = require("electron");
+const { ipcRenderer } = require("electron");
+const remote = require("@electron/remote");
 const currentWindow = remote.getCurrentWindow();
 
 document.getElementById("addNote").addEventListener("click", () => {
+  console.log("Botón 'add' presionado. Enviando 'create-note' a main.js");
   ipcRenderer.send("create-note");
 });
 

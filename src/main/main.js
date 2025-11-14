@@ -25,6 +25,7 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   // AGREGAR ESTO
   require("@electron/remote/main").enable(mainWindow.webContents);
@@ -102,6 +103,7 @@ function getAllNotes() {
 
 // IPC handlers
 ipcMain.on("create-note", (event) => {
+  console.log("IPC 'create-note' recibido en main.js");
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
@@ -113,10 +115,12 @@ ipcMain.on("create-note", (event) => {
     content: "",
     color: "#ffffff",
   };
+  console.log("Nueva nota creada:", note);
 
   const notes = getAllNotes();
   notes.push(note);
   saveNotes(notes);
+  console.log("Nota guardada. Creando nueva ventana de nota...");
 
   createNoteWindow(note);
 });
