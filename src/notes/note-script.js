@@ -16,8 +16,10 @@ window.api.onNoteData((data) => {
     }
   });
 
-  document.getElementById("noteHeader").style.background = data.color;
-  document.getElementById("noteContentArea").style.background = data.color;
+  // document.getElementById("noteHeader").style.background = data.color;
+  // document.getElementById("noteContentArea").style.background = data.color;
+  document.getElementById("noteContent").style.background =
+    data.color || "#FFFFFF";
 });
 
 // BOTÓN CERRAR
@@ -62,9 +64,11 @@ document.querySelectorAll(".color-btn").forEach((btn) => {
       .forEach((b) => b.classList.remove("active"));
     btn.classList.add("active");
 
-    document.getElementById("noteHeader").style.background = color;
-    document.getElementById("noteContentArea").style.background = color;
+    //cambia  el color toda la nota
+    // document.getElementById("noteHeader").style.background = color;
+    // document.getElementById("noteContentArea").style.background = color;
 
+    document.getElementById("noteContent").style.background = color;
     if (noteData) {
       noteData.color = color;
       saveNote();

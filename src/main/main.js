@@ -24,7 +24,7 @@ function createMainWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  mainWindow.webContents.openDevTools({ mode: "detach" });
+  // mainWindow.webContents.openDevTools({ mode: "detach" });
 
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -53,7 +53,7 @@ function createNoteWindow(note) {
   });
 
   noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
-  noteWin.webContents.openDevTools({ mode: "detach" });
+  // noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
