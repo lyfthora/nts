@@ -1,11 +1,7 @@
-const { ipcRenderer } = require("electron");
-const { BrowserWindow } = require("@electron/remote");
-const currentWindow = BrowserWindow.getFocusedWindow();
-
 let noteData = null;
 
-// Recibir datos de la nota
-ipcRenderer.on("note-data", (event, data) => {
+// Recibir datos de la nota (usando el handler expuesto)
+window.api.onNoteData((data) => {
   noteData = data;
   console.log("Nota cargada:", noteData);
   document.getElementById("noteContent").value = data.content || "";
@@ -37,37 +33,28 @@ document.getElementById("minimizeBtn").addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
   console.log("Minimizando ventana");
-  currentWindow.hide();
+  window.api.minimizeWindow();
 });
 
 // Maximizar
 document.getElementById("maximizeBtn").addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
-  if (currentWindow.isMaximized()) {
-    currentWindow.unmaximize();
-  } else {
-    currentWindow.maximize();
-  }
-});
-
-// Interceptar cierre de ventana
-currentWindow.on("close", (e) => {
-  e.preventDefault();
-  closeNote();
+  window.api.toggleMaximize();
 });
 
 function closeNote() {
   console.log("Cerrando nota con ID:", noteData ? noteData.id : "sin datos");
   if (noteData) {
-    ipcRenderer.send("delete-note", noteData.id);
+    window.api.deleteNote(noteData.id);
   }
-  currentWindow.destroy();
+  // destruir ventana (main la destruirá)
+  window.api.destroyWindow();
 }
 
 // Cambiar color
 document.querySelectorAll(".color-btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async () => {
     const color = btn.dataset.color;
 
     document
@@ -104,12 +91,14 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   }, 1000);
 });
 
-function saveNote() {
+async function saveNote() {
   if (noteData) {
-    const [x, y] = currentWindow.getPosition();
+    // pedimos la posición actual de la ventana al main
+    const pos = await window.api.getWindowPosition();
+    const [x, y] = pos;
     noteData.x = x;
     noteData.y = y;
-    ipcRenderer.send("update-note", noteData);
+    window.api.updateNote(noteData);
     console.log("Nota guardada:", noteData);
   }
 }
