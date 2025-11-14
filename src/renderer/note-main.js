@@ -1,4 +1,3 @@
-// ya no require('electron')
 document.getElementById("addNote").addEventListener("click", () => {
   console.log("Botón 'add' presionado. Enviando 'create-note' a main.js");
   window.api.createNote();

@@ -78,7 +78,7 @@ body {
 .color-picker {
   display: flex;
   gap: 8px;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .color-btn {

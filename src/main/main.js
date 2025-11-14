@@ -53,6 +53,7 @@ function createNoteWindow(note) {
   });
 
   noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
+  noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
