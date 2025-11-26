@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld("api", {
     return () => ipcRenderer.removeListener("note-data", handler);
   },
 
+  // Recordatorios
+  setReminder: (noteId, date, time, repeat) =>
+    ipcRenderer.send("set-reminder", { noteId, date, time, repeat }),
+
   // obtener posi
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
 });
