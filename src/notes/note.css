@@ -136,19 +136,26 @@ body {
 
 .footer-btn {
   flex: 1;
-  padding: 8px;
-  background: white;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 6px;
+  background: #a8d5ff;
+  border: none;
+  padding: 12px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 12px;
-  color: #666;
+  font-size: 13px;
+  color: #333;
+  font-weight: 600;
   transition: all 0.2s ease;
+  text-align: center;
 }
 
 .footer-btn:hover {
-  background: #f5f5f5;
-  border-color: rgba(0, 0, 0, 0.2);
+  background: #8bc4ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(168, 213, 255, 0.4);
+}
+
+.footer-btn:active {
+  transform: translateY(0);
 }
 
 /* Modal de Recordatorio */
