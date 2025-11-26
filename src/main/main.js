@@ -35,8 +35,8 @@ function createMainWindow() {
 
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
-    width: 280,
-    height: 280,
+    width: 355,
+    height: 355,
     resizable: true,
     minWidth: 280,
     minHeight: 280,
