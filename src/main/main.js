@@ -186,6 +186,13 @@ ipcMain.handle("get-window-position", (event) => {
   return [0, 0];
 });
 
+// Sistema de Recordatorios
+const { setReminder } = require("./reminder.js");
+
+ipcMain.on("set-reminder", (event, data) => {
+  setReminder(ipcMain, getAllNotes, noteWindows, data);
+});
+
 app.whenReady().then(() => {
   createMainWindow();
   loadNotes();
