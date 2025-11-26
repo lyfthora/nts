@@ -107,7 +107,60 @@ async function saveNote() {
   }
 }
 
-// Botón Reminder
+// Botón Reminder - Abrir modal
 document.getElementById("reminderBtn").addEventListener("click", () => {
-  alert("Recordatorio - próximamente");
+  const modal = document.getElementById("reminderModal");
+  modal.classList.add("active");
+
+  // Si ya hay un recordatorio, cargar los datos
+  if (noteData && noteData.reminder) {
+    document.getElementById("reminderDate").value = noteData.reminder.date;
+    document.getElementById("reminderTime").value = noteData.reminder.time;
+    document.getElementById("reminderRepeat").checked = noteData.reminder.repeat || false;
+
+    // Mostrar estado actual
+    const status = document.getElementById("reminderStatus");
+    status.textContent = `Current: ${noteData.reminder.date} at ${noteData.reminder.time}`;
+  }
 });
+
+// Cerrar modal - Cancelar
+document.getElementById("cancelReminderBtn").addEventListener("click", () => {
+  const modal = document.getElementById("reminderModal");
+  modal.classList.remove("active");
+});
+
+// Guardar recordatorio
+document.getElementById("saveReminderBtn").addEventListener("click", () => {
+  const date = document.getElementById("reminderDate").value;
+  const time = document.getElementById("reminderTime").value;
+  const repeat = document.getElementById("reminderRepeat").checked;
+
+  // Validar que se haya seleccionado fecha y hora
+  if (!date || !time) {
+    alert("Please select date and time");
+    return;
+  }
+
+  // Guardar en noteData
+  if (noteData) {
+    noteData.reminder = { date, time, repeat };
+    saveNote();
+
+    // Enviar al proceso principal para configurar la notificación
+    window.api.setReminder(noteData.id, date, time, repeat);
+
+    // Cerrar modal
+    const modal = document.getElementById("reminderModal");
+    modal.classList.remove("active");
+
+    // Feedback visual
+    const btn = document.getElementById("reminderBtn");
+    const originalText = btn.textContent;
+    btn.textContent = "✓ Reminder Set";
+    setTimeout(() => {
+      btn.textContent = originalText;
+    }, 2000);
+  }
+});
+
