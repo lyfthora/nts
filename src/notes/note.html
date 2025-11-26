@@ -51,6 +51,7 @@
       <div class="note-content-area" id="noteContentArea">
         <textarea
           class="note-content"
+          spellcheck="false"
           id="noteContent"
           placeholder="Escribe tu nota aquí..."
         ></textarea>
@@ -59,6 +60,31 @@
       <div class="note-footer">
         <button class="footer-btn" id="saveBtn">Save</button>
         <button class="footer-btn" id="reminderBtn">Set Reminder</button>
+      </div>
+    </div>
+
+
+    <div class="reminder-modal" id="reminderModal">
+      <div class="reminder-modal-content">
+        <h3>Set Reminder</h3>
+
+        <label>Date:</label>
+        <input type="date" id="reminderDate" />
+
+        <label>Time:</label>
+        <input type="time" id="reminderTime" />
+
+        <label>
+          <input type="checkbox" id="reminderRepeat" />
+          Repeat daily
+        </label>
+
+        <div class="reminder-modal-buttons">
+          <button class="modal-btn cancel-btn" id="cancelReminderBtn">Cancel</button>
+          <button class="modal-btn save-btn" id="saveReminderBtn">Save Reminder</button>
+        </div>
+
+        <div id="reminderStatus"></div>
       </div>
     </div>
 
