@@ -71,16 +71,16 @@ document.querySelectorAll(".color-btn").forEach((btn) => {
     document.getElementById("noteContent").style.background = color;
     if (noteData) {
       noteData.color = color;
-      saveNote();
+      // No se guarda automáticamente, solo al presionar Save
     }
   });
 });
 
-// Guardar contenido automáticamente
+// Actualizar contenido en memoria (sin guardar automáticamente)
 document.getElementById("noteContent").addEventListener("input", (e) => {
   if (noteData) {
     noteData.content = e.target.value;
-    saveNote();
+    // No se guarda automáticamente, solo al presionar Save
   }
 });
 
@@ -97,11 +97,15 @@ document.getElementById("saveBtn").addEventListener("click", () => {
 
 async function saveNote() {
   if (noteData) {
-    // pedimos la posición actual de la ventana al main
+    // pedimos la posición y tamaño actual de la ventana al main
     const pos = await window.api.getWindowPosition();
+    const size = await window.api.getWindowSize();
     const [x, y] = pos;
+    const [width, height] = size;
     noteData.x = x;
     noteData.y = y;
+    noteData.width = width;
+    noteData.height = height;
     window.api.updateNote(noteData);
     console.log("Nota guardada:", noteData);
   }

@@ -35,8 +35,8 @@ function createMainWindow() {
 
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
-    width: 355,
-    height: 355,
+    width: note.width || 355,
+    height: note.height || 355,
     resizable: true,
     minWidth: 280,
     minHeight: 280,
@@ -184,6 +184,15 @@ ipcMain.handle("get-window-position", (event) => {
     return win.getPosition();
   }
   return [0, 0];
+});
+
+// Obtener tamaño de la ventana (invocable)
+ipcMain.handle("get-window-size", (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win && !win.isDestroyed()) {
+    return win.getSize();
+  }
+  return [355, 355];
 });
 
 // Sistema de Recordatorios

@@ -29,6 +29,7 @@ contextBridge.exposeInMainWorld("api", {
   setReminder: (noteId, date, time, repeat) =>
     ipcRenderer.send("set-reminder", { noteId, date, time, repeat }),
 
-  // obtener posi
+  // obtener posición y tamaño
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
+  getWindowSize: () => ipcRenderer.invoke("get-window-size"),
 });
