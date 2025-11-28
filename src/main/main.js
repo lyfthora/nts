@@ -137,8 +137,12 @@ ipcMain.on("create-note", (event) => {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
 
+  const notes = getAllNotes();
+  const noteNumber = notes.length + 1;
+
   const note = {
     id: Date.now(),
+    name: `Note ${noteNumber}`,
     x: Math.floor(Math.random() * (width - 300)),
     y: Math.floor(Math.random() * (height - 300)),
     content: "",
@@ -146,7 +150,7 @@ ipcMain.on("create-note", (event) => {
   };
   console.log("Nueva nota creada:", note);
 
-  const notes = getAllNotes();
+
   notes.push(note);
   saveNotes(notes);
   console.log("Nota guardada. Creando nueva ventana de nota...");
