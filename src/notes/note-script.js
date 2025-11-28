@@ -6,6 +6,11 @@ window.api.onNoteData((data) => {
   console.log("Nota cargada:", noteData);
   document.getElementById("noteContent").value = data.content || "";
 
+  //mostrar nombre de la note
+  if (data.name) {
+    document.getElementById("windowTitleText").textContent = data.name;
+  }
+
   // Aplicar color
   const colorBtns = document.querySelectorAll(".color-btn");
   colorBtns.forEach((btn) => {
