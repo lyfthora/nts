@@ -1,94 +1,78 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="stylesheet" href="note.css" />
-    <title>NOTES</title>
-  </head>
-  <body>
-    <div class="note">
-      <div class="note-window-bar">
-        <div class="window-title">
-          <div class="window-icon"></div>
-          <span class="window-title-text" id="windowTitleText">Note</span>
-        </div>
-        <div class="window-controls">
-          <button class="window-btn minimize-btn" id="minimizeBtn"></button>
-          <button class="window-btn maximize-btn" id="maximizeBtn"></button>
-          <button class="window-btn close-btn" id="closeBtn"></button>
-        </div>
-      </div>
 
-      <div class="note-header" id="noteHeader">
-        <div class="color-picker">
-          <div
-            class="color-btn"
-            style="background: #a8d5ff"
-            data-color="#A8D5FF"
-          ></div>
-          <div
-            class="color-btn"
-            style="background: #b4e7ce"
-            data-color="#B4E7CE"
-          ></div>
-          <div
-            class="color-btn"
-            style="background: #fff4a3"
-            data-color="#FFF4A3"
-          ></div>
-          <div
-            class="color-btn"
-            style="background: #ffb5b5"
-            data-color="#FFB5B5"
-          ></div>
-          <div
-            class="color-btn active"
-            style="background: #ffffff"
-            data-color="#ffffff"
-          ></div>
-        </div>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Zilla+Slab:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="note.css" />
+  <title>NOTES</title>
+</head>
 
-      <div class="note-content-area" id="noteContentArea">
-        <textarea
-          class="note-content"
-          spellcheck="false"
-          id="noteContent"
-          placeholder="Escribe tu nota aquí..."
-        ></textarea>
+<body>
+  <div class="note">
+    <div class="note-window-bar">
+      <div class="window-title">
+        <div class="window-icon"></div>
+        <span class="window-title-text" id="windowTitleText">Note</span>
       </div>
-
-      <div class="note-footer">
-        <button class="footer-btn" id="saveBtn">Save</button>
-        <button class="footer-btn" id="reminderBtn">Set Reminder</button>
+      <div class="window-controls">
+        <button class="window-btn minimize-btn" id="minimizeBtn"></button>
+        <button class="window-btn maximize-btn" id="maximizeBtn"></button>
+        <button class="window-btn close-btn" id="closeBtn"></button>
       </div>
     </div>
 
-
-    <div class="reminder-modal" id="reminderModal">
-      <div class="reminder-modal-content">
-        <h3>Set Reminder</h3>
-
-        <label>Date:</label>
-        <input type="date" id="reminderDate" />
-
-        <label>Time:</label>
-        <input type="time" id="reminderTime" />
-
-        <label>
-          <input type="checkbox" id="reminderRepeat" />
-          Repeat daily
-        </label>
-
-        <div class="reminder-modal-buttons">
-          <button class="modal-btn cancel-btn" id="cancelReminderBtn">Cancel</button>
-          <button class="modal-btn save-btn" id="saveReminderBtn">Save Reminder</button>
-        </div>
-
-        <div id="reminderStatus"></div>
+    <div class="note-header" id="noteHeader">
+      <div class="color-picker">
+        <div class="color-btn" style="background: #a8d5ff" data-color="#A8D5FF"></div>
+        <div class="color-btn" style="background: #b4e7ce" data-color="#B4E7CE"></div>
+        <div class="color-btn" style="background: #fff4a3" data-color="#FFF4A3"></div>
+        <div class="color-btn" style="background: #ffb5b5" data-color="#FFB5B5"></div>
+        <div class="color-btn active" style="background: #ffffff" data-color="#ffffff"></div>
       </div>
     </div>
 
-    <script src="note-script.js"></script>
-  </body>
+    <div class="note-content-area" id="noteContentArea">
+      <textarea class="note-content" spellcheck="false" id="noteContent"
+        placeholder="Escribe tu nota aquí..."></textarea>
+    </div>
+
+    <div class="note-footer">
+      <button class="footer-btn" id="saveBtn">Save</button>
+      <button class="footer-btn" id="reminderBtn">Set Reminder</button>
+    </div>
+  </div>
+
+
+  <div class="reminder-modal" id="reminderModal">
+    <div class="reminder-modal-content">
+      <h3>Set Reminder</h3>
+
+      <label>Date:</label>
+      <input type="date" id="reminderDate" />
+
+      <label>Time:</label>
+      <input type="time" id="reminderTime" />
+
+      <label>
+        <input type="checkbox" id="reminderRepeat" />
+        Repeat daily
+      </label>
+
+      <div class="reminder-modal-buttons">
+        <button class="modal-btn cancel-btn" id="cancelReminderBtn">Cancel</button>
+        <button class="modal-btn save-btn" id="saveReminderBtn">Save Reminder</button>
+      </div>
+
+      <div id="reminderStatus"></div>
+    </div>
+  </div>
+
+  <script src="note-script.js"></script>
+</body>
+
 </html>

@@ -132,6 +132,8 @@ body {
   width: 100%;
   border: none;
   outline: none;
+  font-family: "Zilla Slab", serif;
+  font-weight: 600;
   font-size: 14px;
   resize: none;
   background: transparent;
