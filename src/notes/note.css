@@ -36,6 +36,20 @@ body {
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.window-title {
+  display: flex;
+  align-items: center;
+  /* gap: 6px; */
+  font-size: 11px;
+  color: #333;
+}
+
+.window-title-text {
+  font-size: 11px;
+  color: #666;
+  font-weight: 500;
+}
+
 .window-controls {
   -webkit-app-region: no-drag;
   display: flex;
@@ -55,12 +69,15 @@ body {
 .minimize-btn {
   background: #fdb44b;
 }
+
 .maximize-btn {
   background: #4cd964;
 }
+
 .close-btn {
   background: #ff5f57;
 }
+
 .window-btn:hover {
   opacity: 0.7;
   transform: scale(1.1);
@@ -94,6 +111,7 @@ body {
   transform: scale(1.1);
   border-color: rgba(0, 0, 0, 0.3);
 }
+
 .color-btn.active {
   border-color: #333;
   box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
@@ -106,7 +124,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  /* border-radius: 35px; */
+  border-radius: 20px;
 }
 
 .note-content {
@@ -251,4 +269,3 @@ body {
   color: #666;
   text-align: center;
 }
-
