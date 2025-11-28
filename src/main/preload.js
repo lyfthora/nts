@@ -4,6 +4,8 @@ contextBridge.exposeInMainWorld("api", {
   // acciones de la ventana main
   createNote: () => ipcRenderer.send("create-note"),
   showAllNotes: () => ipcRenderer.send("show-all-notes"),
+  getAllNotes: () => ipcRenderer.invoke("get-all-notes"),
+  openNotesList: () => ipcRenderer.send("open-notes-list"),
   minimizeMain: () => ipcRenderer.send("window-minimize"),
   closeMain: () => ipcRenderer.send("window-close"),
 

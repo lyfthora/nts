@@ -6,6 +6,7 @@ const userDataPath = app.getPath("userData");
 const notesPath = path.join(userDataPath, "notes.json");
 
 let mainWindow = null;
+let listWindow = null;
 let noteWindows = [];
 
 function createMainWindow() {
@@ -66,6 +67,36 @@ function createNoteWindow(note) {
   noteWindows.push(noteWin);
   return noteWin;
 }
+
+function createListWindow(){
+  if (listWindow && !listWindow.isDestroyed()) {
+    listWindow.show();
+    listWindow.focus();
+    return;
+  }
+
+  listWindow = new BrowserWindow({
+    width: 500,
+    height: 660,
+    resizable: true,
+    minWidth: 400,
+    minHeight: 400,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  listWindow.loadFile(path.join(__dirname, "../notes-list/notes-list.html"));
+
+  listWindow.on("closed", () => {
+    listWindow = null;
+  });
+}
+
 
 function loadNotes() {
   try {
@@ -153,6 +184,10 @@ ipcMain.on("show-all-notes", () => {
   });
 });
 
+ipcMain.on("open-notes-list", () => {
+  createListWindow();
+});
+
 // Control de ventanas desde preload
 ipcMain.on("window-minimize", (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -193,6 +228,11 @@ ipcMain.handle("get-window-size", (event) => {
     return win.getSize();
   }
   return [355, 355];
+});
+
+//Obtener todas las notas
+ipcMain.handle("get-all-notes", () => {
+return getAllNotes();
 });
 
 // Sistema de Recordatorios
