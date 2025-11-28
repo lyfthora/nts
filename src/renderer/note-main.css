@@ -6,9 +6,9 @@
 
 body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: transparent;
+  /* background: transparent; */
   overflow: hidden;
-  /* Quitar scrollbar */
+
 }
 
 .main-pad {
