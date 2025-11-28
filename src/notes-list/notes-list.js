@@ -17,15 +17,21 @@ async function loadNotes() {
   if (notes.length === 0) {
     body.innerHTML = '<div class="no-notes-message">No tienes notas guardadas</div>';
   } else {
-    notes.forEac((note) => {
+    notes.forEach((note, index) => {
       const noteItem = document.createElement("div");
       noteItem.className = "note-item";
       noteItem.style.borderLeftColor = note.color || "#ffffff";
+
+
+      const title = document.createElement("div");
+      title.className = "note-item-title";
+      title.textContent = `Note ${index + 1}`;
 
       const preview = document.createElement("div");
       preview.className = note.content ? "note-item-preview" : "note-item-preview note-item-empty";
       preview.textContent = note.content || "Nota vacia";
 
+      noteItem.appendChild(title);
       noteItem.appendChild(preview);
       noteItem.addEventListener("click", () => {
         window.api.showAllNotes();
@@ -35,3 +41,6 @@ async function loadNotes() {
     });
   }
 }
+
+
+loadNotes();
