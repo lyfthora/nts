@@ -34,8 +34,8 @@ async function loadNotes() {
       noteItem.appendChild(title);
       noteItem.appendChild(preview);
       noteItem.addEventListener("click", () => {
-        window.api.showAllNotes();
-        window.api.destroyWindow();
+        window.api.showNoteById(note.id);
+        // window.api.destroyWindow();
       });
       body.appendChild(noteItem);
     });
