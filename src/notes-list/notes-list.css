@@ -97,6 +97,13 @@ body {
   background: white;
 }
 
+.note-item-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 6px;
+}
+
 .note-item {
   background: white;
   border-radius: 8px;
