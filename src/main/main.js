@@ -188,6 +188,25 @@ ipcMain.on("show-all-notes", () => {
   });
 });
 
+ipcMain.on("show-note-by-id", (event, noteIde) =>{
+ const noteWin = noteWindows.find ((win) => {
+  if (!win.isDestroyed ()){
+    const notes = getAllNotes();
+    const note = notes.find((n) => n.id === noteIde);
+    if (note){
+      const [x, y] = win.getPosition();
+      return x === note.x && y === note.y;
+    }
+  }
+  return false;
+ });
+ if (noteWin && !noteWin.isDestroyed()){
+  noteWin.show();
+  noteWin.focus();
+ }
+
+});
+
 ipcMain.on("open-notes-list", () => {
   createListWindow();
 });
