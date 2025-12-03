@@ -8,7 +8,7 @@ document.getElementById("listNotes").addEventListener("click", () => {
 });
 
 document.getElementById("reminderNotes").addEventListener("click", () => {
-  alert("Recordatorios - próximamente");
+  window.api.openRemindersList();
 });
 
 // Minimizar
