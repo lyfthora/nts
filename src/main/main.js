@@ -7,6 +7,7 @@ const notesPath = path.join(userDataPath, "notes.json");
 
 let mainWindow = null;
 let listWindow = null;
+let remindersListWindow = null;
 let noteWindows = [];
 
 function createMainWindow() {
@@ -94,6 +95,36 @@ function createListWindow(){
 
   listWindow.on("closed", () => {
     listWindow = null;
+  });
+}
+
+function createRemindersListWindow(){
+  if (remindersListWindow && !remindersListWindow.isDestroyed()) {
+    remindersListWindow.show();
+    remindersListWindow.focus();
+    return;
+  }
+
+  remindersListWindow = new BrowserWindow({
+    width: 500,
+    height: 660,
+    resizable: true,
+    minWidth: 400,
+    minHeight: 400,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  remindersListWindow.loadFile(path.join(__dirname, "../reminders-list/reminders-list.html"));
+  // remindersListWindow.webContents.openDevTools({ mode: "detach" });
+
+  remindersListWindow.on("closed", () => {
+    remindersListWindow = null;
   });
 }
 
@@ -211,6 +242,10 @@ ipcMain.on("open-notes-list", () => {
   createListWindow();
 });
 
+ipcMain.on("open-reminders-list", () => {
+  createRemindersListWindow();
+});
+
 // Control de ventanas desde preload
 ipcMain.on("window-minimize", (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
@@ -256,6 +291,38 @@ ipcMain.handle("get-window-size", (event) => {
 //Obtener todas las notas
 ipcMain.handle("get-all-notes", () => {
 return getAllNotes();
+});
+
+//Obtener todos los recordatorios
+ipcMain.handle("get-all-reminders", () => {
+  const notes = getAllNotes();
+  const reminders = [];
+
+  notes.forEach((note) => {
+    if (note.reminder) {
+      reminders.push({
+        noteId: note.id,
+        noteName: note.name,
+        date: note.reminder.date,
+        time: note.reminder.time,
+        repeat: note.reminder.repeat || false,
+        color: note.color || "#ffffff",
+      });
+    }
+  });
+
+  return reminders;
+});
+
+//Cancelar recordatorio
+ipcMain.on("cancel-reminder", (event, noteId) => {
+  const notes = getAllNotes();
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
+
+  if (noteIndex !== -1) {
+    delete notes[noteIndex].reminder;
+    saveNotes(notes);
+  }
 });
 
 // Sistema de Recordatorios
