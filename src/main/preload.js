@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld("api", {
   getAllNotes: () => ipcRenderer.invoke("get-all-notes"),
   showNoteById: (noteId) => ipcRenderer.send("show-note-by-id", noteId),
   openNotesList: () => ipcRenderer.send("open-notes-list"),
+  openRemindersList: () => ipcRenderer.send("open-reminders-list"),
   minimizeMain: () => ipcRenderer.send("window-minimize"),
   closeMain: () => ipcRenderer.send("window-close"),
 
@@ -35,4 +36,8 @@ contextBridge.exposeInMainWorld("api", {
   // obtener posición y tamaño
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
   getWindowSize: () => ipcRenderer.invoke("get-window-size"),
+
+  // Recordatorios - lista
+  getAllReminders: () => ipcRenderer.invoke("get-all-reminders"),
+  cancelReminder: (noteId) => ipcRenderer.send("cancel-reminder", noteId),
 });
