@@ -15,7 +15,7 @@ async function loadReminders() {
   body.innerHTML = "";
 
   if (reminders.length === 0) {
-    body.innerHTML = '<div class="no-reminders-message">No tienes recordatorios activos</div>';
+    body.innerHTML = '<div class="no-reminders-message">You have no active reminders</div>';
   } else {
     reminders.forEach((reminder) => {
       const reminderItem = document.createElement("div");
@@ -47,11 +47,11 @@ async function loadReminders() {
 
       const dateSpan = document.createElement("span");
       dateSpan.className = "reminder-item-date";
-      dateSpan.textContent = `📅 ${formatDate(reminder.date)}`;
+      dateSpan.innerHTML = `<img src="../icons/calendar.png" alt="Calendar" class="reminder-icon"> ${formatDate(reminder.date)}`;
 
       const timeSpan = document.createElement("span");
       timeSpan.className = "reminder-item-time";
-      timeSpan.textContent = `🕐 ${reminder.time}`;
+      timeSpan.innerHTML = `<img src="../icons/clock.png" alt="Clock" class="reminder-icon"> ${reminder.time}`;
 
       info.appendChild(dateSpan);
       info.appendChild(timeSpan);
@@ -85,7 +85,7 @@ async function loadReminders() {
 function formatDate(dateString) {
   const date = new Date(dateString);
   const options = { year: 'numeric', month: 'long', day: 'numeric' };
-  return date.toLocaleDateString('es-ES', options);
+  return date.toLocaleDateString('en-US', options);
 }
 
 loadReminders();
