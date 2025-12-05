@@ -152,7 +152,7 @@ function createDashboardWindow (){
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, "../dashboard/dashboard.html"));
-  //  dashboardWindow.webContents.openDevTools({ mode: "detach" });
+   dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
