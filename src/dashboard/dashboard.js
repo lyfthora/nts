@@ -102,6 +102,145 @@ document.getElementById("noteContentEditor").addEventListener("input", (e) => {
   saveCurrentNote();
 });
 
+// ========== METADATA FUNCTIONALITY ==========
+
+// Status Dropdown
+const statusDropdown = document.getElementById("statusDropdown");
+const statusBtn = document.getElementById("statusBtn");
+const statusMenu = document.getElementById("statusMenu");
+const statusDot = document.getElementById("statusDot");
+const statusText = document.getElementById("statusText");
+
+// Toggle status dropdown
+statusBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  statusDropdown.classList.toggle("active");
+});
+
+// Close dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (!statusDropdown.contains(e.target)) {
+    statusDropdown.classList.remove("active");
+  }
+});
+
+// Handle status selection
+document.querySelectorAll(".status-option").forEach((option) => {
+  option.addEventListener("click", () => {
+    if (!currentNote) return;
+
+    const status = option.dataset.status;
+    currentNote.status = status;
+
+    // Update UI
+    updateStatusDisplay(status);
+
+    // Close dropdown
+    statusDropdown.classList.remove("active");
+
+    // Save note
+    saveCurrentNote();
+  });
+});
+
+function updateStatusDisplay(status) {
+  const statusMap = {
+    "active": { text: "Active", class: "status-active" },
+    "onhold": { text: "On Hold", class: "status-onhold" },
+    "completed": { text: "Completed", class: "status-completed" },
+    "dropped": { text: "Dropped", class: "status-dropped" }
+  };
+
+  const statusInfo = statusMap[status];
+  if (statusInfo) {
+    statusText.textContent = statusInfo.text;
+    statusDot.className = `status-dot ${statusInfo.class}`;
+    statusDot.style.display = "inline-block";
+  } else {
+    statusText.textContent = "Status";
+    statusDot.style.display = "none";
+  }
+}
+
+// Tags Functionality
+const tagsContainer = document.getElementById("tagsContainer");
+const tagInput = document.getElementById("tagInput");
+
+// Handle tag input - Enter or comma to add tag
+tagInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" || e.key === ",") {
+    e.preventDefault();
+    const tagName = tagInput.value.trim().replace(/,$/g, ""); // Remove trailing comma
+    if (tagName) {
+      addTag(tagName);
+      tagInput.value = "";
+    }
+  }
+});
+
+function addTag(tagName) {
+  if (!currentNote) return;
+
+  // Initialize tags array if needed
+  if (!currentNote.tags) {
+    currentNote.tags = [];
+  }
+
+  // Don't add duplicates
+  if (currentNote.tags.includes(tagName)) {
+    return;
+  }
+
+  // Add tag to note
+  currentNote.tags.push(tagName);
+
+  // Update UI
+  renderTags();
+
+  // Save note
+  saveCurrentNote();
+}
+
+function removeTag(tagName) {
+  if (!currentNote || !currentNote.tags) return;
+
+  currentNote.tags = currentNote.tags.filter(t => t !== tagName);
+  renderTags();
+  saveCurrentNote();
+}
+
+function renderTags() {
+  if (!currentNote) return;
+
+  tagsContainer.innerHTML = "";
+
+  if (currentNote.tags && currentNote.tags.length > 0) {
+    currentNote.tags.forEach(tag => {
+      const tagBadge = document.createElement("div");
+      tagBadge.className = "tag-badge";
+
+      const tagText = document.createElement("span");
+      tagText.textContent = tag;
+
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "tag-remove";
+      removeBtn.innerHTML = `
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      `;
+      removeBtn.addEventListener("click", () => removeTag(tag));
+
+      tagBadge.appendChild(tagText);
+      tagBadge.appendChild(removeBtn);
+      tagsContainer.appendChild(tagBadge);
+    });
+  }
+}
+
+
+
 // Save current note with debounce
 let saveTimeout;
 function saveCurrentNote() {
@@ -134,6 +273,12 @@ function clearEditor() {
   document.getElementById("noteContentEditor").value = "";
   document.getElementById("editorPlaceholder").classList.remove("hidden");
 
+  // Clear status
+  updateStatusDisplay(null);
+
+  // Clear tags
+  tagsContainer.innerHTML = "";
+
   // Remove active class from all note items
   document.querySelectorAll(".note-list-item").forEach((item) => {
     item.classList.remove("active");
@@ -146,6 +291,12 @@ function loadNoteInEditor(note) {
   document.getElementById("noteContentEditor").value = note.content || "";
   document.getElementById("editorPlaceholder").classList.add("hidden");
 
+  // Load status
+  updateStatusDisplay(note.status);
+
+  // Load tags
+  renderTags();
+
   // Set active class
   document.querySelectorAll(".note-list-item").forEach((item) => {
     if (item.dataset.noteId == note.id) {
@@ -155,6 +306,7 @@ function loadNoteInEditor(note) {
     }
   });
 }
+
 
 // Load all notes into the list panel
 async function loadAllNotes() {
