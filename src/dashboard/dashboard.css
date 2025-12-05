@@ -533,8 +533,8 @@ body {
 
 .editor-body {
   flex: 1;
-  padding: 20px;
-  overflow-y: auto;
+  padding: 0;
+  /* overflow-y: auto; */
   background: #0d0d0d;
 }
 
@@ -547,12 +547,12 @@ body {
 }
 
 .editor-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #2d2d2d;
   border-radius: 4px;
 }
 
 .editor-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #3a3a3a;
 }
 
 .note-content-editor {
@@ -566,10 +566,29 @@ body {
   background: #0d0d0d;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   resize: none;
+  padding: 20px;
 }
 
 .note-content-editor::placeholder {
   color: #555;
+}
+
+/* Textarea scrollbar styling */
+.note-content-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.note-content-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-content-editor::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border-radius: 4px;
+}
+
+.note-content-editor::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
 }
 
 /* Editor Placeholder */
