@@ -3,13 +3,17 @@ document.getElementById("addNote").addEventListener("click", () => {
   window.api.createNote();
 });
 
-document.getElementById("listNotes").addEventListener("click", () => {
-  window.api.openNotesList();
+document.getElementById("dashboardBtn").addEventListener("click", () => {
+  window.api.openDashboard();
 });
 
-document.getElementById("reminderNotes").addEventListener("click", () => {
-  window.api.openRemindersList();
-});
+// document.getElementById("listNotes").addEventListener("click", () => {
+//   window.api.openNotesList();
+// });
+
+// document.getElementById("reminderNotes").addEventListener("click", () => {
+//   window.api.openRemindersList();
+// });
 
 // Minimizar
 document.getElementById("minimizeBtn").addEventListener("click", () => {
