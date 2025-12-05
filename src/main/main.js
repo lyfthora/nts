@@ -8,6 +8,7 @@ const notesPath = path.join(userDataPath, "notes.json");
 let mainWindow = null;
 let listWindow = null;
 let remindersListWindow = null;
+let dashboardWindow = null;
 let noteWindows = [];
 
 function createMainWindow() {
@@ -128,6 +129,35 @@ function createRemindersListWindow(){
   });
 }
 
+function createDashboardWindow (){
+  if (dashboardWindow && !dashboardWindow.isDestroyed()){
+    dashboardWindow.show();
+    dashboardWindow.focus();
+    return;
+  }
+
+  dashboardWindow = new BrowserWindow({
+    width: 1200,
+    height: 750,
+    resizable: true,
+    minWidth: 1000,
+    minHeight: 600,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  dashboardWindow.loadFile(path.join(__dirname, "../dashboard/dashboard.html"));
+  //  dashboardWindow.webContents.openDevTools({ mode: "detach" });
+
+  dashboardWindow.on("closed", () => {
+    dashboardWindow = null;
+  });
+}
 
 function loadNotes() {
   try {
@@ -162,6 +192,7 @@ function getAllNotes() {
 }
 
 // IPC handlers
+// Create note from main window (opens floating window)
 ipcMain.on("create-note", (event) => {
   console.log("IPC 'create-note' recibido en main.js");
   const { screen } = require("electron");
@@ -181,12 +212,74 @@ ipcMain.on("create-note", (event) => {
   };
   console.log("Nueva nota creada:", note);
 
-
   notes.push(note);
   saveNotes(notes);
   console.log("Nota guardada. Creando nueva ventana de nota...");
 
   createNoteWindow(note);
+});
+
+// Create note from dashboard (does NOT open floating window)
+ipcMain.handle("create-note-dashboard", (event) => {
+  const { screen } = require("electron");
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
+  const notes = getAllNotes();
+  const noteNumber = notes.length + 1;
+
+  const note = {
+    id: Date.now(),
+    name: `Note ${noteNumber}`,
+    x: Math.floor(Math.random() * (width - 300)),
+    y: Math.floor(Math.random() * (height - 300)),
+    content: "",
+    color: "#ffffff",
+  };
+
+  notes.push(note);
+  saveNotes(notes);
+
+  return note; // Return the created note
+});
+
+// Open floating window for existing note
+ipcMain.on("open-note-window", (event, noteId, x, y) => {
+  const notes = getAllNotes();
+  const note = notes.find((n) => n.id === noteId);
+
+  if (note) {
+    // Check if window already exists
+    const existingWindow = noteWindows.find((win) => {
+      if (!win.isDestroyed()) {
+        const [x, y] = win.getPosition();
+        return x === note.x && y === note.y;
+      }
+      return false;
+    });
+
+    if (existingWindow && !existingWindow.isDestroyed()) {
+      // If coordinates provided, move window to new position
+      if (x !== undefined && y !== undefined) {
+        existingWindow.setPosition(x, y);
+      }
+      existingWindow.show();
+      existingWindow.focus();
+    } else {
+      // If coordinates provided, update note position before creating window
+      if (x !== undefined && y !== undefined) {
+        note.x = x;
+        note.y = y;
+        // Update in storage
+        const noteIndex = notes.findIndex((n) => n.id === noteId);
+        if (noteIndex !== -1) {
+          notes[noteIndex] = note;
+          saveNotes(notes);
+        }
+      }
+      createNoteWindow(note);
+    }
+  }
 });
 
 ipcMain.on("update-note", (event, noteData) => {
@@ -236,6 +329,10 @@ ipcMain.on("show-note-by-id", (event, noteIde) =>{
   noteWin.focus();
  }
 
+});
+
+ipcMain.on("open-dashboard", () => {
+  createDashboardWindow();
 });
 
 ipcMain.on("open-notes-list", () => {
