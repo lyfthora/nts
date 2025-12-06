@@ -37,8 +37,14 @@ document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
     const view = item.dataset.view;
     updateContentTitle(view);
 
-    // TODO: Filter notes based on view (will be implemented in future phase)
-    console.log("Selected view:", view);
+    //filter notes based on view
+    if (view === "all-notes"){
+      loadAllNotes();
+
+    } else {
+  console.log("Selected view:", view);
+    }
+
   });
 });
 
@@ -250,6 +256,8 @@ function saveCurrentNote() {
       window.api.updateNote(currentNote);
       // Update the note in the list
       updateNoteInList(currentNote);
+      // Update tags in sidebar
+      updateTagsSection();
     }
   }, 500);
 }
@@ -365,6 +373,148 @@ async function loadAllNotes() {
       const x = e.screenX;
       const y = e.screenY;
       window.api.openNoteWindow(note.id, x, y);
+    });
+
+    listBody.appendChild(noteItem);
+  });
+
+  // Update tags in sidebar
+  updateTagsSection();
+}
+
+// ========== DYNAMIC TAGS SYSTEM ==========
+
+// Collect all unique tags from all notes
+function collectAllTags() {
+  const tagMap = {};
+
+  allNotes.forEach(note => {
+    if (note.tags && Array.isArray(note.tags)) {
+      note.tags.forEach(tag => {
+        if (tagMap[tag]) {
+          tagMap[tag]++;
+        } else {
+          tagMap[tag] = 1;
+        }
+      });
+    }
+  });
+
+  return tagMap;
+}
+
+// Update tags section in sidebar
+function updateTagsSection() {
+  const tagsSection = document.getElementById("tagsSection");
+  const tagMap = collectAllTags();
+
+  // Clear existing tags
+  tagsSection.innerHTML = "";
+
+  // Get tags sorted alphabetically
+  const sortedTags = Object.keys(tagMap).sort();
+
+  // Create tag items
+  sortedTags.forEach(tagName => {
+    const tagItem = document.createElement("a");
+    tagItem.href = "#";
+    tagItem.className = "nav-item nav-nested";
+    tagItem.dataset.tag = tagName;
+
+    const hashSpan = document.createElement("span");
+    hashSpan.className = "tag-hash";
+    hashSpan.textContent = "#";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.textContent = tagName;
+
+    const countSpan = document.createElement("span");
+    countSpan.className = "nav-count";
+    countSpan.textContent = tagMap[tagName];
+
+    tagItem.appendChild(hashSpan);
+    tagItem.appendChild(nameSpan);
+    tagItem.appendChild(countSpan);
+
+    // Add click handler
+    tagItem.addEventListener("click", (e) => {
+      e.preventDefault();
+      filterNotesByTag(tagName);
+    });
+
+    tagsSection.appendChild(tagItem);
+  });
+}
+
+// Filter notes by tag
+function filterNotesByTag(tagName) {
+  const filteredNotes = allNotes.filter(note =>
+    note.tags && note.tags.includes(tagName)
+  );
+
+  // Update notes list panel
+  const listBody = document.getElementById("notesListPanel");
+  listBody.innerHTML = "";
+
+  // Update content title
+  document.getElementById("contentTitle").textContent = `#${tagName}`;
+
+  // Remove active class from all nav items
+  document.querySelectorAll(".nav-item").forEach(item => {
+    item.classList.remove("active");
+  });
+
+  // Add active class to clicked tag
+  const tagItem = document.querySelector(`[data-tag="${tagName}"]`);
+  if (tagItem) {
+    tagItem.classList.add("active");
+  }
+
+  if (filteredNotes.length === 0) {
+    listBody.innerHTML = '<div class="no-items-message">No notes with this tag.</div>';
+    return;
+  }
+
+  // Sort notes by ID (most recent first)
+  const sortedNotes = filteredNotes.sort((a, b) => b.id - a.id);
+
+  sortedNotes.forEach((note) => {
+    const noteItem = document.createElement("div");
+    noteItem.className = "note-list-item";
+    noteItem.style.borderLeftColor = note.color || "#667eea";
+    noteItem.dataset.noteId = note.id;
+
+    const title = document.createElement("div");
+    title.className = "note-list-item-title";
+    title.textContent = note.name || "Untitled";
+
+    const preview = document.createElement("div");
+    preview.className = note.content
+      ? "note-list-item-preview"
+      : "note-list-item-preview note-list-item-empty";
+    preview.textContent = note.content || "Empty note";
+
+    noteItem.appendChild(title);
+    noteItem.appendChild(preview);
+
+    // Click to load in editor
+    noteItem.addEventListener("click", () => {
+      loadNoteInEditor(note);
+    });
+
+    // Drag to open as floating window
+    noteItem.draggable = true;
+    noteItem.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "copy";
+      e.dataTransfer.setData("text/plain", note.id);
+      noteItem.style.opacity = "0.5";
+    });
+
+    noteItem.addEventListener("dragend", (e) => {
+      noteItem.style.opacity = "1";
+      const dropX = e.screenX;
+      const dropY = e.screenY;
+      window.api.openNoteWindow(note.id, dropX, dropY);
     });
 
     listBody.appendChild(noteItem);
