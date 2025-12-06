@@ -180,6 +180,7 @@
   width: 480px;
   min-width: 120px;
   /* padding: 2px 4px; */
+  padding-top: 3px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 6px;
