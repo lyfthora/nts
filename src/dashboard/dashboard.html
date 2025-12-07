@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>StickyPad</title>
+  <title>Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="dashboard-metadata.css">
 </head>
@@ -112,22 +112,22 @@
             <a href="#" class="nav-item nav-nested" data-view="status-active">
               <span class="status-dot status-active"></span>
               <span>Active</span>
-              <span class="nav-count">3</span>
+              <span class="nav-count" id="count-active">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-onhold">
               <span class="status-dot status-onhold"></span>
               <span>On Hold</span>
-              <span class="nav-count">1</span>
+              <span class="nav-count" id="count-onhold">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-completed">
               <span class="status-dot status-completed"></span>
               <span>Completed</span>
-              <span class="nav-count">2</span>
+              <span class="nav-count" id="count-completed">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-dropped">
               <span class="status-dot status-dropped"></span>
               <span>Dropped</span>
-              <span class="nav-count">0</span>
+              <span class="nav-count" id="count-dropped">0</span>
             </a>
           </div>
         </div>
@@ -227,6 +227,9 @@
                   </svg>
                 </button>
                 <div class="status-menu" id="statusMenu">
+                  <div class="status-option" data-status="">
+                    <span>None</span>
+                  </div>
                   <div class="status-option" data-status="active">
                     <span class="status-dot status-active"></span>
                     <span>Active</span>
