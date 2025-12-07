@@ -39,11 +39,23 @@ body {
   border-bottom: 1px solid #2d2d2d;
 }
 
-.sidebar-logo {
+.ascii-logo {
+  font-family: 'Courier New', monospace;
+  font-size: 5px;
+  line-height: 1.2;
+  color: #e5e5e5;
+  font-weight: bold;
+  width: fit-content;
+  margin: 0 auto;
+  display: block;
+}
+
+
+/* .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-}
+} */
 
 .logo-icon {
   width: 24px;
