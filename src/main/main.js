@@ -56,7 +56,7 @@ function createNoteWindow(note) {
   });
 
   noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
-  // noteWin.webContents.openDevTools({ mode: "detach" });
+  noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
@@ -70,7 +70,7 @@ function createNoteWindow(note) {
   return noteWin;
 }
 
-function createListWindow(){
+function createListWindow() {
   if (listWindow && !listWindow.isDestroyed()) {
     listWindow.show();
     listWindow.focus();
@@ -99,7 +99,7 @@ function createListWindow(){
   });
 }
 
-function createRemindersListWindow(){
+function createRemindersListWindow() {
   if (remindersListWindow && !remindersListWindow.isDestroyed()) {
     remindersListWindow.show();
     remindersListWindow.focus();
@@ -121,7 +121,9 @@ function createRemindersListWindow(){
       nodeIntegration: false,
     },
   });
-  remindersListWindow.loadFile(path.join(__dirname, "../reminders-list/reminders-list.html"));
+  remindersListWindow.loadFile(
+    path.join(__dirname, "../reminders-list/reminders-list.html")
+  );
   // remindersListWindow.webContents.openDevTools({ mode: "detach" });
 
   remindersListWindow.on("closed", () => {
@@ -129,8 +131,8 @@ function createRemindersListWindow(){
   });
 }
 
-function createDashboardWindow (){
-  if (dashboardWindow && !dashboardWindow.isDestroyed()){
+function createDashboardWindow() {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.show();
     dashboardWindow.focus();
     return;
@@ -152,7 +154,7 @@ function createDashboardWindow (){
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, "../dashboard/dashboard.html"));
-    dashboardWindow.webContents.openDevTools({ mode: "detach" });
+  dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
@@ -312,23 +314,22 @@ ipcMain.on("show-all-notes", () => {
   });
 });
 
-ipcMain.on("show-note-by-id", (event, noteIde) =>{
- const noteWin = noteWindows.find ((win) => {
-  if (!win.isDestroyed ()){
-    const notes = getAllNotes();
-    const note = notes.find((n) => n.id === noteIde);
-    if (note){
-      const [x, y] = win.getPosition();
-      return x === note.x && y === note.y;
+ipcMain.on("show-note-by-id", (event, noteIde) => {
+  const noteWin = noteWindows.find((win) => {
+    if (!win.isDestroyed()) {
+      const notes = getAllNotes();
+      const note = notes.find((n) => n.id === noteIde);
+      if (note) {
+        const [x, y] = win.getPosition();
+        return x === note.x && y === note.y;
+      }
     }
+    return false;
+  });
+  if (noteWin && !noteWin.isDestroyed()) {
+    noteWin.show();
+    noteWin.focus();
   }
-  return false;
- });
- if (noteWin && !noteWin.isDestroyed()){
-  noteWin.show();
-  noteWin.focus();
- }
-
 });
 
 ipcMain.on("open-dashboard", () => {
@@ -387,7 +388,7 @@ ipcMain.handle("get-window-size", (event) => {
 
 //Obtener todas las notas
 ipcMain.handle("get-all-notes", () => {
-return getAllNotes();
+  return getAllNotes();
 });
 
 //Obtener todos los recordatorios
