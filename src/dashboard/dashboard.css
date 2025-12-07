@@ -242,19 +242,43 @@ body {
 }
 
 .status-dot.status-active {
-  background: #4cd964;
+  background: url('../icons/button.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-onhold {
-  background: #ff9500;
+  background: url('../icons/pause.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-completed {
-  background: #5ac8fa;
+  background: url('../icons/checked.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-dropped {
-  background: #ff3b30;
+  background: url('../icons/remove.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 /* Tag Hash */
@@ -476,6 +500,8 @@ body {
   flex-direction: column;
   background: #0d0d0d;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .editor-header {
@@ -485,6 +511,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  position: relative;
 }
 
 .note-title-input {
@@ -496,6 +523,7 @@ body {
   color: #ffffff;
   background: transparent;
   padding: 4px 0;
+  padding-right: 80px;
 }
 
 .note-title-input::placeholder {
@@ -505,6 +533,10 @@ body {
 .editor-actions {
   display: flex;
   gap: 8px;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .editor-action-btn {
@@ -533,8 +565,8 @@ body {
 
 .editor-body {
   flex: 1;
-  padding: 20px;
-  overflow-y: auto;
+  padding: 0;
+  /* overflow-y: auto; */
   background: #0d0d0d;
 }
 
@@ -547,12 +579,12 @@ body {
 }
 
 .editor-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #2d2d2d;
   border-radius: 4px;
 }
 
 .editor-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #3a3a3a;
 }
 
 .note-content-editor {
@@ -566,21 +598,46 @@ body {
   background: #0d0d0d;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   resize: none;
+  padding: 20px;
 }
 
 .note-content-editor::placeholder {
   color: #555;
 }
 
+/* Textarea scrollbar styling */
+.note-content-editor::-webkit-scrollbar {
+  width: 8px;
+}
+
+.note-content-editor::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.note-content-editor::-webkit-scrollbar-thumb {
+  background: #2d2d2d;
+  border-radius: 4px;
+}
+
+.note-content-editor::-webkit-scrollbar-thumb:hover {
+  background: #3a3a3a;
+}
+
 /* Editor Placeholder */
 .editor-placeholder {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #0d0d0d;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: #666;
-  pointer-events: none;
 }
 
 .editor-placeholder svg {

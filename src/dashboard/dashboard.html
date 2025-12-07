@@ -4,13 +4,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="dashboard.css">
   <title>Dashboard</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard-metadata.css">
 </head>
 
 <body>
   <div class="dashboard-container">
-    <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-logo">
@@ -112,22 +112,22 @@
             <a href="#" class="nav-item nav-nested" data-view="status-active">
               <span class="status-dot status-active"></span>
               <span>Active</span>
-              <span class="nav-count">3</span>
+              <span class="nav-count" id="count-active">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-onhold">
               <span class="status-dot status-onhold"></span>
               <span>On Hold</span>
-              <span class="nav-count">1</span>
+              <span class="nav-count" id="count-onhold">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-completed">
               <span class="status-dot status-completed"></span>
               <span>Completed</span>
-              <span class="nav-count">2</span>
+              <span class="nav-count" id="count-completed">0</span>
             </a>
             <a href="#" class="nav-item nav-nested" data-view="status-dropped">
               <span class="status-dot status-dropped"></span>
               <span>Dropped</span>
-              <span class="nav-count">0</span>
+              <span class="nav-count" id="count-dropped">0</span>
             </a>
           </div>
         </div>
@@ -148,16 +148,7 @@
             <span>Tags</span>
           </div>
           <div class="nav-subsection" id="tagsSection">
-            <a href="#" class="nav-item nav-nested" data-view="tag-work">
-              <span class="tag-hash">#</span>
-              <span>work</span>
-              <span class="nav-count">2</span>
-            </a>
-            <a href="#" class="nav-item nav-nested" data-view="tag-personal">
-              <span class="tag-hash">#</span>
-              <span>personal</span>
-              <span class="nav-count">3</span>
-            </a>
+            <!-- Tags will be added here dynamically -->
           </div>
         </div>
       </nav>
@@ -196,7 +187,6 @@
           </div>
         </div>
 
-        <!-- Note Editor Panel (Right Column) -->
         <div class="note-editor-panel">
           <div class="editor-header">
             <input type="text" class="note-title-input" id="noteTitleInput" placeholder="Note title..." />
@@ -214,6 +204,63 @@
               </button>
             </div>
           </div>
+
+          <!-- Metadata Row -->
+          <div class="note-metadata">
+            <!-- Folder/Location -->
+            <div class="metadata-item metadata-folder">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span class="metadata-folder-name">study</span>
+            </div>
+
+            <!-- Status Dropdown -->
+            <div class="metadata-item metadata-status">
+              <div class="status-dropdown" id="statusDropdown">
+                <button class="status-btn" id="statusBtn">
+                  <span class="status-dot" id="statusDot"></span>
+                  <span class="status-text" id="statusText">Status</span>
+                  <svg class="status-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                <div class="status-menu" id="statusMenu">
+                  <div class="status-option" data-status="">
+                    <span>None</span>
+                  </div>
+                  <div class="status-option" data-status="active">
+                    <span class="status-dot status-active"></span>
+                    <span>Active</span>
+                  </div>
+                  <div class="status-option" data-status="onhold">
+                    <span class="status-dot status-onhold"></span>
+                    <span>On Hold</span>
+                  </div>
+                  <div class="status-option" data-status="completed">
+                    <span class="status-dot status-completed"></span>
+                    <span>Completed</span>
+                  </div>
+                  <div class="status-option" data-status="dropped">
+                    <span class="status-dot status-dropped"></span>
+                    <span>Dropped</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tags -->
+            <div class="metadata-item metadata-tags">
+              <div class="tags-wrapper" id="tagsWrapper">
+                <div class="tags-container" id="tagsContainer">
+                  <!-- Tags will be added here dynamically -->
+                </div>
+                <input type="text" class="tag-input" id="tagInput" placeholder="Add Tags" />
+              </div>
+            </div>
+          </div>
+
           <div class="editor-body">
             <textarea class="note-content-editor" id="noteContentEditor" placeholder="Start typing..."></textarea>
           </div>
@@ -227,6 +274,7 @@
         </div>
       </div>
     </div>
+  </div>
   </div>
   <script src="dashboard.js"></script>
 </body>
