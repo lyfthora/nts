@@ -242,19 +242,43 @@ body {
 }
 
 .status-dot.status-active {
-  background: #4cd964;
+  background: url('../icons/button.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-onhold {
-  background: #ff9500;
+  background: url('../icons/pause.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-completed {
-  background: #5ac8fa;
+  background: url('../icons/checked.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 .status-dot.status-dropped {
-  background: #ff3b30;
+  background: url('../icons/remove.png') no-repeat center center;
+  /* background-size: contain; */
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
 }
 
 /* Tag Hash */
@@ -476,6 +500,8 @@ body {
   flex-direction: column;
   background: #0d0d0d;
   position: relative;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .editor-header {
@@ -485,6 +511,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  position: relative;
 }
 
 .note-title-input {
@@ -496,6 +523,7 @@ body {
   color: #ffffff;
   background: transparent;
   padding: 4px 0;
+  padding-right: 80px;
 }
 
 .note-title-input::placeholder {
@@ -505,6 +533,10 @@ body {
 .editor-actions {
   display: flex;
   gap: 8px;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .editor-action-btn {
