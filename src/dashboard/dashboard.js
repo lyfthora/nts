@@ -40,7 +40,9 @@ document.querySelectorAll(".nav-item[data-view]").forEach((item) => {
     //filter notes based on view
     if (view === "all-notes"){
       loadAllNotes();
-
+    }else if (view.startsWith("status-")){
+      const status = view.replace("status-", "");
+      filterNotesByStatus(status);
     } else {
   console.log("Selected view:", view);
     }
@@ -146,6 +148,9 @@ document.querySelectorAll(".status-option").forEach((option) => {
 
     // Save note
     saveCurrentNote();
+
+    // Update status counts
+    updateStatusCounts();
   });
 });
 
@@ -162,9 +167,11 @@ function updateStatusDisplay(status) {
     statusText.textContent = statusInfo.text;
     statusDot.className = `status-dot ${statusInfo.class}`;
     statusDot.style.display = "inline-block";
+    statusBtn.classList.add("selected");
   } else {
     statusText.textContent = "Status";
     statusDot.style.display = "none";
+    statusBtn.classList.remove("selected");
   }
 }
 
@@ -321,6 +328,8 @@ async function loadAllNotes() {
   const notes = await window.api.getAllNotes();
   allNotes = notes;
 
+  updateStatusCounts();
+
   const listBody = document.getElementById("notesListPanel");
   listBody.innerHTML = "";
 
@@ -381,6 +390,86 @@ async function loadAllNotes() {
   // Update tags in sidebar
   updateTagsSection();
 }
+
+
+// ========== DYNAMIC STATUS SYSTEM ==========
+
+function updateStatusCounts(){
+  const counts = {
+    active: 0,
+    onhold: 0,
+    completed: 0,
+    dropped: 0
+  };
+ allNotes.forEach(note => {
+  if (note.status && counts.hasOwnProperty(note.status)) {
+    counts[note.status]++;
+  }
+ });
+
+ const activeEl = document.getElementById("count-active");
+ const onholdEl = document.getElementById("count-onhold");
+ const completedEl = document.getElementById("count-completed");
+ const droppedEl = document.getElementById("count-dropped");
+
+
+if (activeEl) activeEl.textContent = counts.active;
+if (onholdEl) onholdEl.textContent = counts.onhold;
+if (completedEl) completedEl.textContent = counts.completed;
+if (droppedEl) droppedEl.textContent = counts.dropped;
+}
+
+function filterNotesByStatus (status) {
+  const filteredNotes = allNotes.filter(note => note.status === status);
+  const listBody = document.getElementById("notesListPanel");
+  listBody.innerHTML = "";
+
+  if (filteredNotes.length === 0){
+    listBody.innerHTML =  '<div class="no-items-message">No notes with this status.</div>';
+    return;
+  }
+
+  const sortedNotes = filteredNotes.sort((a, b) => b.id - a.id);
+
+  sortedNotes.forEach(note => {
+    const noteItem = document.createElement("div");
+    noteItem.className = "note-list-item";
+    noteItem.style.borderLeftColor = note.color || "#667eea";
+    noteItem.dataset.noteId = note.id;
+    noteItem.draggable = true;
+
+
+    const title = document.createElement("div");
+    title.className = "note-list-item-title";
+    title.textContent = note.name || "Untitled";
+
+    const preview = document.createElement("div");
+    preview.className = note.content
+      ? "note-list-item-preview"
+      : "note-list-item-preview note-list-item-empty";
+    preview.textContent = note.content || "Empty note";
+
+    noteItem.appendChild(title);
+    noteItem.appendChild(preview);
+
+    noteItem.addEventListener("click", () => loadNoteInEditor(note));
+
+    noteItem.addEventListener("dragstart", (e) => {
+      e.dataTransfer.effectAllowed = "copy";
+      e.dataTransfer.setData("text/plain", note.id);
+      noteItem.style.opacity = "0.5";
+    });
+    noteItem.addEventListener("dragend", (e) => {
+      noteItem.style.opacity = "1";
+      window.api.openNoteWindow(note.id, e.screenX, e.screenY);
+    });
+
+    listBody.appendChild(noteItem);
+  });
+}
+
+
+
 
 // ========== DYNAMIC TAGS SYSTEM ==========
 
