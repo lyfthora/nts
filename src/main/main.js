@@ -26,7 +26,7 @@ function createMainWindow() {
     },
   });
 
-  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
+  mainWindow.loadFile(path.join(__dirname, "../windows/home/index.html"));
   // mainWindow.webContents.openDevTools({ mode: "detach" });
 
   const { screen } = require("electron");
@@ -55,7 +55,7 @@ function createNoteWindow(note) {
     },
   });
 
-  noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
+  noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
   noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
@@ -92,7 +92,7 @@ function createListWindow() {
       nodeIntegration: false,
     },
   });
-  listWindow.loadFile(path.join(__dirname, "../notes-list/notes-list.html"));
+  listWindow.loadFile(path.join(__dirname, "../windows/notes-list/index.html"));
 
   listWindow.on("closed", () => {
     listWindow = null;
@@ -122,7 +122,7 @@ function createRemindersListWindow() {
     },
   });
   remindersListWindow.loadFile(
-    path.join(__dirname, "../reminders-list/reminders-list.html")
+    path.join(__dirname, "../windows/reminders-list/index.html")
   );
   // remindersListWindow.webContents.openDevTools({ mode: "detach" });
 
@@ -153,7 +153,9 @@ function createDashboardWindow() {
       nodeIntegration: false,
     },
   });
-  dashboardWindow.loadFile(path.join(__dirname, "../dashboard/dashboard.html"));
+  dashboardWindow.loadFile(
+    path.join(__dirname, "../windows/dashboard/index.html")
+  );
   dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {

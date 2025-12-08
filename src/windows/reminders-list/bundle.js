@@ -24493,33 +24493,92 @@
       var import_react = __toESM(require_react());
       var import_client = __toESM(require_client());
       var import_jsx_runtime = __toESM(require_jsx_runtime());
-      function WindowBar({ onMinimize, onClose }) {
+      function WindowBar({
+        onMinimize,
+        onClose
+      }) {
         return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "note-window-bar", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "window-title", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "window-icon" }) }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "window-controls", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "window-btn minimize-btn", id: "minimizeBtn", onClick: onMinimize }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "window-btn close-btn", id: "closeBtn", onClick: onClose })
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "button",
+              {
+                className: "window-btn minimize-btn",
+                id: "minimizeBtn",
+                onClick: onMinimize
+              }
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+              "button",
+              {
+                className: "window-btn close-btn",
+                id: "closeBtn",
+                onClick: onClose
+              }
+            )
           ] })
         ] });
       }
-      function ReminderItem({ reminder, onCancel }) {
-        return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reminder-item", style: { borderLeftColor: reminder.color || "#ffffff" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reminder-item-header", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "reminder-item-title", children: reminder.noteName || `Note ${reminder.noteId}` }),
-            reminder.repeat ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "reminder-item-badge", style: { backgroundColor: reminder.color || "#4cd964" }, children: "Repeat daily" }) : null
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reminder-item-info", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "reminder-item-date", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", { src: "../icons/calendar.png", alt: "Calendar", className: "reminder-icon" }),
-              new Date(reminder.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "reminder-item-time", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("img", { src: "../icons/clock.png", alt: "Clock", className: "reminder-icon" }),
-              reminder.time
-            ] })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "reminder-item-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "cancel-reminder-btn", onClick: () => onCancel(reminder.noteId), children: "Cancel Reminder" }) })
-        ] });
+      function ReminderItem({
+        reminder,
+        onCancel
+      }) {
+        return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+          "div",
+          {
+            className: "reminder-item",
+            style: { borderLeftColor: reminder.color || "#ffffff" },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reminder-item-header", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "reminder-item-title", children: reminder.noteName || `Note ${reminder.noteId}` }),
+                reminder.repeat ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                  "div",
+                  {
+                    className: "reminder-item-badge",
+                    style: { backgroundColor: reminder.color || "#4cd964" },
+                    children: "Repeat daily"
+                  }
+                ) : null
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "reminder-item-info", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "reminder-item-date", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                    "img",
+                    {
+                      src: "../../icons/calendar.png",
+                      alt: "Calendar",
+                      className: "reminder-icon"
+                    }
+                  ),
+                  new Date(reminder.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric"
+                  })
+                ] }),
+                /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { className: "reminder-item-time", children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                    "img",
+                    {
+                      src: "../../icons/clock.png",
+                      alt: "Clock",
+                      className: "reminder-icon"
+                    }
+                  ),
+                  reminder.time
+                ] })
+              ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "reminder-item-actions", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+                "button",
+                {
+                  className: "cancel-reminder-btn",
+                  onClick: () => onCancel(reminder.noteId),
+                  children: "Cancel Reminder"
+                }
+              ) })
+            ]
+          }
+        );
       }
       function App() {
         const [reminders, setReminders] = (0, import_react.useState)([]);
