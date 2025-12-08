@@ -1,0 +1,84 @@
+/* Tags Editor Component */
+
+.metadata-tags {
+  min-width: 0;
+}
+
+.tags-wrapper {
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border-radius: 6px;
+  flex-wrap: wrap;
+  transition: all 0.2s ease;
+}
+
+.tags-wrapper:focus-within {
+  border-color: #5a5a5a;
+}
+
+.tags-container {
+  display: flex;
+  margin: 0 2px 0 0;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tag-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  background: #2d2d2d;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  font-size: 11px;
+  color: #e5e5e5;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tag-remove {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+  margin-left: 2px;
+}
+
+.tag-remove:hover {
+  color: #ff5f57;
+}
+
+.tag-input {
+  flex: 1;
+  width: 480px;
+  min-width: 120px;
+  padding-top: 3px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #999;
+  font-size: 12px;
+  outline: none;
+  line-height: 1.5;
+  transition: all 0.2s ease;
+}
+
+.tag-input:hover {
+  border-color: #4a4a4a;
+}
+
+.tag-input:focus {
+  border-color: #5a5a5a;
+}
+
+.tag-input::placeholder {
+  color: #666;
+}

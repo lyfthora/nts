@@ -11,8 +11,6 @@ contextBridge.exposeInMainWorld("api", {
   openNotesList: () => ipcRenderer.send("open-notes-list"),
   openRemindersList: () => ipcRenderer.send("open-reminders-list"),
   openDashboard: () => ipcRenderer.send("open-dashboard"),
-  minimizeMain: () => ipcRenderer.send("window-minimize"),
-  closeMain: () => ipcRenderer.send("window-close"),
 
   // acciones (nota o main)
   minimizeWindow: () => ipcRenderer.send("window-minimize"),

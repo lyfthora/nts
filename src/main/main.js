@@ -11,31 +11,6 @@ let remindersListWindow = null;
 let dashboardWindow = null;
 let noteWindows = [];
 
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 400,
-    height: 115,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  mainWindow.loadFile(path.join(__dirname, "../windows/home/index.html"));
-  // mainWindow.webContents.openDevTools({ mode: "detach" });
-
-  const { screen } = require("electron");
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-
-  mainWindow.setPosition(width - 420, height - 135);
-}
-
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
     width: note.width || 355,
@@ -55,6 +30,7 @@ function createNoteWindow(note) {
     },
   });
 
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
   noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
   noteWin.webContents.openDevTools({ mode: "detach" });
 
@@ -92,6 +68,7 @@ function createListWindow() {
       nodeIntegration: false,
     },
   });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
   listWindow.loadFile(path.join(__dirname, "../windows/notes-list/index.html"));
 
   listWindow.on("closed", () => {
@@ -121,10 +98,10 @@ function createRemindersListWindow() {
       nodeIntegration: false,
     },
   });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
   remindersListWindow.loadFile(
     path.join(__dirname, "../windows/reminders-list/index.html")
   );
-  // remindersListWindow.webContents.openDevTools({ mode: "detach" });
 
   remindersListWindow.on("closed", () => {
     remindersListWindow = null;
@@ -303,9 +280,6 @@ ipcMain.on("delete-note", (event, noteId) => {
   notes = notes.filter((n) => n.id !== noteId);
   console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
   saveNotes(notes);
-
-  // const win = BrowserWindow.fromWebContents(event.sender);
-  // if (win) win.destroy();
 });
 
 ipcMain.on("show-all-notes", () => {
@@ -432,9 +406,10 @@ ipcMain.on("set-reminder", (event, data) => {
   setReminder(ipcMain, getAllNotes, noteWindows, data);
 });
 
+// CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
 app.whenReady().then(() => {
-  createDashboardWindow(); // Ahora abre el Dashboard SPA primero
-  loadNotes();
+  createDashboardWindow();
+  // loadNotes(); // Comentado - no carga ventanas flotantes automáticamente
 });
 
 app.on("window-all-closed", () => {
