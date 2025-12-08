@@ -24487,13 +24487,16 @@
     }
   });
 
-  // src/renderer/note-main-react.tsx
-  var require_note_main_react = __commonJS({
-    "src/renderer/note-main-react.tsx"() {
+  // src/ui/main/main.tsx
+  var require_main = __commonJS({
+    "src/ui/main/main.tsx"() {
       var import_react = __toESM(require_react());
       var import_client = __toESM(require_client());
       var import_jsx_runtime = __toESM(require_jsx_runtime());
-      function WindowControls({ onMinimize, onClose }) {
+      function WindowControls({
+        onMinimize,
+        onClose
+      }) {
         return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "note-window-bar", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "window-title", children: [
             /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "window-icon" }),
@@ -24505,7 +24508,10 @@
           ] })
         ] });
       }
-      function MainButtons({ onAdd, onDashboard }) {
+      function MainButtons({
+        onAdd,
+        onDashboard
+      }) {
         return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "main-content", children: /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "buttons-container", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "tool-btn", onClick: onAdd, children: "add" }),
           /* @__PURE__ */ (0, import_jsx_runtime.jsx)("button", { className: "tool-btn", onClick: onDashboard, children: "dashboard" })
@@ -24534,7 +24540,7 @@
       root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App, {}));
     }
   });
-  require_note_main_react();
+  require_main();
 })();
 /*! Bundled license information:
 

@@ -24487,9 +24487,9 @@
     }
   });
 
-  // src/notes-list/notes-list-react.tsx
-  var require_notes_list_react = __commonJS({
-    "src/notes-list/notes-list-react.tsx"() {
+  // src/ui/notes-list/notes-list.tsx
+  var require_notes_list = __commonJS({
+    "src/ui/notes-list/notes-list.tsx"() {
       var import_react = __toESM(require_react());
       var import_client = __toESM(require_client());
       var import_jsx_runtime = __toESM(require_jsx_runtime());
@@ -24535,7 +24535,7 @@
       root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App, {}));
     }
   });
-  require_notes_list_react();
+  require_notes_list();
 })();
 /*! Bundled license information:
 

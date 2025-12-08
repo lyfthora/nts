@@ -24487,9 +24487,9 @@
     }
   });
 
-  // src/notes/note-react.tsx
-  var require_note_react = __commonJS({
-    "src/notes/note-react.tsx"() {
+  // src/ui/note/note.tsx
+  var require_note = __commonJS({
+    "src/ui/note/note.tsx"() {
       var import_react = __toESM(require_react());
       var import_client = __toESM(require_client());
       var import_jsx_runtime = __toESM(require_jsx_runtime());
@@ -24608,7 +24608,7 @@
       root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App, {}));
     }
   });
-  require_note_react();
+  require_note();
 })();
 /*! Bundled license information:
 

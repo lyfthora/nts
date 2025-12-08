@@ -24487,9 +24487,9 @@
     }
   });
 
-  // src/reminders-list/reminders-list-react.tsx
-  var require_reminders_list_react = __commonJS({
-    "src/reminders-list/reminders-list-react.tsx"() {
+  // src/ui/reminders-list/reminders-list.tsx
+  var require_reminders_list = __commonJS({
+    "src/ui/reminders-list/reminders-list.tsx"() {
       var import_react = __toESM(require_react());
       var import_client = __toESM(require_client());
       var import_jsx_runtime = __toESM(require_jsx_runtime());
@@ -24550,7 +24550,7 @@
       root.render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(App, {}));
     }
   });
-  require_reminders_list_react();
+  require_reminders_list();
 })();
 /*! Bundled license information:
 
