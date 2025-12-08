@@ -2,30 +2,20 @@ const esbuild = require("esbuild");
 
 async function buildAll() {
   const entries = [
-    { in: "src/ui/main/main.tsx", out: "src/windows/home/bundle.js" },
-    {
-      in: "src/ui/dashboard/dashboard.tsx",
-      out: "src/windows/dashboard/bundle.js",
-    },
-    { in: "src/ui/note/note.tsx", out: "src/windows/note/bundle.js" },
-    {
-      in: "src/ui/notes-list/notes-list.tsx",
-      out: "src/windows/notes-list/bundle.js",
-    },
-    {
-      in: "src/ui/reminders-list/reminders-list.tsx",
-      out: "src/windows/reminders-list/bundle.js",
-    },
+    { in: "src/renderer/index.tsx", out: "src/renderer/index.js" },
   ];
 
   for (const e of entries) {
     await esbuild.build({
       entryPoints: [e.in],
-      outfile: e.out,
+      outdir: "dist", // Cambiado a "dist" para un directorio de salida estándar
+      entryNames: "[name]", // Añadido para nombrar consistentemente la salida dividida
+      splitting: true,    // Añadido para habilitar la división de CSS
       bundle: true,
       platform: "browser",
       target: ["es2020"],
-      format: "iife",
+      format: "esm",
+      loader: { '.png': 'file' },
       sourcemap: false,
     });
   }

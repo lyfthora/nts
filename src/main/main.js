@@ -154,7 +154,7 @@ function createDashboardWindow() {
     },
   });
   dashboardWindow.loadFile(
-    path.join(__dirname, "../windows/dashboard/index.html")
+    path.join(__dirname, "../../dist/index.html")
   );
   dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
@@ -433,7 +433,7 @@ ipcMain.on("set-reminder", (event, data) => {
 });
 
 app.whenReady().then(() => {
-  createMainWindow();
+  createDashboardWindow(); // Ahora abre el Dashboard SPA primero
   loadNotes();
 });
 

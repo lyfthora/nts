@@ -296,10 +296,5 @@ function App() {
   );
 }
 
-const container = document.querySelector('.dashboard-container') || document.getElementById('root') || document.body;
-if (container) {
-  container.innerHTML = '';
-  const root = ReactDOM.createRoot(container);
-  root.render(<App />);
-}
+export { App };
 
