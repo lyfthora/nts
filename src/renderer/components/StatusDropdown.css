@@ -1,0 +1,90 @@
+/* Status Dropdown Component */
+
+.metadata-status {
+  position: relative;
+}
+
+.status-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.status-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  padding: 4px 0 2px 0px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.status-btn.selected {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.status-btn:hover {
+  border-color: #4a4a4a;
+}
+
+.status-text {
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.status-chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+}
+
+.status-dropdown.active .status-chevron {
+  transform: rotate(180deg);
+}
+
+.status-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  display: none;
+}
+
+.status-dropdown.active .status-menu {
+  display: block;
+}
+
+.status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #e5e5e5;
+  font-size: 13px;
+}
+
+.status-option:hover {
+  background: #2d2d2d;
+}
+
+.status-option[data-status=""] {
+  justify-content: center;
+  font-weight: 700;
+  color: #ffffff;
+}

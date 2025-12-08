@@ -11,8 +11,6 @@ contextBridge.exposeInMainWorld("api", {
   openNotesList: () => ipcRenderer.send("open-notes-list"),
   openRemindersList: () => ipcRenderer.send("open-reminders-list"),
   openDashboard: () => ipcRenderer.send("open-dashboard"),
-  minimizeMain: () => ipcRenderer.send("window-minimize"),
-  closeMain: () => ipcRenderer.send("window-close"),
 
   // acciones (nota o main)
   minimizeWindow: () => ipcRenderer.send("window-minimize"),
@@ -23,6 +21,8 @@ contextBridge.exposeInMainWorld("api", {
   // Notas: enviar/recibir
   updateNote: (note) => ipcRenderer.send("update-note", note),
   deleteNote: (id) => ipcRenderer.send("delete-note", id),
+  deleteNotePermanently: (id) => ipcRenderer.send("delete-note-permanently", id),
+  restoreNote: (id) => ipcRenderer.send("restore-note", id),
 
   // recibir datos de la nota
   onNoteData: (callback) => {

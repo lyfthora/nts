@@ -11,31 +11,6 @@ let remindersListWindow = null;
 let dashboardWindow = null;
 let noteWindows = [];
 
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 400,
-    height: 115,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  // mainWindow.webContents.openDevTools({ mode: "detach" });
-
-  const { screen } = require("electron");
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-
-  mainWindow.setPosition(width - 420, height - 135);
-}
-
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
     width: note.width || 355,
@@ -55,8 +30,9 @@ function createNoteWindow(note) {
     },
   });
 
-  noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
-  // noteWin.webContents.openDevTools({ mode: "detach" });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
+  noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
@@ -70,7 +46,7 @@ function createNoteWindow(note) {
   return noteWin;
 }
 
-function createListWindow(){
+function createListWindow() {
   if (listWindow && !listWindow.isDestroyed()) {
     listWindow.show();
     listWindow.focus();
@@ -92,14 +68,15 @@ function createListWindow(){
       nodeIntegration: false,
     },
   });
-  listWindow.loadFile(path.join(__dirname, "../notes-list/notes-list.html"));
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  listWindow.loadFile(path.join(__dirname, "../windows/notes-list/index.html"));
 
   listWindow.on("closed", () => {
     listWindow = null;
   });
 }
 
-function createRemindersListWindow(){
+function createRemindersListWindow() {
   if (remindersListWindow && !remindersListWindow.isDestroyed()) {
     remindersListWindow.show();
     remindersListWindow.focus();
@@ -121,16 +98,18 @@ function createRemindersListWindow(){
       nodeIntegration: false,
     },
   });
-  remindersListWindow.loadFile(path.join(__dirname, "../reminders-list/reminders-list.html"));
-  // remindersListWindow.webContents.openDevTools({ mode: "detach" });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  remindersListWindow.loadFile(
+    path.join(__dirname, "../windows/reminders-list/index.html")
+  );
 
   remindersListWindow.on("closed", () => {
     remindersListWindow = null;
   });
 }
 
-function createDashboardWindow (){
-  if (dashboardWindow && !dashboardWindow.isDestroyed()){
+function createDashboardWindow() {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.show();
     dashboardWindow.focus();
     return;
@@ -151,8 +130,10 @@ function createDashboardWindow (){
       nodeIntegration: false,
     },
   });
-  dashboardWindow.loadFile(path.join(__dirname, "../dashboard/dashboard.html"));
-    dashboardWindow.webContents.openDevTools({ mode: "detach" });
+  dashboardWindow.loadFile(
+    path.join(__dirname, "../../dist/index.html")
+  );
+  dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
@@ -249,7 +230,6 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
   const note = notes.find((n) => n.id === noteId);
 
   if (note) {
-    // Check if window already exists
     const existingWindow = noteWindows.find((win) => {
       if (!win.isDestroyed()) {
         const [x, y] = win.getPosition();
@@ -259,18 +239,15 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
     });
 
     if (existingWindow && !existingWindow.isDestroyed()) {
-      // If coordinates provided, move window to new position
       if (x !== undefined && y !== undefined) {
         existingWindow.setPosition(x, y);
       }
       existingWindow.show();
       existingWindow.focus();
     } else {
-      // If coordinates provided, update note position before creating window
       if (x !== undefined && y !== undefined) {
         note.x = x;
         note.y = y;
-        // Update in storage
         const noteIndex = notes.findIndex((n) => n.id === noteId);
         if (noteIndex !== -1) {
           notes[noteIndex] = note;
@@ -282,6 +259,7 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
   }
 });
 
+// update note
 ipcMain.on("update-note", (event, noteData) => {
   const notes = getAllNotes();
   const index = notes.findIndex((n) => n.id === noteData.id);
@@ -292,18 +270,42 @@ ipcMain.on("update-note", (event, noteData) => {
   }
 });
 
+// delete note to trash
 ipcMain.on("delete-note", (event, noteId) => {
-  console.log("Eliminando nota:", noteId);
-  let notes = getAllNotes();
-  const originalLength = notes.length;
-  notes = notes.filter((n) => n.id !== noteId);
-  console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
-  saveNotes(notes);
+  console.log("Deleting note:", noteId);
+  const notes = getAllNotes();
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
 
-  // const win = BrowserWindow.fromWebContents(event.sender);
-  // if (win) win.destroy();
+  if (noteIndex !== -1) {
+    notes [noteIndex].deleted = true;
+    saveNotes (notes);
+    console.log(`Note ${noteId} deleted.`);
+  }
 });
 
+// restore note from trash
+ipcMain.on("restore-note", (event, noteId)=> {
+ console.log("Restoring note:", noteId);
+ const notes = getAllNotes();
+ const noteIndex = notes.findIndex ((n)=> n.id === noteId);
+
+ if (noteIndex !== -1){
+  delete notes [noteIndex].deleted;
+  saveNotes (notes);
+  console.log(`Note ${noteId} restored.`);
+ }
+})
+
+// delete note permanently
+ipcMain.on("delete-note-permanently", (event, noteId) => {
+  console.log("Deleting note permanently:", noteId);
+  let notes = getAllNotes();
+  notes = notes.filter ((n) => n.id !== noteId);
+  saveNotes (notes);
+  console.log(`Note ${noteId} deleted permanently.`);
+});
+
+// show all notes
 ipcMain.on("show-all-notes", () => {
   noteWindows.forEach((win) => {
     if (!win.isDestroyed()) {
@@ -312,23 +314,22 @@ ipcMain.on("show-all-notes", () => {
   });
 });
 
-ipcMain.on("show-note-by-id", (event, noteIde) =>{
- const noteWin = noteWindows.find ((win) => {
-  if (!win.isDestroyed ()){
-    const notes = getAllNotes();
-    const note = notes.find((n) => n.id === noteIde);
-    if (note){
-      const [x, y] = win.getPosition();
-      return x === note.x && y === note.y;
+ipcMain.on("show-note-by-id", (event, noteIde) => {
+  const noteWin = noteWindows.find((win) => {
+    if (!win.isDestroyed()) {
+      const notes = getAllNotes();
+      const note = notes.find((n) => n.id === noteIde);
+      if (note) {
+        const [x, y] = win.getPosition();
+        return x === note.x && y === note.y;
+      }
     }
+    return false;
+  });
+  if (noteWin && !noteWin.isDestroyed()) {
+    noteWin.show();
+    noteWin.focus();
   }
-  return false;
- });
- if (noteWin && !noteWin.isDestroyed()){
-  noteWin.show();
-  noteWin.focus();
- }
-
 });
 
 ipcMain.on("open-dashboard", () => {
@@ -387,7 +388,7 @@ ipcMain.handle("get-window-size", (event) => {
 
 //Obtener todas las notas
 ipcMain.handle("get-all-notes", () => {
-return getAllNotes();
+  return getAllNotes();
 });
 
 //Obtener todos los recordatorios
@@ -429,9 +430,10 @@ ipcMain.on("set-reminder", (event, data) => {
   setReminder(ipcMain, getAllNotes, noteWindows, data);
 });
 
+// CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
 app.whenReady().then(() => {
-  createMainWindow();
-  loadNotes();
+  createDashboardWindow();
+  // loadNotes(); // Comentado - no carga ventanas flotantes automáticamente
 });
 
 app.on("window-all-closed", () => {
