@@ -11,6 +11,8 @@
 
 .panel-header {
   padding: 16px 20px;
+  min-height: 65px;
+  max-height: 65px;
   border-bottom: 1px solid #3a3a3a;
   background: #1a1a1a;
   display: flex;
