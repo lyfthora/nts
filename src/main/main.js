@@ -123,16 +123,14 @@ function createDashboardWindow() {
     minHeight: 600,
     frame: false,
     transparent: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false, //xd // xd //x d//xd //xd //xd //xd //xd //xd xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
-  dashboardWindow.loadFile(
-    path.join(__dirname, "../../dist/index.html")
-  );
+  dashboardWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
   dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {
@@ -277,31 +275,31 @@ ipcMain.on("delete-note", (event, noteId) => {
   const noteIndex = notes.findIndex((n) => n.id === noteId);
 
   if (noteIndex !== -1) {
-    notes [noteIndex].deleted = true;
-    saveNotes (notes);
+    notes[noteIndex].deleted = true;
+    saveNotes(notes);
     console.log(`Note ${noteId} deleted.`);
   }
 });
 
 // restore note from trash
-ipcMain.on("restore-note", (event, noteId)=> {
- console.log("Restoring note:", noteId);
- const notes = getAllNotes();
- const noteIndex = notes.findIndex ((n)=> n.id === noteId);
+ipcMain.on("restore-note", (event, noteId) => {
+  console.log("Restoring note:", noteId);
+  const notes = getAllNotes();
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
 
- if (noteIndex !== -1){
-  delete notes [noteIndex].deleted;
-  saveNotes (notes);
-  console.log(`Note ${noteId} restored.`);
- }
-})
+  if (noteIndex !== -1) {
+    delete notes[noteIndex].deleted;
+    saveNotes(notes);
+    console.log(`Note ${noteId} restored.`);
+  }
+});
 
 // delete note permanently
 ipcMain.on("delete-note-permanently", (event, noteId) => {
   console.log("Deleting note permanently:", noteId);
   let notes = getAllNotes();
-  notes = notes.filter ((n) => n.id !== noteId);
-  saveNotes (notes);
+  notes = notes.filter((n) => n.id !== noteId);
+  saveNotes(notes);
   console.log(`Note ${noteId} deleted permanently.`);
 });
 
