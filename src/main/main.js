@@ -230,7 +230,6 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
   const note = notes.find((n) => n.id === noteId);
 
   if (note) {
-    // Check if window already exists
     const existingWindow = noteWindows.find((win) => {
       if (!win.isDestroyed()) {
         const [x, y] = win.getPosition();
@@ -240,18 +239,15 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
     });
 
     if (existingWindow && !existingWindow.isDestroyed()) {
-      // If coordinates provided, move window to new position
       if (x !== undefined && y !== undefined) {
         existingWindow.setPosition(x, y);
       }
       existingWindow.show();
       existingWindow.focus();
     } else {
-      // If coordinates provided, update note position before creating window
       if (x !== undefined && y !== undefined) {
         note.x = x;
         note.y = y;
-        // Update in storage
         const noteIndex = notes.findIndex((n) => n.id === noteId);
         if (noteIndex !== -1) {
           notes[noteIndex] = note;
@@ -263,6 +259,7 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
   }
 });
 
+// update note
 ipcMain.on("update-note", (event, noteData) => {
   const notes = getAllNotes();
   const index = notes.findIndex((n) => n.id === noteData.id);
@@ -273,15 +270,42 @@ ipcMain.on("update-note", (event, noteData) => {
   }
 });
 
+// delete note to trash
 ipcMain.on("delete-note", (event, noteId) => {
-  console.log("Eliminando nota:", noteId);
-  let notes = getAllNotes();
-  const originalLength = notes.length;
-  notes = notes.filter((n) => n.id !== noteId);
-  console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
-  saveNotes(notes);
+  console.log("Deleting note:", noteId);
+  const notes = getAllNotes();
+  const noteIndex = notes.findIndex((n) => n.id === noteId);
+
+  if (noteIndex !== -1) {
+    notes [noteIndex].deleted = true;
+    saveNotes (notes);
+    console.log(`Note ${noteId} deleted.`);
+  }
 });
 
+// restore note from trash
+ipcMain.on("restore-note", (event, noteId)=> {
+ console.log("Restoring note:", noteId);
+ const notes = getAllNotes();
+ const noteIndex = notes.findIndex ((n)=> n.id === noteId);
+
+ if (noteIndex !== -1){
+  delete notes [noteIndex].deleted;
+  saveNotes (notes);
+  console.log(`Note ${noteId} restored.`);
+ }
+})
+
+// delete note permanently
+ipcMain.on("delete-note-permanently", (event, noteId) => {
+  console.log("Deleting note permanently:", noteId);
+  let notes = getAllNotes();
+  notes = notes.filter ((n) => n.id !== noteId);
+  saveNotes (notes);
+  console.log(`Note ${noteId} deleted permanently.`);
+});
+
+// show all notes
 ipcMain.on("show-all-notes", () => {
   noteWindows.forEach((win) => {
     if (!win.isDestroyed()) {

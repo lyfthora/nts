@@ -2436,7 +2436,7 @@ var require_react_dom_development = __commonJS({
         var HostPortal = 4;
         var HostComponent = 5;
         var HostText = 6;
-        var Fragment = 7;
+        var Fragment2 = 7;
         var Mode = 8;
         var ContextConsumer = 9;
         var ContextProvider = 10;
@@ -3593,7 +3593,7 @@ var require_react_dom_development = __commonJS({
               return "DehydratedFragment";
             case ForwardRef:
               return getWrappedName$1(type, type.render, "ForwardRef");
-            case Fragment:
+            case Fragment2:
               return "Fragment";
             case HostComponent:
               return type;
@@ -12022,7 +12022,7 @@ var require_react_dom_development = __commonJS({
             }
           }
           function updateFragment2(returnFiber, current2, fragment, lanes, key) {
-            if (current2 === null || current2.tag !== Fragment) {
+            if (current2 === null || current2.tag !== Fragment2) {
               var created = createFiberFromFragment(fragment, returnFiber.mode, lanes, key);
               created.return = returnFiber;
               return created;
@@ -12425,7 +12425,7 @@ var require_react_dom_development = __commonJS({
               if (child.key === key) {
                 var elementType = element.type;
                 if (elementType === REACT_FRAGMENT_TYPE) {
-                  if (child.tag === Fragment) {
+                  if (child.tag === Fragment2) {
                     deleteRemainingChildren(returnFiber, child.sibling);
                     var existing = useFiber(child, element.props.children);
                     existing.return = returnFiber;
@@ -17901,7 +17901,7 @@ var require_react_dom_development = __commonJS({
               var _resolvedProps2 = workInProgress2.elementType === type ? _unresolvedProps2 : resolveDefaultProps(type, _unresolvedProps2);
               return updateForwardRef(current2, workInProgress2, type, _resolvedProps2, renderLanes2);
             }
-            case Fragment:
+            case Fragment2:
               return updateFragment(current2, workInProgress2, renderLanes2);
             case Mode:
               return updateMode(current2, workInProgress2, renderLanes2);
@@ -18173,7 +18173,7 @@ var require_react_dom_development = __commonJS({
             case SimpleMemoComponent:
             case FunctionComponent:
             case ForwardRef:
-            case Fragment:
+            case Fragment2:
             case Mode:
             case Profiler:
             case ContextConsumer:
@@ -22434,7 +22434,7 @@ var require_react_dom_development = __commonJS({
           return fiber;
         }
         function createFiberFromFragment(elements, mode, lanes, key) {
-          var fiber = createFiber(Fragment, elements, key, mode);
+          var fiber = createFiber(Fragment2, elements, key, mode);
           fiber.lanes = lanes;
           return fiber;
         }
@@ -24552,60 +24552,162 @@ var init_remove = __esm({
 });
 
 // src/renderer/components/Sidebar.tsx
-function Sidebar({ notes, view, onViewChange, counts, tags }) {
-  const Item = ({ view: v, children }) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("a", { href: "#", className: `nav-item${view === v ? " active" : ""}`, onClick: (e) => {
-    e.preventDefault();
-    onViewChange(v);
-  }, children });
+function Sidebar({
+  notes,
+  view,
+  onViewChange,
+  counts,
+  tags
+}) {
+  const Item = ({ view: v, children }) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    "a",
+    {
+      href: "#",
+      className: `nav-item${view === v ? " active" : ""}`,
+      onClick: (e) => {
+        e.preventDefault();
+        onViewChange(v);
+      },
+      children
+    }
+  );
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "sidebar", children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "sidebar-header", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("pre", { className: "ascii-logo", children: `\u2588\u2591\u2591 \u2584\u2580\u2588 \u2588 \u2588\u2584\u2591\u2588
 \u2588\u2584\u2584 \u2588\u2580\u2588 \u2588 \u2588\u2591\u2580\u2588` }) }),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("nav", { className: "sidebar-nav", children: [
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-section", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "all-notes", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "14 2 14 8 20 8" })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "svg",
+            {
+              width: 16,
+              height: 16,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "14 2 14 8 20 8" })
+              ]
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "All Notes" }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "allNotesCount", children: String(notes.length) })
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "allNotesCount", children: String(notes.filter((n) => !n.deleted).length) })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "pinned", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 17v5" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "svg",
+            {
+              width: 16,
+              height: 16,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 17v5" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" })
+              ]
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Pinned Notes" }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "pinnedCount", children: "0" })
         ] })
       ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "nav-section", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "trash", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+          "svg",
+          {
+            width: 16,
+            height: 16,
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: 2,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "3 6 5 6 21 6" }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
+            ]
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Trash" }),
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "trashCount", children: String(notes.filter((n) => n.deleted).length) })
+      ] }) }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-section", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-section-header", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "nav-collapse-btn", "data-section": "status", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { className: "chevron", width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "9 18 15 12 9 6" }) }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("circle", { cx: 12, cy: 12, r: 10 }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 6v6l4 2" })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "nav-collapse-btn", "data-section": "status", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "svg",
+            {
+              className: "chevron",
+              width: 12,
+              height: 12,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "9 18 15 12 9 6" })
+            }
+          ) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "svg",
+            {
+              width: 16,
+              height: 16,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("circle", { cx: 12, cy: 12, r: 10 }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M12 6v6l4 2" })
+              ]
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Status" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-subsection", id: "statusSection", children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "status-active", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "status-dot status-active", style: { backgroundImage: `url(${button_default})` } }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "span",
+              {
+                className: "status-dot status-active",
+                style: { backgroundImage: `url(${button_default})` }
+              }
+            ),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Active" }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "count-active", children: String(counts.active) })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "status-onhold", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "status-dot status-onhold", style: { backgroundImage: `url(${pause_default})` } }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "span",
+              {
+                className: "status-dot status-onhold",
+                style: { backgroundImage: `url(${pause_default})` }
+              }
+            ),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "On Hold" }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "count-onhold", children: String(counts.onhold) })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "status-completed", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "status-dot status-completed", style: { backgroundImage: `url(${checked_default})` } }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "span",
+              {
+                className: "status-dot status-completed",
+                style: { backgroundImage: `url(${checked_default})` }
+              }
+            ),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Completed" }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "count-completed", children: String(counts.completed) })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(Item, { view: "status-dropped", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "status-dot status-dropped", style: { backgroundImage: `url(${remove_default})` } }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+              "span",
+              {
+                className: "status-dot status-dropped",
+                style: { backgroundImage: `url(${remove_default})` }
+              }
+            ),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Dropped" }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", id: "count-dropped", children: String(counts.dropped) })
           ] })
@@ -24613,21 +24715,53 @@ function Sidebar({ notes, view, onViewChange, counts, tags }) {
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-section", children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: "nav-section-header", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "nav-collapse-btn", "data-section": "tags", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("svg", { className: "chevron", width: 12, height: 12, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "9 18 15 12 9 6" }) }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("line", { x1: 7, y1: 7, x2: 7.01, y2: 7 })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("button", { className: "nav-collapse-btn", "data-section": "tags", children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+            "svg",
+            {
+              className: "chevron",
+              width: 12,
+              height: 12,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("polyline", { points: "9 18 15 12 9 6" })
+            }
+          ) }),
+          /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+            "svg",
+            {
+              width: 16,
+              height: 16,
+              viewBox: "0 0 24 24",
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: 2,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("path", { d: "M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" }),
+                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("line", { x1: 7, y1: 7, x2: 7.01, y2: 7 })
+              ]
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: "Tags" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "nav-subsection", id: "tagsSection", children: tags.map((t) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("a", { href: "#", className: "nav-item nav-nested", onClick: (e) => {
-          e.preventDefault();
-          onViewChange(`tag-${t.name}`);
-        }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "tag-hash", children: "#" }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t.name }),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", children: String(t.count) })
-        ] }, t.name)) })
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: "nav-subsection", id: "tagsSection", children: tags.map((t) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+          "a",
+          {
+            href: "#",
+            className: "nav-item nav-nested",
+            onClick: (e) => {
+              e.preventDefault();
+              onViewChange(`tag-${t.name}`);
+            },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "tag-hash", children: "#" }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { children: t.name }),
+              /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: "nav-count", children: String(t.count) })
+            ]
+          },
+          t.name
+        )) })
       ] })
     ] })
   ] });
@@ -24652,11 +24786,11 @@ var init_NotesListPanel = __esm({
 });
 
 // src/renderer/components/NotesListPanel.tsx
-function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect }) {
+function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }) {
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "notes-list-panel", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "panel-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { id: "contentTitle", children: "All Notes" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "panel-actions", children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "action-btn", id: "addNoteBtn", title: "Add Note", onClick: onAddNote, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { id: "contentTitle", children: title || "All Notes" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: "panel-actions", children: !isTrashView && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "action-btn", id: "addNoteBtn", title: "Add Note", onClick: onAddNote, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("path", { d: "M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" })
       ] }) }) })
@@ -24801,36 +24935,150 @@ var init_EditorPanel = __esm({
 });
 
 // src/renderer/components/EditorPanel.tsx
-function EditorPanel({ note, onChange, onDelete, onStatus, onTagAdd, onTagRemove, onColor }) {
+function EditorPanel({
+  note,
+  onChange,
+  onDelete,
+  onRestore,
+  onDeletePermanently,
+  onStatus,
+  onTagAdd,
+  onTagRemove,
+  onColor,
+  isTrashView
+}) {
   if (!note) {
     return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "note-editor-panel", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "editor-placeholder", id: "editorPlaceholder", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: 64, height: 64, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "14 2 14 8 20 8" })
-      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        "svg",
+        {
+          width: 64,
+          height: 64,
+          viewBox: "0 0 24 24",
+          fill: "none",
+          stroke: "currentColor",
+          strokeWidth: 1.5,
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "14 2 14 8 20 8" })
+          ]
+        }
+      ),
       /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "Select a note to view" })
     ] }) });
   }
   return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "note-editor-panel", children: [
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "editor-header", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "text", className: "note-title-input", id: "noteTitleInput", placeholder: "Note title...", value: note.name || "", onChange: (e) => onChange({ ...note, name: e.target.value }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "editor-actions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "editor-action-btn", id: "deleteNoteBtn", title: "Delete Note", onClick: () => onDelete(note), children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "3 6 5 6 21 6" }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
-        ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ColorPicker, { color: note.color, onChange: (c) => onColor({ ...note, color: c }) })
-      ] })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        "input",
+        {
+          type: "text",
+          className: "note-title-input",
+          id: "noteTitleInput",
+          placeholder: "Note title...",
+          value: note.name || "",
+          onChange: (e) => onChange({ ...note, name: e.target.value })
+        }
+      ),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "editor-actions", children: isTrashView ? (
+        // Botones para vista Trash
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "editor-action-btn", title: "Restore Note", onClick: () => onRestore && onRestore(note), children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "23 4 23 10 17 10" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M20.49 15a9 9 0 1 1-2.12-9.36L23 10" })
+          ] }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "editor-action-btn", title: "Delete Permanently", onClick: () => onDeletePermanently && onDeletePermanently(note), children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "3 6 5 6 21 6" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("line", { x1: 10, y1: 11, x2: 10, y2: 17 }),
+            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("line", { x1: 14, y1: 11, x2: 14, y2: 17 })
+          ] }) })
+        ] })
+      ) : (
+        // Botones para vista normal
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              className: "editor-action-btn",
+              id: "deleteNoteBtn",
+              title: "Delete Note",
+              onClick: () => onDelete(note),
+              children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+                "svg",
+                {
+                  width: 16,
+                  height: 16,
+                  viewBox: "0 0 24 24",
+                  fill: "none",
+                  stroke: "currentColor",
+                  strokeWidth: 2,
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { points: "3 6 5 6 21 6" }),
+                    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" })
+                  ]
+                }
+              )
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            ColorPicker,
+            {
+              color: note.color,
+              onChange: (c) => onColor({ ...note, color: c })
+            }
+          )
+        ] })
+      ) })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "note-metadata", children: [
       /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "metadata-item metadata-folder", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" }) }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+          "svg",
+          {
+            width: 14,
+            height: 14,
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: 2,
+            children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" })
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: "metadata-folder-name", children: "study" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "metadata-item metadata-status", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(StatusDropdown, { status: note.status || "", onChange: (s) => onStatus({ ...note, status: s }) }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(TagsEditor, { tags: note.tags || [], onAdd: (t) => onTagAdd({ ...note, tags: Array.from(/* @__PURE__ */ new Set([...note.tags || [], t])) }), onRemove: (t) => onTagRemove({ ...note, tags: (note.tags || []).filter((x) => x !== t) }) })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "metadata-item metadata-status", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        StatusDropdown,
+        {
+          status: note.status || "",
+          onChange: (s) => onStatus({ ...note, status: s })
+        }
+      ) }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        TagsEditor,
+        {
+          tags: note.tags || [],
+          onAdd: (t) => onTagAdd({
+            ...note,
+            tags: Array.from(/* @__PURE__ */ new Set([...note.tags || [], t]))
+          }),
+          onRemove: (t) => onTagRemove({
+            ...note,
+            tags: (note.tags || []).filter((x) => x !== t)
+          })
+        }
+      )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "editor-body", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("textarea", { className: "note-content-editor", id: "noteContentEditor", placeholder: "Start typing...", value: note.content || "", onChange: (e) => onChange({ ...note, content: e.target.value }) }) })
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "editor-body", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      "textarea",
+      {
+        className: "note-content-editor",
+        id: "noteContentEditor",
+        placeholder: "Start typing...",
+        value: note.content || "",
+        onChange: (e) => onChange({ ...note, content: e.target.value })
+      }
+    ) })
   ] });
 }
 var import_jsx_runtime7;
@@ -24856,19 +25104,31 @@ function Dashboard() {
   const [notes, setNotes] = (0, import_react4.useState)([]);
   const [view, setView] = (0, import_react4.useState)("all-notes");
   const [currentId, setCurrentId] = (0, import_react4.useState)(null);
-  const currentNote = (0, import_react4.useMemo)(() => notes.find((n) => n.id === currentId) || null, [notes, currentId]);
+  const currentNote = (0, import_react4.useMemo)(
+    () => notes.find((n) => n.id === currentId) || null,
+    [notes, currentId]
+  );
   const counts = (0, import_react4.useMemo)(() => {
-    const c = { active: 0, onhold: 0, completed: 0, dropped: 0 };
-    notes.forEach((n) => {
+    const activeNotes = notes.filter((n) => !n.deleted);
+    const c = {
+      active: 0,
+      onhold: 0,
+      completed: 0,
+      dropped: 0
+    };
+    activeNotes.forEach((n) => {
       if (n.status && c.hasOwnProperty(n.status)) c[n.status]++;
     });
     return c;
   }, [notes]);
   const tags = (0, import_react4.useMemo)(() => {
+    const activeNotes = notes.filter((n) => !n.deleted);
     const m = {};
-    notes.forEach((n) => (n.tags || []).forEach((t) => {
-      m[t] = (m[t] || 0) + 1;
-    }));
+    activeNotes.forEach(
+      (n) => (n.tags || []).forEach((t) => {
+        m[t] = (m[t] || 0) + 1;
+      })
+    );
     return Object.keys(m).sort().map((name) => ({ name, count: m[name] }));
   }, [notes]);
   const debRef = (0, import_react4.useRef)(null);
@@ -24882,16 +25142,20 @@ function Dashboard() {
     };
   }, []);
   const filteredNotes = (0, import_react4.useMemo)(() => {
-    if (view === "all-notes") return notes;
+    if (view === "trash") {
+      return notes.filter((n) => n.deleted === true);
+    }
+    const activeNotes = notes.filter((n) => !n.deleted);
+    if (view === "all-notes") return activeNotes;
     if (view.startsWith("status-")) {
       const s = view.replace("status-", "");
-      return notes.filter((n) => n.status === s);
+      return activeNotes.filter((n) => n.status === s);
     }
     if (view.startsWith("tag-")) {
       const t = view.replace("tag-", "");
-      return notes.filter((n) => (n.tags || []).includes(t));
+      return activeNotes.filter((n) => (n.tags || []).includes(t));
     }
-    return notes;
+    return activeNotes;
   }, [notes, view]);
   const onAddNote = (0, import_react4.useCallback)(async () => {
     const newNote = await window.api.createNoteDashboard();
@@ -24912,37 +25176,99 @@ function Dashboard() {
     setNotes(ns || []);
     setCurrentId(null);
   }, []);
-  const onChange = (0, import_react4.useCallback)((note) => {
-    setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
-    saveNote(note);
-  }, [saveNote]);
-  const onStatus = (0, import_react4.useCallback)((note) => {
-    setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
-    saveNote(note);
-  }, [saveNote]);
-  const onTagAdd = (0, import_react4.useCallback)((note) => {
-    setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
-    saveNote(note);
-  }, [saveNote]);
-  const onTagRemove = (0, import_react4.useCallback)((note) => {
-    setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
-    saveNote(note);
-  }, [saveNote]);
-  const onColor = (0, import_react4.useCallback)((note) => {
-    setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
-    saveNote(note);
-  }, [saveNote]);
+  const onRestore = (0, import_react4.useCallback)(async (notes2) => {
+    await window.api.restoreNote(notes2.id);
+    const ns = await window.api.getAllNotes();
+    setNotes(ns || []);
+    setCurrentId(null);
+  }, []);
+  const onDeletePermanently = (0, import_react4.useCallback)(async (note) => {
+    if (confirm(`Are you sure you want to delete note ${note.title} permanently?`)) {
+      await window.api.deleteNotePermanently(note.id);
+      const ns = await window.api.getAllNotes();
+      setNotes(ns || []);
+      setCurrentId(null);
+    }
+  }, []);
+  const onChange = (0, import_react4.useCallback)(
+    (note) => {
+      setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
+      saveNote(note);
+    },
+    [saveNote]
+  );
+  const onStatus = (0, import_react4.useCallback)(
+    (note) => {
+      setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
+      saveNote(note);
+    },
+    [saveNote]
+  );
+  const onTagAdd = (0, import_react4.useCallback)(
+    (note) => {
+      setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
+      saveNote(note);
+    },
+    [saveNote]
+  );
+  const onTagRemove = (0, import_react4.useCallback)(
+    (note) => {
+      setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
+      saveNote(note);
+    },
+    [saveNote]
+  );
+  const onColor = (0, import_react4.useCallback)(
+    (note) => {
+      setNotes((prev) => prev.map((n) => n.id === note.id ? note : n));
+      saveNote(note);
+    },
+    [saveNote]
+  );
   const onSelect = (0, import_react4.useCallback)((n) => setCurrentId(n.id), []);
   const onViewChange = (0, import_react4.useCallback)((v) => setView(v), []);
   const onMinimize = (0, import_react4.useCallback)(() => window.api.minimizeWindow(), []);
   const onClose = (0, import_react4.useCallback)(() => window.api.closeWindow(), []);
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "dashboard-container", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Sidebar, { notes, view, onViewChange, counts, tags }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      Sidebar,
+      {
+        notes,
+        view,
+        onViewChange,
+        counts,
+        tags
+      }
+    ),
     /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "main-content", children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(WindowBar, { onMinimize, onClose }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "content-container", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(NotesListPanel, { notes: filteredNotes, currentNoteId: currentId, onAddNote, onSelect }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(EditorPanel, { note: currentNote, onChange, onDelete, onStatus, onTagAdd, onTagRemove, onColor })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          NotesListPanel,
+          {
+            notes: filteredNotes,
+            currentNoteId: currentId,
+            onAddNote,
+            onSelect,
+            isTrashView: view === "trash",
+            title: view === "trash" ? "Trash" : view === "all-notes" ? "All Notes" : view.startsWith("status-") ? view.replace("status-", "").charAt(0).toUpperCase() + view.replace("status-", "").slice(1) : view.startsWith("tag-") ? `#${view.replace("tag-", "")}` : "Notes"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          EditorPanel,
+          {
+            note: currentNote,
+            onChange,
+            onDelete,
+            onRestore,
+            onDeletePermanently,
+            onStatus,
+            onTagAdd,
+            onTagRemove,
+            onColor,
+            isTrashView: view === "trash"
+          }
+        )
       ] })
     ] })
   ] });

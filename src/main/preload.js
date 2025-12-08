@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("api", {
   // Notas: enviar/recibir
   updateNote: (note) => ipcRenderer.send("update-note", note),
   deleteNote: (id) => ipcRenderer.send("delete-note", id),
+  deleteNotePermanently: (id) => ipcRenderer.send("delete-note-permanently", id),
+  restoreNote: (id) => ipcRenderer.send("restore-note", id),
 
   // recibir datos de la nota
   onNoteData: (callback) => {
