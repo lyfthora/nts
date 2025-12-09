@@ -1,9 +1,16 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-const fs = require("fs");
+// const fs = require("fs");
 const path = require("path");
+const Store = require("electron-store");
 
-const userDataPath = app.getPath("userData");
-const notesPath = path.join(userDataPath, "notes.json");
+// electron-store startttttttttttttttttttttttttttttttttttttttttttttttttaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+const store = new Store({
+  name: "notes-data",
+  defaults: {
+    notes: [],
+    folders: [],
+  },
+});
 
 let mainWindow = null;
 let listWindow = null;
@@ -140,36 +147,121 @@ function createDashboardWindow() {
 
 function loadNotes() {
   try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      const notes = JSON.parse(data);
-      notes.forEach((note) => createNoteWindow(note));
-    }
-  } catch (error) {
-    console.error("Error cargando notas:", error);
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error loading notes:", err);
+    return [];
+  }
+}
+function getAllNotes() {
+  try {
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
   }
 }
 
 function saveNotes(notes) {
   try {
-    fs.writeFileSync(notesPath, JSON.stringify(notes, null, 2));
-  } catch (error) {
-    console.error("Error guardando notas:", error);
+    store.set("notes", notes);
+    console.log("Notes saved successfully!");
+  } catch (err) {
+    console.error("Error saving notes:", err);
   }
 }
 
-function getAllNotes() {
+function getAllFolders() {
   try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Error obteniendo notas:", error);
+    return store.get("folders", []);
+  } catch (err) {
+    console.error("Error reading folders:", err);
+    return [];
   }
-  return [];
 }
 
+function saveFolders(folders) {
+  try {
+    store.set("folders", folders);
+    console.log("Folders saved successfully!");
+  } catch (err) {
+    console.error("Error saving folders:", err);
+  }
+}
+
+function saveAll(notes, folders) {
+  try {
+    store.set("notes", notes);
+    store.set("folders", folders);
+  } catch (err) {
+    console.error("Error saving all data:", err);
+  }
+}
+
+function initializeDefaultStructure() {
+  const folders = getAllFolders();
+
+  if (folders.length === 0) {
+    const defaultFolders = [
+      {
+        id: 1,
+        name: "All Notes",
+        parentId: null,
+        isSystem: true,
+        expanded: true,
+      },
+      {
+        id: 2,
+        name: "Personal",
+        parentId: null,
+        isSystem: false,
+        expanded: true,
+      },
+      {
+        id: 3,
+        name: "Work",
+        parentId: null,
+        isSystem: false,
+        expanded: true,
+      },
+    ];
+    saveFolders(defaultFolders);
+    console.log("Default folder structure created");
+  }
+
+  // const indexExists = folders.find((f) => f.id === INDEX_FOLDER_ID);
+  // if (!indexExists) {
+  //   folders.push({
+  //     id: INDEX_FOLDER_ID,
+  //     type: "folder",
+  //     name: "Index",
+  //     parentId: null,
+  //     isSystem: true,
+  //     expanded: true,
+  //     createdAt: Date.now(),
+  //   });
+  //   console.log("Folder Index created");
+  // }
+
+  // const guideExists = notes.find((n) => n.id === GUIDE_NOTE_ID);
+  // if (!guideExists) {
+  //   notes.push({
+  //     id: GUIDE_NOTE_ID,
+  //     type: "note",
+  //     name: "Guide",
+  //     folderId: INDEX_FOLDER_ID,
+  //     isSystem: true,
+  //     content:
+  //       "# Bienvenido a tu app de notas\n\nEsta es la nota guía del sistema.\n\n## Características:\n- Organiza tus notas en carpetas\n- Usa etiquetas para categorizar\n- Establece estados (Active, On Hold, etc.)\n- Mueve notas a la papelera",
+  //     color: "#667eea",
+  //     status: "",
+  //     tags: [],
+  //     deleted: false,
+  //   });
+  //   console.log("Guide note created");
+  // }
+  // saveAll(notes, folders);
+}
 // IPC handlers
 // Create note from main window (opens floating window)
 ipcMain.on("create-note", (event) => {
@@ -386,7 +478,12 @@ ipcMain.handle("get-window-size", (event) => {
 
 //Obtener todas las notas
 ipcMain.handle("get-all-notes", () => {
-  return getAllNotes();
+  try {
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
+  }
 });
 
 //Obtener todos los recordatorios
@@ -428,8 +525,84 @@ ipcMain.on("set-reminder", (event, data) => {
   setReminder(ipcMain, getAllNotes, noteWindows, data);
 });
 
+// obtener todas las carpetas
+ipcMain.handle("get-all-folders", () => {
+  return getAllFolders();
+});
+// crear carpetas
+ipcMain.handle("create-folder", (event, folderData) => {
+  const folders = getAllFolders();
+  const newFolder = {
+    id: Date.now(),
+    type: "folder",
+    name: folderData.name || "New Folder",
+    parentId: folderData.parentId || null,
+    isSystem: false,
+    expanded: true,
+    createdAt: Date.now(),
+  };
+  folders.push(newFolder);
+  saveFolders(folders);
+  return newFolder;
+});
+
+// actualizar carpeta
+ipcMain.on("update-folder", (event, folderData) => {
+  const folders = getAllFolders();
+  const index = folders.findIndex((f) => f.id === folderData.id);
+  if (index !== -1) {
+    folders[index] = { ...folders[index], ...folderData };
+    saveFolders(folders);
+  }
+});
+
+// eliminar carpeta (no se puede al main)
+ipcMain.on("delete-folder", (event, folderId) => {
+  const folders = getAllFolders();
+  const folder = folders.find((f) => f.id === folderId);
+
+  if (folder && folder.isSystem) {
+    console.log("Cannot delete system folder");
+    return;
+  }
+
+  const toDelete = [folderId];
+  let i = 0;
+  while (i < toDelete.length) {
+    const currentId = toDelete[i];
+    const subfolders = folders.filter((f) => f.parentId === currentId);
+    toDelete.push(...subfolders.map((f) => f.id));
+    i++;
+  }
+
+  const remainingFolders = folders.filter((f) => !toDelete.includes(f.id));
+  saveFolders(remainingFolders);
+
+  const notes = getAllNotes();
+  const updateNotes = notes.map((n) => {
+    if (toDelete.includes(n.folderId)) {
+      return { ...n, folderId: null };
+    }
+    return n;
+  });
+  saveNotes(updateNotes);
+});
+
+//mover carpeta a otra carpeta padre
+ipcMain.on("move-folder", (event, { folderId, newParentId }) => {
+  const folders = getAllFolders();
+  const index = folders.findIndex((f) => f.id === folderId);
+  if (index !== -1) {
+    if (folderId === newParentId) return;
+
+    folders[index].parentId = newParentId;
+    saveFolders(folders);
+  }
+});
+
 // CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
 app.whenReady().then(() => {
+  initializeDefaultStructure();
   createDashboardWindow();
   // loadNotes(); // Comentado - no carga ventanas flotantes automáticamente
 });

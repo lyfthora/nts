@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import StatusDropdown from "./StatusDropdown";
 import TagsEditor from "./TagsEditor";
 import ColorPicker from "./ColorPicker";
@@ -17,7 +17,7 @@ interface EditorPanelProps {
   isTrashView?: boolean;
 }
 
-export default function EditorPanel({
+const EditorPanel = memo(function EditorPanel({
   note,
   onChange,
   onDelete,
@@ -155,4 +155,5 @@ export default function EditorPanel({
       </div>
     </div>
   );
-}
+});
+export default EditorPanel;

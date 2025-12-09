@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, memo } from "react";
 import './StatusDropdown.css';
 import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
@@ -10,7 +10,7 @@ interface StatusDropdownProps {
   onChange: (s: string) => void;
 }
 
-export default function StatusDropdown({ status, onChange }: StatusDropdownProps) {
+const StatusDropdown = memo(function StatusDropdown({ status, onChange }: StatusDropdownProps) {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen(v => !v), []);
 
@@ -52,4 +52,6 @@ export default function StatusDropdown({ status, onChange }: StatusDropdownProps
       </div>
     </div>
   );
-}
+});
+
+export default StatusDropdown;

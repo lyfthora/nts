@@ -1,5 +1,8 @@
-import React from "react";
+import React, { useState, memo, useCallback } from "react";
+import type { StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
+import FolderTree from "./FolderTree";
+import InputModal from "./InputModal";
 import buttonIcon from "../assets/icons/button.png";
 import pauseIcon from "../assets/icons/pause.png";
 import checkedIcon from "../assets/icons/checked.png";
@@ -7,20 +10,45 @@ import removeIcon from "../assets/icons/remove.png";
 
 interface SidebarProps {
   notes: any[];
+  folders: any[];
   view: string;
+  selectedFolderId: number | null;
   onViewChange: (v: string) => void;
-  counts: Record<string, number>;
-  tags: { name: string; count: number }[];
+  onFolderSelect: (id: number) => void;
+  onFolderToggle: (id: number) => void;
+  onFolderCreate: (parentId: number | null, name: string) => void;
+  onFolderRename: (id: number, newName: string) => void;
+  onFolderDelete: (id: number) => void;
+  folderCounts: Record<number, number>;
+  counts: StatusCounts;
+  tags: Tag[];
 }
 
-export default function Sidebar({
+const Sidebar = memo(function Sidebar({
   notes,
+  folders,
   view,
+  selectedFolderId,
+  folderCounts,
   onViewChange,
+  onFolderSelect,
+  onFolderToggle,
+  onFolderCreate,
+  onFolderDelete,
+  onFolderRename,
   counts,
   tags,
 }: SidebarProps) {
-  const Item = ({ view: v, children }: any) => (
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = useCallback((sectionId: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  }, []);
+  const Item = memo(({ view: v, children }: any) => (
     <a
       href="#"
       className={`nav-item${view === v ? " active" : ""}`}
@@ -31,7 +59,7 @@ export default function Sidebar({
     >
       {children}
     </a>
-  );
+  ));
 
   return (
     <div className="sidebar">
@@ -76,7 +104,66 @@ export default function Sidebar({
             </span>
           </Item>
         </div>
-
+        <div className="nav-section">
+          <div className="nav-section-header">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['folders'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('folders')}
+            >
+              <svg
+                className="chevron"
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>Index</span>
+            <button
+              className="section-action-btn"
+              onClick={() => setShowCreateModal(true)}
+              title="New Folder"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#999',
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                fontSize: '16px'
+              }}
+            >
+              +
+            </button>
+          </div>
+          {!collapsedSections['folders'] && (
+            <div className="nav-subsection" id="foldersSection">
+              <FolderTree
+                folders={folders}
+                selectedFolderId={selectedFolderId}
+                onSelectFolder={onFolderSelect}
+                folderCounts={folderCounts}
+                onToggleExpand={onFolderToggle}
+                onCreateFolder={onFolderCreate}
+                onDeleteFolder={onFolderDelete}
+                onRenameFolder={onFolderRename}
+              />
+            </div>
+          )}
+        </div>
         <div className="nav-section">
           <Item view="trash">
             <svg
@@ -98,7 +185,10 @@ export default function Sidebar({
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button className="nav-collapse-btn" data-section="status">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['status'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('status')}
+            >
               <svg
                 className="chevron"
                 width={12}
@@ -124,52 +214,59 @@ export default function Sidebar({
             </svg>
             <span>Status</span>
           </div>
-          <div className="nav-subsection" id="statusSection">
-            <Item view="status-active">
-              <span
-                className="status-dot status-active"
-                style={{ backgroundImage: `url(${buttonIcon})` }}
-              />
-              <span>Active</span>
-              <span className="nav-count" id="count-active">
-                {String(counts.active)}
-              </span>
-            </Item>
-            <Item view="status-onhold">
-              <span
-                className="status-dot status-onhold"
-                style={{ backgroundImage: `url(${pauseIcon})` }}
-              />
-              <span>On Hold</span>
-              <span className="nav-count" id="count-onhold">
-                {String(counts.onhold)}
-              </span>
-            </Item>
-            <Item view="status-completed">
-              <span
-                className="status-dot status-completed"
-                style={{ backgroundImage: `url(${checkedIcon})` }}
-              />
-              <span>Completed</span>
-              <span className="nav-count" id="count-completed">
-                {String(counts.completed)}
-              </span>
-            </Item>
-            <Item view="status-dropped">
-              <span
-                className="status-dot status-dropped"
-                style={{ backgroundImage: `url(${removeIcon})` }}
-              />
-              <span>Dropped</span>
-              <span className="nav-count" id="count-dropped">
-                {String(counts.dropped)}
-              </span>
-            </Item>
-          </div>
+          {!collapsedSections['status'] && (
+            <div className="nav-subsection" id="statusSection">
+              <Item view="status-active">
+                <span
+                  className="status-dot status-active"
+                  style={{ backgroundImage: `url(${buttonIcon})` }}
+                />
+                <span>Active</span>
+                <span className="nav-count" id="count-active">
+                  {String(counts.active)}
+                </span>
+              </Item>
+
+
+              <Item view="status-onhold">
+                <span
+                  className="status-dot status-onhold"
+                  style={{ backgroundImage: `url(${pauseIcon})` }}
+                />
+                <span>On Hold</span>
+                <span className="nav-count" id="count-onhold">
+                  {String(counts.onhold)}
+                </span>
+              </Item>
+              <Item view="status-completed">
+                <span
+                  className="status-dot status-completed"
+                  style={{ backgroundImage: `url(${checkedIcon})` }}
+                />
+                <span>Completed</span>
+                <span className="nav-count" id="count-completed">
+                  {String(counts.completed)}
+                </span>
+              </Item>
+              <Item view="status-dropped">
+                <span
+                  className="status-dot status-dropped"
+                  style={{ backgroundImage: `url(${removeIcon})` }}
+                />
+                <span>Dropped</span>
+                <span className="nav-count" id="count-dropped">
+                  {String(counts.dropped)}
+                </span>
+              </Item>
+            </div>
+          )}
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button className="nav-collapse-btn" data-section="tags">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['tags'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('tags')}
+            >
               <svg
                 className="chevron"
                 width={12}
@@ -195,25 +292,40 @@ export default function Sidebar({
             </svg>
             <span>Tags</span>
           </div>
-          <div className="nav-subsection" id="tagsSection">
-            {tags.map((t) => (
-              <a
-                key={t.name}
-                href="#"
-                className="nav-item nav-nested"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onViewChange(`tag-${t.name}`);
-                }}
-              >
-                <span className="tag-hash">#</span>
-                <span>{t.name}</span>
-                <span className="nav-count">{String(t.count)}</span>
-              </a>
-            ))}
-          </div>
+          {!collapsedSections['tags'] && (
+            <div className="nav-subsection" id="tagsSection">
+              {tags.map((t) => (
+                <a
+                  key={t.name}
+                  href="#"
+                  className={`nav-item nav-nested ${view === `tag-${t.name}` ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onViewChange(`tag-${t.name}`);
+                  }}
+                >
+                  <span className="tag-hash">#</span>
+                  <span>{t.name}</span>
+                  <span className="nav-count">{String(t.count)}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </nav>
+
+      <InputModal
+        isOpen={showCreateModal}
+        title="Create Folder"
+        placeholder="Folder Name"
+        onConfirm={(name) => {
+          onFolderCreate(null, name);
+          setShowCreateModal(false);
+        }}
+        onCancel={() => setShowCreateModal(false)}
+      />
     </div>
   );
-}
+});
+
+export default Sidebar;
