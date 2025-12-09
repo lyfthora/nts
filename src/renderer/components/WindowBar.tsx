@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import './WindowBar.css';
 
 interface WindowBarProps {
@@ -6,7 +6,7 @@ interface WindowBarProps {
   onClose: () => void;
 }
 
-export default function WindowBar({ onMinimize, onClose }: WindowBarProps) {
+const WindowBar = memo(function WindowBar({ onMinimize, onClose }: WindowBarProps) {
   return (
     <div className="note-window-bar">
       <div className="window-title" />
@@ -16,4 +16,6 @@ export default function WindowBar({ onMinimize, onClose }: WindowBarProps) {
       </div>
     </div>
   );
-}
+});
+
+export default WindowBar

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, memo } from "react";
 import './TagsEditor.css';
 
 interface TagsEditorProps {
@@ -7,7 +7,7 @@ interface TagsEditorProps {
   onRemove: (t: string) => void;
 }
 
-export default function TagsEditor({ tags, onAdd, onRemove }: TagsEditorProps) {
+const TagsEditor = memo(function TagsEditor({ tags, onAdd, onRemove }: TagsEditorProps) {
   const [value, setValue] = useState('');
   const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
@@ -31,4 +31,6 @@ export default function TagsEditor({ tags, onAdd, onRemove }: TagsEditorProps) {
       </div>
     </div>
   );
-}
+});
+
+export default TagsEditor;

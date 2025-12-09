@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import './NotesListPanel.css';
 
 interface NotesListPanelProps {
@@ -10,7 +10,7 @@ interface NotesListPanelProps {
   title?: string;
 }
 
-export default function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }: NotesListPanelProps) {
+const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }: NotesListPanelProps) {
   return (
     <div className="notes-list-panel">
       <div className="panel-header">
@@ -37,4 +37,5 @@ export default function NotesListPanel({ notes, currentNoteId, onAddNote, onSele
       </div>
     </div>
   );
-}
+});
+export default NotesListPanel;

@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import type { Note, Folder, StatusCounts, Tag, FolderCounts } from "../types/models";
 import WindowBar from "../components/WindowBar";
 import Sidebar from "../components/Sidebar";
 import NotesListPanel from "../components/NotesListPanel";
@@ -12,18 +13,19 @@ import EditorPanel from "../components/EditorPanel";
 import "./Dashboard.css";
 
 export default function Dashboard() {
-  const [notes, setNotes] = useState<any[]>([]);
-  const [folders, setFolders] = useState<any[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [view, setView] = useState("all-notes");
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [currentId, setCurrentId] = useState<number | null>(null);
-  const currentNote = useMemo(
+  const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
+  const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
   );
-  const counts = useMemo(() => {
+  const counts = useMemo<StatusCounts>(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
-    const c: Record<string, number> = {
+    const c: StatusCounts = {
       active: 0,
       onhold: 0,
       completed: 0,
@@ -35,15 +37,15 @@ export default function Dashboard() {
     return c;
   }, [notes]);
 
-  const folderCounts = useMemo(() => {
-    const counts: Record<number, number> = {};
+  const folderCounts = useMemo<FolderCounts>(() => {
+    const counts: FolderCounts = {};
     folders.forEach(folder => {
       counts[folder.id] = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
     });
     return counts;
   }, [notes, folders]);
 
-  const tags = useMemo(() => {
+  const tags = useMemo<Tag[]>(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
     const m: Record<string, number> = {};
     activeNotes.forEach((n) =>
@@ -55,7 +57,7 @@ export default function Dashboard() {
       .sort()
       .map((name) => ({ name, count: m[name] }));
   }, [notes]);
-  const debRef = useRef<any>(null);
+  const debRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
     let mounted = true;
@@ -105,31 +107,31 @@ export default function Dashboard() {
     if (newNote) setCurrentId(newNote.id);
   }, [selectedFolderId]);
 
-  const saveNote = useCallback((note: any) => {
-    clearTimeout(debRef.current);
+  const saveNote = useCallback((note: Note) => {
+    if (debRef.current !== undefined) clearTimeout(debRef.current);
     debRef.current = setTimeout(async () => {
       await window.api.updateNote(note);
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
     }, 500);
   }, []);
 
-  const onDelete = useCallback(async (note: any) => {
+  const onDelete = useCallback(async (note: Note) => {
     await window.api.deleteNote(note.id);
     const ns = await window.api.getAllNotes();
     setNotes(ns || []);
     setCurrentId(null);
   }, []);
 
-  const onRestore = useCallback(async (notes: any) => {
+  const onRestore = useCallback(async (notes: Note) => {
     await window.api.restoreNote(notes.id);
     const ns = await window.api.getAllNotes();
     setNotes(ns || []);
     setCurrentId(null);
   }, []);
 
-  const onDeletePermanently = useCallback(async (note: any) => {
+  const onDeletePermanently = useCallback(async (note: Note) => {
     if (
-      confirm(`Are you sure you want to delete note ${note.title} permanently?`)
+      confirm(`Are you sure you want to delete note ${note.name} permanently?`)
     ) {
       await window.api.deleteNotePermanently(note.id);
       const ns = await window.api.getAllNotes();
@@ -150,11 +152,21 @@ export default function Dashboard() {
       const newFolders = prev.map(f =>
         f.id === id ? { ...f, expanded: !f.expanded } : f
       );
-      const folder = newFolders.find(f => f.id === id);
-      if (folder) window.api.updateFolder(folder);
+      const updated = newFolders.find(f => f.id === id);
+      if (updated) setFolderToUpdate(updated);
       return newFolders;
     });
   }, []);
+  useEffect(() => {
+    if (folderToUpdate) {
+      const timeout = setTimeout(() => {
+        window.api.updateFolder(folderToUpdate);
+        setFolderToUpdate(null);
+      }, 300);
+      return () => clearTimeout(timeout);
+    }
+  }, [folderToUpdate]);
+
 
   const onFolderCreate = useCallback(async (parentId: number | null, name: string) => {
     if (!name.trim()) return;
@@ -197,44 +209,43 @@ export default function Dashboard() {
     setSelectedFolderId(null);
   }, []);
 
-
   const onChange = useCallback(
-    (note: any) => {
+    (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
     },
     [saveNote]
   );
   const onStatus = useCallback(
-    (note: any) => {
+    (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
     },
     [saveNote]
   );
   const onTagAdd = useCallback(
-    (note: any) => {
+    (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
     },
     [saveNote]
   );
   const onTagRemove = useCallback(
-    (note: any) => {
+    (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
     },
     [saveNote]
   );
   const onColor = useCallback(
-    (note: any) => {
+    (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
     },
     [saveNote]
   );
 
-  const onSelect = useCallback((n: any) => setCurrentId(n.id), []);
+  const onSelect = useCallback((n: Note) => setCurrentId(n.id), []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
   const onClose = useCallback(() => window.api.closeWindow(), []);
 

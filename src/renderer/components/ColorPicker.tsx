@@ -1,11 +1,11 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, memo } from "react";
 
 interface ColorPickerProps {
   color: string;
   onChange: (c: string) => void;
 }
 
-export default function ColorPicker({ color, onChange }: ColorPickerProps) {
+const ColorPicker = memo(function ColorPicker({ color, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen(v => !v), []);
   const colors = ['#A8D5FF', '#B4E7CE', '#FFF4A3', '#FFB5B5'];
@@ -23,4 +23,6 @@ export default function ColorPicker({ color, onChange }: ColorPickerProps) {
       ) : null}
     </div>
   );
-}
+});
+
+export default ColorPicker;

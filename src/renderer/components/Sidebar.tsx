@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, memo, useCallback } from "react";
+import type { StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
 import FolderTree from "./FolderTree";
 import InputModal from "./InputModal";
@@ -19,11 +20,11 @@ interface SidebarProps {
   onFolderRename: (id: number, newName: string) => void;
   onFolderDelete: (id: number) => void;
   folderCounts: Record<number, number>;
-  counts: Record<string, number>;
-  tags: { name: string; count: number }[];
+  counts: StatusCounts;
+  tags: Tag[];
 }
 
-export default function Sidebar({
+const Sidebar = memo(function Sidebar({
   notes,
   folders,
   view,
@@ -41,13 +42,13 @@ export default function Sidebar({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (sectionId: string) => {
+  const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections(prev => ({
       ...prev,
       [sectionId]: !prev[sectionId]
     }));
-  };
-  const Item = ({ view: v, children }: any) => (
+  }, []);
+  const Item = memo(({ view: v, children }: any) => (
     <a
       href="#"
       className={`nav-item${view === v ? " active" : ""}`}
@@ -58,7 +59,7 @@ export default function Sidebar({
     >
       {children}
     </a>
-  );
+  ));
 
   return (
     <div className="sidebar">
@@ -325,4 +326,6 @@ export default function Sidebar({
       />
     </div>
   );
-}
+});
+
+export default Sidebar;

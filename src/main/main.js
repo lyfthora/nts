@@ -1,9 +1,16 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-const fs = require("fs");
+// const fs = require("fs");
 const path = require("path");
+const Store = require("electron-store");
 
-const userDataPath = app.getPath("userData");
-const notesPath = path.join(userDataPath, "notes.json");
+// electron-store startttttttttttttttttttttttttttttttttttttttttttttttttaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+const store = new Store({
+  name: "notes-data",
+  defaults: {
+    notes: [],
+    folders: [],
+  },
+});
 
 let mainWindow = null;
 let listWindow = null;
@@ -140,100 +147,86 @@ function createDashboardWindow() {
 
 function loadNotes() {
   try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      const notes = JSON.parse(data);
-      notes.forEach((note) => createNoteWindow(note));
-    }
-  } catch (error) {
-    console.error("Error cargando notas:", error);
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error loading notes:", err);
+    return [];
+  }
+}
+function getAllNotes() {
+  try {
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
   }
 }
 
 function saveNotes(notes) {
   try {
-    let data = { folders: [], notes: [] };
-    if (fs.existsSync(notesPath)) {
-      const existing = fs.readFileSync(notesPath, "utf8");
-      const parsed = JSON.parse(existing);
-      if (!Array.isArray(parsed)) {
-        data.folders = parsed.folders || [];
-      }
-    }
-
-    data.notes = notes;
-    fs.writeFileSync(notesPath, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error("Error saving notes:", error);
+    store.set("notes", notes);
+    console.log("Notes saved successfully!");
+  } catch (err) {
+    console.error("Error saving notes:", err);
   }
-}
-
-function getAllNotes() {
-  try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      return parsed.notes || [];
-    }
-  } catch (error) {
-    console.error("Error obteniendo notas:", error);
-  }
-  return [];
 }
 
 function getAllFolders() {
   try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      const parsed = JSON.parse(data);
-      if (Array.isArray(parsed)) {
-        return [];
-      }
-      return parsed.folders || [];
-    }
-  } catch (error) {
-    console.error("Error folders:", error);
+    return store.get("folders", []);
+  } catch (err) {
+    console.error("Error reading folders:", err);
+    return [];
   }
-  return [];
 }
 
 function saveFolders(folders) {
   try {
-    let data = { folders: [], notes: [] };
-    if (fs.existsSync(notesPath)) {
-      const existing = fs.readFileSync(notesPath, "utf8");
-      const parsed = JSON.parse(existing);
-      if (!Array.isArray(parsed)) {
-        data.notes = parsed.notes || [];
-      } else {
-        data.notes = parsed;
-      }
-    }
-    data.folders = folders;
-    fs.writeFileSync(notesPath, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error("Error saving folders:", error);
+    store.set("folders", folders);
+    console.log("Folders saved successfully!");
+  } catch (err) {
+    console.error("Error saving folders:", err);
   }
 }
 
 function saveAll(notes, folders) {
   try {
-    const data = { folders, notes };
-    fs.writeFileSync(notesPath, JSON.stringify(data, null, 2));
-  } catch (error) {
-    console.error("Error saving all:", error);
+    store.set("notes", notes);
+    store.set("folders", folders);
+  } catch (err) {
+    console.error("Error saving all data:", err);
   }
 }
 
 function initializeDefaultStructure() {
-  let folders = getAllFolders();
-  let notes = getAllNotes();
+  const folders = getAllFolders();
 
-  if (!Array.isArray(folders) || !Array.isArray(notes)) {
-    saveAll(notes, folders);
+  if (folders.length === 0) {
+    const defaultFolders = [
+      {
+        id: 1,
+        name: "All Notes",
+        parentId: null,
+        isSystem: true,
+        expanded: true,
+      },
+      {
+        id: 2,
+        name: "Personal",
+        parentId: null,
+        isSystem: false,
+        expanded: true,
+      },
+      {
+        id: 3,
+        name: "Work",
+        parentId: null,
+        isSystem: false,
+        expanded: true,
+      },
+    ];
+    saveFolders(defaultFolders);
+    console.log("Default folder structure created");
   }
 
   // const indexExists = folders.find((f) => f.id === INDEX_FOLDER_ID);
@@ -485,7 +478,12 @@ ipcMain.handle("get-window-size", (event) => {
 
 //Obtener todas las notas
 ipcMain.handle("get-all-notes", () => {
-  return getAllNotes();
+  try {
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
+  }
 });
 
 //Obtener todos los recordatorios

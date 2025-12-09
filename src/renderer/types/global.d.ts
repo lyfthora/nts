@@ -1,3 +1,1 @@
-declare interface Window {
-  api: any;
-}
+export {};
