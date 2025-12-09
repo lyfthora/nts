@@ -34,6 +34,15 @@ export default function Dashboard() {
     });
     return c;
   }, [notes]);
+
+  const folderCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    folders.forEach(folder => {
+      counts[folder.id] = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
+    });
+    return counts;
+  }, [notes, folders]);
+
   const tags = useMemo(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
     const m: Record<string, number> = {};
@@ -65,9 +74,9 @@ export default function Dashboard() {
   }, []);
 
   const filteredNotes = useMemo(() => {
-
     if (selectedFolderId !== null) {
-      return notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+      const filtered = notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+      return filtered;
     }
     if (view === "trash") {
       return notes.filter((n) => n.deleted === true);
@@ -83,7 +92,7 @@ export default function Dashboard() {
       return activeNotes.filter((n) => (n.tags || []).includes(t));
     }
     return activeNotes;
-  }, [notes, view]);
+  }, [notes, view, selectedFolderId]);
 
   const onAddNote = useCallback(async () => {
     const newNote = await window.api.createNoteDashboard();
@@ -238,6 +247,7 @@ export default function Dashboard() {
         selectedFolderId={selectedFolderId}
         onViewChange={onViewChange}
         onFolderSelect={onFolderSelect}
+        folderCounts={folderCounts}
         onFolderToggle={onFolderToggle}
         onFolderCreate={onFolderCreate}
         onFolderDelete={onFolderDelete}

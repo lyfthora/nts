@@ -10,12 +10,12 @@
   cursor: pointer;
   transition: background 0.15s ease;
   border-radius: 4px;
-  margin: 2px 4px;
+  /* margin: 2px 4px; */
 }
 
-.folder-item:hover {
+/* .folder-item:hover {
   background: rgba(255, 255, 255, 0.05);
-}
+} */
 
 .folder-item.active {
   background: rgba(255, 255, 255, 0.1);
@@ -100,3 +100,10 @@
 .context-menu-item:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* .folder-count {
+  margin-left: auto;
+  color: #999;
+  font-size: 11px;
+  font-weight: 500;
+} */

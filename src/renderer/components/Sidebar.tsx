@@ -18,6 +18,7 @@ interface SidebarProps {
   onFolderCreate: (parentId: number | null, name: string) => void;
   onFolderRename: (id: number, newName: string) => void;
   onFolderDelete: (id: number) => void;
+  folderCounts: Record<number, number>;
   counts: Record<string, number>;
   tags: { name: string; count: number }[];
 }
@@ -27,6 +28,7 @@ export default function Sidebar({
   folders,
   view,
   selectedFolderId,
+  folderCounts,
   onViewChange,
   onFolderSelect,
   onFolderToggle,
@@ -37,6 +39,14 @@ export default function Sidebar({
   tags,
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
   const Item = ({ view: v, children }: any) => (
     <a
       href="#"
@@ -95,7 +105,10 @@ export default function Sidebar({
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button className="nav-collapse-btn" data-section="folders">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['folders'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('folders')}
+            >
               <svg
                 className="chevron"
                 width={12}
@@ -135,17 +148,20 @@ export default function Sidebar({
               +
             </button>
           </div>
-          <div className="nav-subsection" id="foldersSection">
-            <FolderTree
-              folders={folders}
-              selectedFolderId={selectedFolderId}
-              onSelectFolder={onFolderSelect}
-              onToggleExpand={onFolderToggle}
-              onCreateFolder={onFolderCreate}
-              onDeleteFolder={onFolderDelete}
-              onRenameFolder={onFolderRename}
-            />
-          </div>
+          {!collapsedSections['folders'] && (
+            <div className="nav-subsection" id="foldersSection">
+              <FolderTree
+                folders={folders}
+                selectedFolderId={selectedFolderId}
+                onSelectFolder={onFolderSelect}
+                folderCounts={folderCounts}
+                onToggleExpand={onFolderToggle}
+                onCreateFolder={onFolderCreate}
+                onDeleteFolder={onFolderDelete}
+                onRenameFolder={onFolderRename}
+              />
+            </div>
+          )}
         </div>
         <div className="nav-section">
           <Item view="trash">
@@ -168,7 +184,10 @@ export default function Sidebar({
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button className="nav-collapse-btn" data-section="status">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['status'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('status')}
+            >
               <svg
                 className="chevron"
                 width={12}
@@ -194,52 +213,59 @@ export default function Sidebar({
             </svg>
             <span>Status</span>
           </div>
-          <div className="nav-subsection" id="statusSection">
-            <Item view="status-active">
-              <span
-                className="status-dot status-active"
-                style={{ backgroundImage: `url(${buttonIcon})` }}
-              />
-              <span>Active</span>
-              <span className="nav-count" id="count-active">
-                {String(counts.active)}
-              </span>
-            </Item>
-            <Item view="status-onhold">
-              <span
-                className="status-dot status-onhold"
-                style={{ backgroundImage: `url(${pauseIcon})` }}
-              />
-              <span>On Hold</span>
-              <span className="nav-count" id="count-onhold">
-                {String(counts.onhold)}
-              </span>
-            </Item>
-            <Item view="status-completed">
-              <span
-                className="status-dot status-completed"
-                style={{ backgroundImage: `url(${checkedIcon})` }}
-              />
-              <span>Completed</span>
-              <span className="nav-count" id="count-completed">
-                {String(counts.completed)}
-              </span>
-            </Item>
-            <Item view="status-dropped">
-              <span
-                className="status-dot status-dropped"
-                style={{ backgroundImage: `url(${removeIcon})` }}
-              />
-              <span>Dropped</span>
-              <span className="nav-count" id="count-dropped">
-                {String(counts.dropped)}
-              </span>
-            </Item>
-          </div>
+          {!collapsedSections['status'] && (
+            <div className="nav-subsection" id="statusSection">
+              <Item view="status-active">
+                <span
+                  className="status-dot status-active"
+                  style={{ backgroundImage: `url(${buttonIcon})` }}
+                />
+                <span>Active</span>
+                <span className="nav-count" id="count-active">
+                  {String(counts.active)}
+                </span>
+              </Item>
+
+
+              <Item view="status-onhold">
+                <span
+                  className="status-dot status-onhold"
+                  style={{ backgroundImage: `url(${pauseIcon})` }}
+                />
+                <span>On Hold</span>
+                <span className="nav-count" id="count-onhold">
+                  {String(counts.onhold)}
+                </span>
+              </Item>
+              <Item view="status-completed">
+                <span
+                  className="status-dot status-completed"
+                  style={{ backgroundImage: `url(${checkedIcon})` }}
+                />
+                <span>Completed</span>
+                <span className="nav-count" id="count-completed">
+                  {String(counts.completed)}
+                </span>
+              </Item>
+              <Item view="status-dropped">
+                <span
+                  className="status-dot status-dropped"
+                  style={{ backgroundImage: `url(${removeIcon})` }}
+                />
+                <span>Dropped</span>
+                <span className="nav-count" id="count-dropped">
+                  {String(counts.dropped)}
+                </span>
+              </Item>
+            </div>
+          )}
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button className="nav-collapse-btn" data-section="tags">
+            <button
+              className={`nav-collapse-btn ${collapsedSections['tags'] ? 'collapsed' : ''}`}
+              onClick={() => toggleSection('tags')}
+            >
               <svg
                 className="chevron"
                 width={12}
@@ -265,23 +291,25 @@ export default function Sidebar({
             </svg>
             <span>Tags</span>
           </div>
-          <div className="nav-subsection" id="tagsSection">
-            {tags.map((t) => (
-              <a
-                key={t.name}
-                href="#"
-                className="nav-item nav-nested"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onViewChange(`tag-${t.name}`);
-                }}
-              >
-                <span className="tag-hash">#</span>
-                <span>{t.name}</span>
-                <span className="nav-count">{String(t.count)}</span>
-              </a>
-            ))}
-          </div>
+          {!collapsedSections['tags'] && (
+            <div className="nav-subsection" id="tagsSection">
+              {tags.map((t) => (
+                <a
+                  key={t.name}
+                  href="#"
+                  className={`nav-item nav-nested ${view === `tag-${t.name}` ? 'active' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onViewChange(`tag-${t.name}`);
+                  }}
+                >
+                  <span className="tag-hash">#</span>
+                  <span>{t.name}</span>
+                  <span className="nav-count">{String(t.count)}</span>
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </nav>
 

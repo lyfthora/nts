@@ -13,6 +13,7 @@ interface Folder {
 interface FolderTreeProps {
   folders: Folder[];
   selectedFolderId: number | null;
+  folderCounts: Record<number, number>;
   onSelectFolder: (id: number) => void;
   onToggleExpand: (id: number) => void;
   onCreateFolder: (parentId: number | null, name: string) => void;
@@ -23,6 +24,7 @@ interface FolderTreeProps {
 export default function FolderTree({
   folders,
   selectedFolderId,
+  folderCounts,
   onSelectFolder,
   onToggleExpand,
   onCreateFolder,
@@ -116,32 +118,9 @@ export default function FolderTree({
             >
               {folder.name}
             </span>
+            <span className="nav-count">{folderCounts[folder.id] || 0}</span>
 
-            {!folder.isSystem && (
-              <div className="folder-actions">
-                <button
-                  className="folder-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const name = prompt('Nombre de la subcarpeta:');
-                    if (name) onCreateFolder(folder.id, name);
-                  }}
-                  title="Add subfolder"
-                >
-                  +
-                </button>
-                <button
-                  className="folder-action-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteFolder(folder.id);
-                  }}
-                  title="Delete folder"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+
           </div>
 
           {folder.expanded && buildTree(folder.id, level + 1)}
