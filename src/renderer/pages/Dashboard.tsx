@@ -13,7 +13,9 @@ import "./Dashboard.css";
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<any[]>([]);
+  const [folders, setFolders] = useState<any[]>([]);
   const [view, setView] = useState("all-notes");
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const currentNote = useMemo(
     () => notes.find((n) => n.id === currentId) || null,
@@ -48,8 +50,14 @@ export default function Dashboard() {
 
   useEffect(() => {
     let mounted = true;
-    window.api.getAllNotes().then((ns: any[]) => {
-      if (mounted) setNotes(ns || []);
+    Promise.all([
+      window.api.getAllNotes(),
+      window.api.getAllFolders()
+    ]).then(([ns, fs]) => {
+      if (mounted) {
+        setNotes(ns || []);
+        setFolders(fs || []);
+      }
     });
     return () => {
       mounted = false;
@@ -57,6 +65,10 @@ export default function Dashboard() {
   }, []);
 
   const filteredNotes = useMemo(() => {
+
+    if (selectedFolderId !== null) {
+      return notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+    }
     if (view === "trash") {
       return notes.filter((n) => n.deleted === true);
     }
@@ -75,10 +87,14 @@ export default function Dashboard() {
 
   const onAddNote = useCallback(async () => {
     const newNote = await window.api.createNoteDashboard();
+    if (newNote && selectedFolderId) {
+      newNote.folderId = selectedFolderId;
+      await window.api.updateNote(newNote);
+    }
     const ns = await window.api.getAllNotes();
     setNotes(ns || []);
     if (newNote) setCurrentId(newNote.id);
-  }, []);
+  }, [selectedFolderId]);
 
   const saveNote = useCallback((note: any) => {
     clearTimeout(debRef.current);
@@ -112,6 +128,66 @@ export default function Dashboard() {
       setCurrentId(null);
     }
   }, []);
+
+
+  const onFolderSelect = useCallback((id: number) => {
+    setSelectedFolderId(id);
+    setView('folder');
+    setCurrentId(null);
+  }, []);
+
+  const onFolderToggle = useCallback((id: number) => {
+    setFolders(prev => {
+      const newFolders = prev.map(f =>
+        f.id === id ? { ...f, expanded: !f.expanded } : f
+      );
+      const folder = newFolders.find(f => f.id === id);
+      if (folder) window.api.updateFolder(folder);
+      return newFolders;
+    });
+  }, []);
+
+  const onFolderCreate = useCallback(async (parentId: number | null, name: string) => {
+    if (!name.trim()) return;
+
+    await window.api.createFolder({ name, parentId });
+    const fs = await window.api.getAllFolders();
+    setFolders(fs || []);
+  }, []);
+
+  const onFolderRename = useCallback(async (id: number, newName: string) => {
+    if (!newName.trim()) return;
+
+    const folder = folders.find(f => f.id === id);
+    if (folder) {
+      folder.name = newName;
+      await window.api.updateFolder(folder);
+      const fs = await window.api.getAllFolders();
+      setFolders(fs || []);
+    }
+  }, [folders]);
+
+  const onFolderDelete = useCallback(async (id: number) => {
+    if (!confirm("¿Eliminar carpeta y todo su contenido?")) return;
+
+    await window.api.deleteFolder(id);
+    const fs = await window.api.getAllFolders();
+    const ns = await window.api.getAllNotes();
+    setFolders(fs || []);
+    setNotes(ns || []);
+
+    if (selectedFolderId === id) {
+      setSelectedFolderId(null);
+      setView('all-notes');
+    }
+  }, [selectedFolderId]);
+
+
+  const onViewChange = useCallback((v: string) => {
+    setView(v);
+    setSelectedFolderId(null);
+  }, []);
+
 
   const onChange = useCallback(
     (note: any) => {
@@ -150,7 +226,6 @@ export default function Dashboard() {
   );
 
   const onSelect = useCallback((n: any) => setCurrentId(n.id), []);
-  const onViewChange = useCallback((v: string) => setView(v), []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
   const onClose = useCallback(() => window.api.closeWindow(), []);
 
@@ -158,8 +233,15 @@ export default function Dashboard() {
     <div className="dashboard-container">
       <Sidebar
         notes={notes}
+        folders={folders}
         view={view}
+        selectedFolderId={selectedFolderId}
         onViewChange={onViewChange}
+        onFolderSelect={onFolderSelect}
+        onFolderToggle={onFolderToggle}
+        onFolderCreate={onFolderCreate}
+        onFolderDelete={onFolderDelete}
+        onFolderRename={onFolderRename}
         counts={counts}
         tags={tags}
       />
@@ -187,6 +269,7 @@ export default function Dashboard() {
             isTrashView={view === "trash"}
           />
         </div>
+
       </div>
     </div>
   );

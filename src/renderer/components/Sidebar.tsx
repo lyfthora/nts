@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Sidebar.css";
+import FolderTree from "./FolderTree";
+import InputModal from "./InputModal";
 import buttonIcon from "../assets/icons/button.png";
 import pauseIcon from "../assets/icons/pause.png";
 import checkedIcon from "../assets/icons/checked.png";
@@ -7,19 +9,34 @@ import removeIcon from "../assets/icons/remove.png";
 
 interface SidebarProps {
   notes: any[];
+  folders: any[];
   view: string;
+  selectedFolderId: number | null;
   onViewChange: (v: string) => void;
+  onFolderSelect: (id: number) => void;
+  onFolderToggle: (id: number) => void;
+  onFolderCreate: (parentId: number | null, name: string) => void;
+  onFolderRename: (id: number, newName: string) => void;
+  onFolderDelete: (id: number) => void;
   counts: Record<string, number>;
   tags: { name: string; count: number }[];
 }
 
 export default function Sidebar({
   notes,
+  folders,
   view,
+  selectedFolderId,
   onViewChange,
+  onFolderSelect,
+  onFolderToggle,
+  onFolderCreate,
+  onFolderDelete,
+  onFolderRename,
   counts,
   tags,
 }: SidebarProps) {
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const Item = ({ view: v, children }: any) => (
     <a
       href="#"
@@ -76,7 +93,60 @@ export default function Sidebar({
             </span>
           </Item>
         </div>
-
+        <div className="nav-section">
+          <div className="nav-section-header">
+            <button className="nav-collapse-btn" data-section="folders">
+              <svg
+                className="chevron"
+                width={12}
+                height={12}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>Index</span>
+            <button
+              className="section-action-btn"
+              onClick={() => setShowCreateModal(true)}
+              title="New Folder"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#999',
+                cursor: 'pointer',
+                marginLeft: 'auto',
+                fontSize: '16px'
+              }}
+            >
+              +
+            </button>
+          </div>
+          <div className="nav-subsection" id="foldersSection">
+            <FolderTree
+              folders={folders}
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={onFolderSelect}
+              onToggleExpand={onFolderToggle}
+              onCreateFolder={onFolderCreate}
+              onDeleteFolder={onFolderDelete}
+              onRenameFolder={onFolderRename}
+            />
+          </div>
+        </div>
         <div className="nav-section">
           <Item view="trash">
             <svg
@@ -214,6 +284,17 @@ export default function Sidebar({
           </div>
         </div>
       </nav>
+
+      <InputModal
+        isOpen={showCreateModal}
+        title="Create Folder"
+        placeholder="Folder Name"
+        onConfirm={(name) => {
+          onFolderCreate(null, name);
+          setShowCreateModal(false);
+        }}
+        onCancel={() => setShowCreateModal(false)}
+      />
     </div>
   );
 }
