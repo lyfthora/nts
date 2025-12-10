@@ -28,7 +28,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
           <div className="no-items-message">No notes</div>
         ) : (
           notes.map(n => (
-            <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} style={{ borderLeftColor: n.color || '#667eea' }} onClick={() => onSelect(n)}>
+            <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} onClick={() => onSelect(n)}>
               <div className="note-list-item-title">
                 {n.pinned && (
                   <svg
@@ -47,6 +47,13 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                 )}
                 {n.name || 'Untitled'}
               </div>
+              {n.tags && n.tags.length > 0 && (
+                <div className="note-list-item-tags">
+                  {n.tags.map((tag: string) => (
+                    <span key={tag} className="note-tag">#{tag}</span>
+                  ))}
+                </div>
+              )}
               <div className={n.content ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{n.content || 'Empty note'}</div>
             </div>
           ))
