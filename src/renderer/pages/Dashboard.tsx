@@ -76,24 +76,36 @@ export default function Dashboard() {
   }, []);
 
   const filteredNotes = useMemo(() => {
-    if (selectedFolderId !== null) {
-      const filtered = notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
-      return filtered;
-    }
-    if (view === "trash") {
+    let filtered: Note[] = [];
+
+    if (view === "pinned") {
+
+      filtered = notes.filter((n) => !n.deleted && n.pinned);
+    } else if (selectedFolderId !== null) {
+      filtered = notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+    } else if (view === "trash") {
       return notes.filter((n) => n.deleted === true);
+    } else {
+      const activeNotes = notes.filter((n) => !n.deleted);
+      if (view === "all-notes") {
+        filtered = activeNotes;
+      } else if (view.startsWith("status-")) {
+        const s = view.replace("status-", "");
+        filtered = activeNotes.filter((n) => n.status === s);
+      } else if (view.startsWith("tag-")) {
+        const t = view.replace("tag-", "");
+        filtered = activeNotes.filter((n) => (n.tags || []).includes(t));
+      } else {
+        filtered = activeNotes;
+      }
     }
-    const activeNotes = notes.filter((n) => !n.deleted);
-    if (view === "all-notes") return activeNotes;
-    if (view.startsWith("status-")) {
-      const s = view.replace("status-", "");
-      return activeNotes.filter((n) => n.status === s);
-    }
-    if (view.startsWith("tag-")) {
-      const t = view.replace("tag-", "");
-      return activeNotes.filter((n) => (n.tags || []).includes(t));
-    }
-    return activeNotes;
+
+
+    return filtered.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return 0;
+    });
   }, [notes, view, selectedFolderId]);
 
   const onAddNote = useCallback(async () => {
@@ -237,7 +249,9 @@ export default function Dashboard() {
     },
     [saveNote]
   );
-  const onColor = useCallback(
+
+
+  const onPin = useCallback(
     (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       saveNote(note);
@@ -275,7 +289,14 @@ export default function Dashboard() {
             onAddNote={onAddNote}
             onSelect={onSelect}
             isTrashView={view === 'trash'}
-            title={view === 'trash' ? 'Trash' : view === 'all-notes' ? 'All Notes' : view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) : view.startsWith('tag-') ? `#${view.replace('tag-', '')}` : 'Notes'}
+            title={
+              view === 'trash' ? 'Trash' :
+                view === 'pinned' ? 'Pinned Notes' :
+                  view === 'all-notes' ? 'All Notes' :
+                    view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) :
+                      view.startsWith('tag-') ? `#${view.replace('tag-', '')}` :
+                        'Notes'
+            }
           />
           <EditorPanel
             note={currentNote}
@@ -286,7 +307,7 @@ export default function Dashboard() {
             onStatus={onStatus}
             onTagAdd={onTagAdd}
             onTagRemove={onTagRemove}
-            onColor={onColor}
+            onPin={onPin}
             isTrashView={view === "trash"}
           />
         </div>

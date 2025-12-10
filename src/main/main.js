@@ -271,11 +271,10 @@ ipcMain.on("create-note", (event) => {
   const { width, height } = primaryDisplay.workAreaSize;
 
   const notes = getAllNotes();
-  const noteNumber = notes.length + 1;
 
   const note = {
     id: Date.now(),
-    name: `Note ${noteNumber}`,
+    name: "",
     x: Math.floor(Math.random() * (width - 300)),
     y: Math.floor(Math.random() * (height - 300)),
     content: "",
@@ -297,11 +296,10 @@ ipcMain.handle("create-note-dashboard", (event) => {
   const { width, height } = primaryDisplay.workAreaSize;
 
   const notes = getAllNotes();
-  const noteNumber = notes.length + 1;
 
   const note = {
     id: Date.now(),
-    name: `Note ${noteNumber}`,
+    name: "",
     x: Math.floor(Math.random() * (width - 300)),
     y: Math.floor(Math.random() * (height - 300)),
     content: "",

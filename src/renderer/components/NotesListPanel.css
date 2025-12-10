@@ -88,7 +88,7 @@
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-left: 4px solid;
+  /* border-left: 4px solid #667eea; */
   border: 1px solid #3a3a3a;
 }
 
@@ -99,7 +99,7 @@
 }
 
 .note-list-item.active {
-  background: #3a4a5a;
+  background: #0d0d0d;
   border-left-color: #4a9eff;
   border-color: #4a9eff;
 }
@@ -112,7 +112,37 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
 }
+
+.pin-icon {
+  flex-shrink: 0;
+  color: #fbbf24;
+  opacity: 0.9;
+}
+
+.note-list-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+  margin-top: 6px;
+}
+
+.note-tag {
+  display: inline-block;
+  font-size: 11px;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
+
+
+
 
 .note-list-item-preview {
   color: #999;
