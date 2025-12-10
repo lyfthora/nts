@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import "./FolderTree.css";
 import InputModal from "./InputModal";
 
@@ -74,7 +75,8 @@ export default function FolderTree({
         <div key={folder.id}>
           <div
             className={`folder-item ${selectedFolderId === folder.id ? "active" : ""}`}
-            style={{ paddingLeft: `${level * 16 + 12}px` }}
+            style={{ paddingLeft: `${level * 16 + 12}px`, cursor: 'pointer' }}
+            onClick={() => onSelectFolder(folder.id)}
             onContextMenu={(e) => handleContextMenu(e, folder.id, folder.isSystem)}
           >
             <button
@@ -112,10 +114,7 @@ export default function FolderTree({
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
 
-            <span
-              className="folder-name"
-              onClick={() => onSelectFolder(folder.id)}
-            >
+            <span className="folder-name">
               {folder.name}
             </span>
             <span className="nav-count">{folderCounts[folder.id] || 0}</span>
@@ -123,7 +122,19 @@ export default function FolderTree({
 
           </div>
 
-          {folder.expanded && buildTree(folder.id, level + 1)}
+          <AnimatePresence initial={false}>
+            {folder.expanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden", pointerEvents: "auto" }}
+              >
+                {buildTree(folder.id, level + 1)}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ));
   };
