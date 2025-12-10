@@ -100,7 +100,7 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Pinned Notes</span>
             <span className="nav-count" id="pinnedCount">
-              0
+              {String(notes.filter((n: any) => !n.deleted && n.pinned).length)}
             </span>
           </Item>
         </div>
