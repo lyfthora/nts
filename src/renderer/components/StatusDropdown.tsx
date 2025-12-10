@@ -1,4 +1,5 @@
 import React, { useState, useCallback, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import './StatusDropdown.css';
 import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
@@ -43,13 +44,24 @@ const StatusDropdown = memo(function StatusDropdown({ status, onChange }: Status
         <span className="status-text" id="statusText">{text}</span>
         <svg className="status-chevron" width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><polyline points="6 9 12 15 18 9" /></svg>
       </button>
-      <div className="status-menu" id="statusMenu">
-        {Option('', 'None')}
-        {Option('active', 'Active', 'status-active')}
-        {Option('onhold', 'On Hold', 'status-onhold')}
-        {Option('completed', 'Completed', 'status-completed')}
-        {Option('dropped', 'Dropped', 'status-dropped')}
-      </div>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            className="status-menu"
+            id="statusMenu"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            {Option('', 'None')}
+            {Option('active', 'Active', 'status-active')}
+            {Option('onhold', 'On Hold', 'status-onhold')}
+            {Option('completed', 'Completed', 'status-completed')}
+            {Option('dropped', 'Dropped', 'status-dropped')}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 });
