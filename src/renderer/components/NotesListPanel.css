@@ -112,6 +112,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.pin-icon {
+  flex-shrink: 0;
+  color: #fbbf24;
+  opacity: 0.9;
 }
 
 .note-list-item-preview {
