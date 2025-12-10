@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import "./FolderTree.css";
 import InputModal from "./InputModal";
 
@@ -123,7 +124,19 @@ export default function FolderTree({
 
           </div>
 
-          {folder.expanded && buildTree(folder.id, level + 1)}
+          <AnimatePresence initial={false}>
+            {folder.expanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                {buildTree(folder.id, level + 1)}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       ));
   };
