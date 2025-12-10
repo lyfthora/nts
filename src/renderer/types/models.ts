@@ -7,6 +7,7 @@ export interface Note {
   x?: number;
   y?: number;
   deleted?: boolean;
+  pinned?: boolean;
   status?: "active" | "onhold" | "completed" | "dropped" | "";
   tags?: string[];
   folderId?: number | null;
