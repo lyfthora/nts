@@ -249,13 +249,7 @@ export default function Dashboard() {
     },
     [saveNote]
   );
-  const onColor = useCallback(
-    (note: Note) => {
-      setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
-      saveNote(note);
-    },
-    [saveNote]
-  );
+
 
   const onPin = useCallback(
     (note: Note) => {
@@ -314,7 +308,6 @@ export default function Dashboard() {
             onTagAdd={onTagAdd}
             onTagRemove={onTagRemove}
             onPin={onPin}
-            onColor={onColor}
             isTrashView={view === "trash"}
           />
         </div>
