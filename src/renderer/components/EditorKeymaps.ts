@@ -25,14 +25,7 @@ export const applyFormat = (view: EditorView, type: string): boolean => {
       insert = `# ${selectedText}`;
       cursorOffset = selectedText ? insert.length : 2;
       break;
-    case "h2":
-      insert = `## ${selectedText}`;
-      cursorOffset = selectedText ? insert.length : 3;
-      break;
-    case "h3":
-      insert = `### ${selectedText}`;
-      cursorOffset = selectedText ? insert.length : 4;
-      break;
+
     case "ul":
       insert = `- ${selectedText}`;
       cursorOffset = selectedText ? insert.length : 2;
@@ -98,6 +91,40 @@ export const markdownKeymap = Prec.highest(
     {
       key: "Mod-u",
       run: (view) => applyFormat(view, "strikethrough"),
+    },
+    {
+      key: "Mod-t",
+      run: (view) => applyFormat(view, "code"),
+    },
+    {
+      key: "Mod-q",
+      run: (view) => {
+        const line = view.state.doc.lineAt(view.state.selection.main.head);
+        view.dispatch({
+          selection: { anchor: line.from, head: line.to },
+        });
+        return true;
+      },
+    },
+    {
+      key: "Mod-.",
+      run: (view) => {
+        const line = view.state.doc.lineAt(view.state.selection.main.head);
+        view.dispatch({
+          selection: { anchor: line.to },
+        });
+        return true;
+      },
+    },
+    {
+      key: "Mod-,",
+      run: (view) => {
+        const line = view.state.doc.lineAt(view.state.selection.main.head);
+        view.dispatch({
+          selection: { anchor: line.from },
+        });
+        return true;
+      },
     },
   ])
 );
