@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { syntaxHighlighting } from "@codemirror/language";
 import { classHighlighter } from "@lezer/highlight";
@@ -9,9 +9,10 @@ import StatusDropdown from "./StatusDropdown";
 import TagsEditor from "./TagsEditor";
 import MarkdownToolbar from "./MarkdownToolbar";
 import { applyFormat, markdownKeymap } from "./EditorKeymaps";
-import { lineNumbers } from "@codemirror/view";
+import { lineNumbers, keymap } from "@codemirror/view";
 import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
+import { gotoLine } from "@codemirror/search";
 
 import "./EditorPanel.css";
 
@@ -57,6 +58,14 @@ const EditorPanel = memo(function EditorPanel({
 
         EditorView.lineWrapping,
         markdownKeymap,
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Mod-g",
+              run: gotoLine,
+            },
+          ])
+        ),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
@@ -93,7 +102,6 @@ const EditorPanel = memo(function EditorPanel({
       });
     }
   }, [note?.content]);
-
   const handleFormat = (type: string) => {
     if (!viewRef.current) return;
     applyFormat(viewRef.current, type);
