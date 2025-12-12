@@ -3,10 +3,15 @@ import { EditorView, basicSetup } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorState } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
+import { syntaxHighlighting } from "@codemirror/language";
+import { classHighlighter } from "@lezer/highlight";
 import StatusDropdown from "./StatusDropdown";
 import TagsEditor from "./TagsEditor";
 import MarkdownToolbar from "./MarkdownToolbar";
+import { applyFormat, markdownKeymap } from "./editorKeymaps";
 import { lineNumbers } from "@codemirror/view";
+import { EditorView as EditorViewWrapping } from "@codemirror/view";
+import { Strikethrough } from "@lezer/markdown";
 
 import "./EditorPanel.css";
 
@@ -46,8 +51,12 @@ const EditorPanel = memo(function EditorPanel({
       doc: note.content || "",
       extensions: [
         basicSetup,
-        markdown(),
+        markdown({ extensions: [Strikethrough] }),
         oneDark,
+        syntaxHighlighting(classHighlighter),
+
+        EditorView.lineWrapping,
+        markdownKeymap,
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
@@ -87,66 +96,8 @@ const EditorPanel = memo(function EditorPanel({
 
   const handleFormat = (type: string) => {
     if (!viewRef.current) return;
-
-    const view = viewRef.current;
-    const { from, to } = view.state.selection.main;
-    const selectedText = view.state.sliceDoc(from, to);
-
-    let insert = "";
-
-    switch (type) {
-      case "bold":
-        insert = `**${selectedText || "bold text"}**`;
-        break;
-      case "italic":
-        insert = `*${selectedText || "italic text"}*`;
-        break;
-      case "strikethrough":
-        insert = `~~${selectedText || "strikethrough"}~~`;
-        break;
-      case "h1":
-        insert = `# ${selectedText || "Heading 1"}`;
-        break;
-      case "h2":
-        insert = `## ${selectedText || "Heading 2"}`;
-        break;
-      case "h3":
-        insert = `### ${selectedText || "Heading 3"}`;
-        break;
-      case "ul":
-        insert = `- ${selectedText || "List item"}`;
-        break;
-      case "ol":
-        insert = `1. ${selectedText || "List item"}`;
-        break;
-      case "task":
-        insert = `- [ ] ${selectedText || "Task"}`;
-        break;
-      case "quote":
-        insert = `> ${selectedText || "Quote"}`;
-        break;
-      case "code":
-        insert = `\`\`\`\n${selectedText || "code"}\n\`\`\``;
-        break;
-      case "inlineCode":
-        insert = `\`${selectedText || "code"}\``;
-        break;
-      case "link":
-        insert = `[${selectedText || "text"}](url)`;
-        break;
-      case "hr":
-        insert = "\n---\n";
-        break;
-      default:
-        return;
-    }
-
-    view.dispatch({
-      changes: { from, to, insert },
-      selection: { anchor: from + insert.length },
-    });
-
-    view.focus();
+    applyFormat(viewRef.current, type);
+    viewRef.current.focus();
   };
   const toggleLineNumbers = () => {
     setShowLineNumbers(!showLineNumbers);

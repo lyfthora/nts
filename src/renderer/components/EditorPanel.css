@@ -235,9 +235,14 @@
 
 .cm-editor {
   background-color: #0d0d0d !important;
-  color: #d9d9d9 !important;
+  /* color: #d9d9d9 !important; */
 
 }
+
+.cm-content {
+  color: #d9d9d9;
+}
+
 
 .cm-gutters {
   background-color: #0d0d0d !important;
@@ -282,4 +287,69 @@
 
 .cm-scroller::-webkit-scrollbar-thumb:hover {
   background: #4a4a4a;
+}
+
+
+/* colores toolbar bold,italic.etceetecc */
+/*
+.ͼx {
+  color: #f19d34 !important;
+  font-weight: bold;
+}
+
+.ͼy {
+  color: #4a9eff !important;
+  font-style: italic;
+}
+
+/* .cm-line>span:not(.ͼx):not(.ͼy) {
+  color: #d9d9d9 !important;
+} */
+/* .cm-line del {
+  text-decoration: line-through !important;
+  color: #d9d9d9 !important;
+} */
+
+/* .ͼz {
+  color: #ffffff !important;
+  ;
+}  */
+
+.tok-strong {
+  color: #f19d34 !important;
+  font-weight: bold !important;
+}
+
+
+.tok-emphasis {
+  color: #4a9eff !important;
+  font-style: italic !important;
+}
+
+
+.tok-strikethrough {
+  text-decoration: line-through !important;
+  color: #d9d9d9 !important;
+}
+
+
+.tok-heading {
+  font-weight: bold !important;
+  font-size: 1.4em !important;
+  color: #e0e0e0 !important;
+}
+
+
+.tok-strong.tok-heading,
+.tok-heading+.tok-strong,
+span.tok-heading span.tok-strong {
+  color: #f19d34 !important;
+}
+
+
+.tok-emphasis.tok-heading,
+.tok-heading+.tok-emphasis,
+span.tok-heading span.tok-emphasis {
+  color: #4a9eff !important;
+  font-style: italic !important;
 }
