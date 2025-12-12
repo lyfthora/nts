@@ -205,9 +205,10 @@
 
 /* CodeMirror Container */
 .codemirror-container {
-  width: 100%;
+  flex: 1;
   height: 100%;
   overflow: auto;
+  transition: flex 0.3s ease;
 
 }
 
@@ -231,8 +232,8 @@
   flex: 1;
   overflow: hidden;
   display: flex;
-  flex-direction: column;
-  /* position: relative; */
+  flex-direction: row;
+  position: relative;
 }
 
 .cm-editor {
@@ -357,7 +358,7 @@ span.tok-heading span.tok-emphasis {
   font-style: italic !important;
 }
 
-*/
+
 /* busquesda (Ctrl+F) */
 
 /* coincidencias */
@@ -447,3 +448,156 @@ span.tok-heading span.tok-emphasis {
 .cm-panel.cm-gotoLine button {
   display: none !important;
 }
+
+/* Preview Toggle Button */
+.preview-toggle-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #4a4a4a;
+  background: #2d2d2d;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 100;
+}
+
+.preview-toggle-btn:hover {
+  background: #3a3a3a;
+  color: #e5e5e5;
+  border-color: #667eea;
+  transform: scale(1.1);
+}
+
+.preview-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Markdown Preview Panel */
+/* Markdown Preview Panel */
+.markdown-preview-panel {
+  flex: 1;
+  height: 100%;
+  background: #0d0d0d;
+  border-left: 1px solid #2d2d2d;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: flex 0.3s ease;
+}
+
+.markdown-preview-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.markdown-preview-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-preview-panel::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.markdown-preview-panel::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+.markdown-preview-content {
+  padding: 20px;
+  color: #e5e5e5;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Estilos para elementos Markdown renderizados */
+.markdown-preview-content h1,
+.markdown-preview-content h2,
+.markdown-preview-content h3,
+.markdown-preview-content h4,
+.markdown-preview-content h5,
+.markdown-preview-content h6 {
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-preview-content h1 {
+  font-size: 2em;
+  border-bottom: 1px solid #2d2d2d;
+  padding-bottom: 8px;
+}
+
+.markdown-preview-content h2 {
+  font-size: 1.5em;
+  border-bottom: 1px solid #2d2d2d;
+  padding-bottom: 6px;
+}
+
+.markdown-preview-content h3 {
+  font-size: 1.25em;
+}
+
+.markdown-preview-content p {
+  margin-bottom: 16px;
+}
+
+.markdown-preview-content code {
+  background: #2d2d2d;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.markdown-preview-content pre {
+  background: #2d2d2d;
+  padding: 16px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin-bottom: 16px;
+}
+
+.markdown-preview-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-preview-content a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.markdown-preview-content a:hover {
+  text-decoration: underline;
+}
+
+.markdown-preview-content ul,
+.markdown-preview-content ol {
+  margin-bottom: 16px;
+  padding-left: 2em;
+}
+
+.markdown-preview-content li {
+  margin-bottom: 4px;
+}
+
+.markdown-preview-content blockquote {
+  border-left: 4px solid #667eea;
+  padding-left: 16px;
+  margin: 16px 0;
+  color: #999;
+}
+
+/* Cambiar cursor a text */
+/* .cm-line {
+  cursor: text;
+} */

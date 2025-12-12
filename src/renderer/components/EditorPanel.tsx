@@ -1,4 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from "react";
+import { marked } from "marked";
+import { useCallback } from "react";
 import { EditorView, basicSetup } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorState, Prec } from "@codemirror/state";
@@ -13,6 +15,7 @@ import { lineNumbers, keymap } from "@codemirror/view";
 import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
 import { gotoLine } from "@codemirror/search";
+import { checkboxPlugin } from "./CheckboxWidget";
 
 import "./EditorPanel.css";
 
@@ -44,6 +47,7 @@ const EditorPanel = memo(function EditorPanel({
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     if (!editorRef.current || !note) return;
@@ -58,11 +62,19 @@ const EditorPanel = memo(function EditorPanel({
 
         EditorView.lineWrapping,
         markdownKeymap,
+        checkboxPlugin,
         Prec.highest(
           keymap.of([
             {
               key: "Mod-g",
               run: gotoLine,
+            },
+            {
+              key: "Mod-p",
+              run: () => {
+                setShowPreview(prev => !prev);
+                return true;
+              },
             },
           ])
         ),
@@ -273,6 +285,33 @@ const EditorPanel = memo(function EditorPanel({
 
       <div className="editor-body">
         <div ref={editorRef} className={`codemirror-container ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
+
+        {/* Botón de Preview */}
+        <button
+          className="preview-toggle-btn"
+          title="Toggle Preview (Ctrl+P)"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx={12} cy={12} r={3} />
+          </svg>
+        </button>
+
+        {/* Panel de Preview */}
+        {showPreview && (
+          <div className="markdown-preview-panel">
+            <div
+              className="markdown-preview-content"
+              dangerouslySetInnerHTML={{
+                __html: marked(note?.content || '', {
+                  breaks: true,
+                  gfm: true
+                })
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
