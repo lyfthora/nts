@@ -8,7 +8,7 @@ import { classHighlighter } from "@lezer/highlight";
 import StatusDropdown from "./StatusDropdown";
 import TagsEditor from "./TagsEditor";
 import MarkdownToolbar from "./MarkdownToolbar";
-import { applyFormat, markdownKeymap } from "./editorKeymaps";
+import { applyFormat, markdownKeymap } from "./EditorKeymaps";
 import { lineNumbers } from "@codemirror/view";
 import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
