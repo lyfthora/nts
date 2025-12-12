@@ -32,7 +32,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Strikethrough"
+        title="Strikethrough (Ctrl+U)"
         onClick={() => onFormat("strikethrough")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -44,26 +44,10 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Heading 1"
+        title="Heading"
         onClick={() => onFormat("h1")}
       >
-        <span className="toolbar-text">H1</span>
-      </button>
-
-      <button
-        className="toolbar-btn"
-        title="Heading 2"
-        onClick={() => onFormat("h2")}
-      >
-        <span className="toolbar-text">H2</span>
-      </button>
-
-      <button
-        className="toolbar-btn"
-        title="Heading 3"
-        onClick={() => onFormat("h3")}
-      >
-        <span className="toolbar-text">H3</span>
+        <span className="toolbar-text">H</span>
       </button>
 
       <div className="toolbar-separator"></div>
