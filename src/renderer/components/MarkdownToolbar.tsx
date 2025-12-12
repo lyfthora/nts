@@ -2,8 +2,8 @@ import React from "react";
 import "./MarkdownToolbar.css";
 
 interface MarkdownToolbarProps {
-  onFormat: (type: string) => void;
   onToggleLineNumbers: () => void;
+  onFormat: (type: string) => void;
   showLineNumbers: boolean;
 }
 
@@ -106,7 +106,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Code Block"
+        title="Code Block (Ctrl+T)"
         onClick={() => onFormat("code")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -117,7 +117,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Inline Code"
+        title="Inline Code (Ctrl+E)"
         onClick={() => onFormat("inlineCode")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -138,7 +138,6 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
         </svg>
       </button>
-
       <button
         className={`toolbar-btn ${showLineNumbers ? 'active' : ''}`}
         title="Toggle Line Numbers"

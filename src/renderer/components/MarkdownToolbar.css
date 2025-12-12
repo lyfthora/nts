@@ -3,8 +3,8 @@
   align-items: center;
   gap: 4px;
   padding: 8px 12px;
-  background: var(--bg-secondary, #0d0d0d);
-  border-bottom: 1px solid var(--border-color, #333);
+  background: #0d0d0d;
+  border-bottom: 1px solid #2d2d2d;
   flex-wrap: wrap;
 }
 
@@ -16,7 +16,7 @@
   height: 32px;
   border: none;
   background: transparent;
-  color: var(--text-secondary, #999);
+  color: #999;
   cursor: pointer;
   border-radius: 4px;
   transition: all 0.15s ease;
@@ -24,8 +24,8 @@
 }
 
 .toolbar-btn:hover {
-  background: var(--bg-hover, #2a2a2a);
-  color: var(--text-primary, #fff);
+  background: #2a2a2a;
+  color: #fff;
 }
 
 .toolbar-btn:active {
@@ -45,7 +45,7 @@
 .toolbar-separator {
   width: 1px;
   height: 20px;
-  background: var(--border-color, #333);
+  background: #2d2d2d;
   margin: 0 4px;
 }
 
