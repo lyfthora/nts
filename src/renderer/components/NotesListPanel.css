@@ -6,14 +6,14 @@
   display: flex;
   flex-direction: column;
   background: #1a1a1a;
-  border-right: 1px solid #3a3a3a;
+  border-right: 1px solid #2d2d2d;
 }
 
 .panel-header {
   padding: 16px 20px;
   min-height: 65px;
   max-height: 65px;
-  border-bottom: 1px solid #3a3a3a;
+  border-bottom: 1px solid #2d2d2d;
   background: #1a1a1a;
   display: flex;
   justify-content: space-between;
@@ -73,12 +73,12 @@
 }
 
 .notes-list-body::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: #3a3a3a;
   border-radius: 3px;
 }
 
 .notes-list-body::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: #4a4a4a;
 }
 
 .note-list-item {

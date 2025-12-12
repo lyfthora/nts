@@ -1,6 +1,21 @@
-import React, { memo } from "react";
+import React, { memo, useEffect, useRef, useState } from "react";
+import { marked } from "marked";
+import { useCallback } from "react";
+import { EditorView, basicSetup } from "codemirror";
+import { markdown } from "@codemirror/lang-markdown";
+import { EditorState, Prec } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { syntaxHighlighting } from "@codemirror/language";
+import { classHighlighter } from "@lezer/highlight";
 import StatusDropdown from "./StatusDropdown";
 import TagsEditor from "./TagsEditor";
+import MarkdownToolbar from "./MarkdownToolbar";
+import { applyFormat, markdownKeymap } from "./EditorKeymaps";
+import { lineNumbers, keymap } from "@codemirror/view";
+import { EditorView as EditorViewWrapping } from "@codemirror/view";
+import { Strikethrough } from "@lezer/markdown";
+import { gotoLine } from "@codemirror/search";
+import { checkboxPlugin } from "./CheckboxWidget";
 
 import "./EditorPanel.css";
 
@@ -13,7 +28,6 @@ interface EditorPanelProps {
   onStatus: (n: any) => void;
   onTagAdd: (n: any) => void;
   onTagRemove: (n: any) => void;
-
   onPin: (n: any) => void;
   isTrashView?: boolean;
 }
@@ -27,10 +41,89 @@ const EditorPanel = memo(function EditorPanel({
   onStatus,
   onTagAdd,
   onTagRemove,
-
   onPin,
   isTrashView,
 }: EditorPanelProps) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const [showLineNumbers, setShowLineNumbers] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!editorRef.current || !note) return;
+
+    const startState = EditorState.create({
+      doc: note.content || "",
+      extensions: [
+        basicSetup,
+        markdown({ extensions: [Strikethrough] }),
+        oneDark,
+        syntaxHighlighting(classHighlighter),
+
+        EditorView.lineWrapping,
+        markdownKeymap,
+        checkboxPlugin,
+        Prec.highest(
+          keymap.of([
+            {
+              key: "Mod-g",
+              run: gotoLine,
+            },
+            {
+              key: "Mod-p",
+              run: () => {
+                setShowPreview(prev => !prev);
+                return true;
+              },
+            },
+          ])
+        ),
+        EditorView.updateListener.of((update) => {
+          if (update.docChanged) {
+            const newContent = update.state.doc.toString();
+            onChange({ ...note, content: newContent });
+          }
+        }),
+      ],
+    });
+
+    const view = new EditorView({
+      state: startState,
+      parent: editorRef.current,
+    });
+
+    viewRef.current = view;
+
+    return () => {
+      view.destroy();
+      viewRef.current = null;
+    };
+  }, [note?.id]);
+
+  useEffect(() => {
+    if (!viewRef.current || !note) return;
+
+    const currentContent = viewRef.current.state.doc.toString();
+    if (currentContent !== note.content) {
+      viewRef.current.dispatch({
+        changes: {
+          from: 0,
+          to: currentContent.length,
+          insert: note.content || "",
+        },
+      });
+    }
+  }, [note?.content]);
+  const handleFormat = (type: string) => {
+    if (!viewRef.current) return;
+    applyFormat(viewRef.current, type);
+    viewRef.current.focus();
+  };
+  const toggleLineNumbers = () => {
+    setShowLineNumbers(!showLineNumbers);
+  };
+
+
   if (!note) {
     return (
       <div className="note-editor-panel">
@@ -51,6 +144,7 @@ const EditorPanel = memo(function EditorPanel({
       </div>
     );
   }
+
   return (
     <div className="note-editor-panel">
       <div className="editor-header">
@@ -64,16 +158,39 @@ const EditorPanel = memo(function EditorPanel({
         />
         <div className="editor-actions">
           {isTrashView ? (
-            // Botones para vista Trash
             <>
-              <button className="editor-action-btn" title="Restore Note" onClick={() => onRestore && onRestore(note)}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <button
+                className="editor-action-btn"
+                title="Restore Note"
+                onClick={() => onRestore && onRestore(note)}
+              >
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <polyline points="23 4 23 10 17 10" />
                   <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                 </svg>
               </button>
-              <button className="editor-action-btn" title="Delete Permanently" onClick={() => onDeletePermanently && onDeletePermanently(note)}>
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <button
+                className="editor-action-btn"
+                title="Delete Permanently"
+                onClick={() =>
+                  onDeletePermanently && onDeletePermanently(note)
+                }
+              >
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
                   <polyline points="3 6 5 6 21 6" />
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                   <line x1={10} y1={11} x2={10} y2={17} />
@@ -82,7 +199,6 @@ const EditorPanel = memo(function EditorPanel({
               </button>
             </>
           ) : (
-            // Botones para vista normal
             <>
               <button
                 className="editor-action-btn"
@@ -160,16 +276,45 @@ const EditorPanel = memo(function EditorPanel({
           }
         />
       </div>
+
+      <MarkdownToolbar
+        onFormat={handleFormat}
+        onToggleLineNumbers={toggleLineNumbers}
+        showLineNumbers={showLineNumbers}
+      />
+
       <div className="editor-body">
-        <textarea
-          className="note-content-editor"
-          id="noteContentEditor"
-          placeholder="Start typing..."
-          value={note.content || ""}
-          onChange={(e) => onChange({ ...note, content: e.target.value })}
-        />
+        <div ref={editorRef} className={`codemirror-container ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
+
+        {/* Botón de Preview */}
+        <button
+          className="preview-toggle-btn"
+          title="Toggle Preview (Ctrl+P)"
+          onClick={() => setShowPreview(!showPreview)}
+        >
+          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx={12} cy={12} r={3} />
+          </svg>
+        </button>
+
+        {/* Panel de Preview */}
+        {showPreview && (
+          <div className="markdown-preview-panel">
+            <div
+              className="markdown-preview-content"
+              dangerouslySetInnerHTML={{
+                __html: marked(note?.content || '', {
+                  breaks: true,
+                  gfm: true
+                })
+              }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 });
+
 export default EditorPanel;
