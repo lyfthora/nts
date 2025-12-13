@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
 import FolderTree from "./FolderTree";
@@ -132,7 +133,7 @@ const Sidebar = memo(function Sidebar({
             >
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
-            <span>Index</span>
+            <span>Notebooks</span>
             <button
               className="section-action-btn"
               onClick={() => setShowCreateModal(true)}
@@ -149,20 +150,30 @@ const Sidebar = memo(function Sidebar({
               +
             </button>
           </div>
-          {!collapsedSections['folders'] && (
-            <div className="nav-subsection" id="foldersSection">
-              <FolderTree
-                folders={folders}
-                selectedFolderId={selectedFolderId}
-                onSelectFolder={onFolderSelect}
-                folderCounts={folderCounts}
-                onToggleExpand={onFolderToggle}
-                onCreateFolder={onFolderCreate}
-                onDeleteFolder={onFolderDelete}
-                onRenameFolder={onFolderRename}
-              />
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {!collapsedSections['folders'] && (
+              <motion.div
+                className="nav-subsection"
+                id="foldersSection"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <FolderTree
+                  folders={folders}
+                  selectedFolderId={selectedFolderId}
+                  onSelectFolder={onFolderSelect}
+                  folderCounts={folderCounts}
+                  onToggleExpand={onFolderToggle}
+                  onCreateFolder={onFolderCreate}
+                  onDeleteFolder={onFolderDelete}
+                  onRenameFolder={onFolderRename}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <div className="nav-section">
           <Item view="trash">
@@ -214,52 +225,60 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Status</span>
           </div>
-          {!collapsedSections['status'] && (
-            <div className="nav-subsection" id="statusSection">
-              <Item view="status-active">
-                <span
-                  className="status-dot status-active"
-                  style={{ backgroundImage: `url(${buttonIcon})` }}
-                />
-                <span>Active</span>
-                <span className="nav-count" id="count-active">
-                  {String(counts.active)}
-                </span>
-              </Item>
+          <AnimatePresence initial={false}>
+            {!collapsedSections['status'] && (
+              <motion.div className="nav-subsection" id="statusSection"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                <Item view="status-active">
+                  <span
+                    className="status-dot status-active"
+                    style={{ backgroundImage: `url(${buttonIcon})` }}
+                  />
+                  <span>Active</span>
+                  <span className="nav-count" id="count-active">
+                    {String(counts.active)}
+                  </span>
+                </Item>
 
 
-              <Item view="status-onhold">
-                <span
-                  className="status-dot status-onhold"
-                  style={{ backgroundImage: `url(${pauseIcon})` }}
-                />
-                <span>On Hold</span>
-                <span className="nav-count" id="count-onhold">
-                  {String(counts.onhold)}
-                </span>
-              </Item>
-              <Item view="status-completed">
-                <span
-                  className="status-dot status-completed"
-                  style={{ backgroundImage: `url(${checkedIcon})` }}
-                />
-                <span>Completed</span>
-                <span className="nav-count" id="count-completed">
-                  {String(counts.completed)}
-                </span>
-              </Item>
-              <Item view="status-dropped">
-                <span
-                  className="status-dot status-dropped"
-                  style={{ backgroundImage: `url(${removeIcon})` }}
-                />
-                <span>Dropped</span>
-                <span className="nav-count" id="count-dropped">
-                  {String(counts.dropped)}
-                </span>
-              </Item>
-            </div>
-          )}
+                <Item view="status-onhold">
+                  <span
+                    className="status-dot status-onhold"
+                    style={{ backgroundImage: `url(${pauseIcon})` }}
+                  />
+                  <span>On Hold</span>
+                  <span className="nav-count" id="count-onhold">
+                    {String(counts.onhold)}
+                  </span>
+                </Item>
+                <Item view="status-completed">
+                  <span
+                    className="status-dot status-completed"
+                    style={{ backgroundImage: `url(${checkedIcon})` }}
+                  />
+                  <span>Completed</span>
+                  <span className="nav-count" id="count-completed">
+                    {String(counts.completed)}
+                  </span>
+                </Item>
+                <Item view="status-dropped">
+                  <span
+                    className="status-dot status-dropped"
+                    style={{ backgroundImage: `url(${removeIcon})` }}
+                  />
+                  <span>Dropped</span>
+                  <span className="nav-count" id="count-dropped">
+                    {String(counts.dropped)}
+                  </span>
+                </Item>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
@@ -292,25 +311,35 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Tags</span>
           </div>
-          {!collapsedSections['tags'] && (
-            <div className="nav-subsection" id="tagsSection">
-              {tags.map((t) => (
-                <a
-                  key={t.name}
-                  href="#"
-                  className={`nav-item nav-nested ${view === `tag-${t.name}` ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onViewChange(`tag-${t.name}`);
-                  }}
-                >
-                  <span className="tag-hash">#</span>
-                  <span>{t.name}</span>
-                  <span className="nav-count">{String(t.count)}</span>
-                </a>
-              ))}
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {!collapsedSections['tags'] && (
+              <motion.div
+                className="nav-subsection"
+                id="tagsSection"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: "easeInOut" }}
+                style={{ overflow: "hidden" }}
+              >
+                {tags.map((t) => (
+                  <a
+                    key={t.name}
+                    href="#"
+                    className={`nav-item nav-nested ${view === `tag-${t.name}` ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onViewChange(`tag-${t.name}`);
+                    }}
+                  >
+                    <span className="tag-hash">#</span>
+                    <span>{t.name}</span>
+                    <span className="nav-count">{String(t.count)}</span>
+                  </a>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
 
