@@ -82,7 +82,11 @@ export default function Dashboard() {
 
       filtered = notes.filter((n) => !n.deleted && n.pinned);
     } else if (selectedFolderId !== null) {
-      filtered = notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+      if (selectedFolderId === 1) {
+        filtered = notes.filter(n => !n.deleted && (n.folderId === null || n.folderId === undefined || n.folderId === 1));
+      } else {
+        filtered = notes.filter(n => !n.deleted && n.folderId === selectedFolderId);
+      }
     } else if (view === "trash") {
       return notes.filter((n) => n.deleted === true);
     } else {
@@ -300,6 +304,7 @@ export default function Dashboard() {
           />
           <EditorPanel
             note={currentNote}
+            folders={folders}
             onChange={onChange}
             onDelete={onDelete}
             onRestore={onRestore}
