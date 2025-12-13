@@ -79,28 +79,30 @@ export default function FolderTree({
             onClick={() => onSelectFolder(folder.id)}
             onContextMenu={(e) => handleContextMenu(e, folder.id, folder.isSystem)}
           >
-            <button
-              className="folder-chevron"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleExpand(folder.id);
-              }}
-            >
-              <svg
-                width={12}
-                height={12}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                style={{
-                  transform: folder.expanded ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 0.2s"
+            {!folder.isSystem && (
+              <button
+                className="folder-chevron"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand(folder.id);
                 }}
               >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
+                <svg
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  style={{
+                    transform: folder.expanded ? "rotate(90deg)" : "rotate(0deg)",
+                    transition: "transform 0.2s"
+                  }}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
 
             <svg
               width={14}
@@ -110,6 +112,7 @@ export default function FolderTree({
               stroke="currentColor"
               strokeWidth={2}
               className="folder-icon"
+              style={{ marginLeft: folder.isSystem ? '4px' : '0' }}
             >
               <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
             </svg>
