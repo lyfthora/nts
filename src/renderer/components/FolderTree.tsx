@@ -67,7 +67,7 @@ export default function FolderTree({
   };
 
 
-  // Construir árbol jerárquico
+  // aqui se contruye el arbolgod
   const buildTree = (parentId: number | null = null, level: number = 0): JSX.Element[] => {
     return folders
       .filter(f => f.parentId === parentId)
