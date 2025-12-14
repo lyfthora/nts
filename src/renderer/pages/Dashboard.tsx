@@ -14,6 +14,7 @@ import "./Dashboard.css";
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loadedContents, setLoadedContents] = useState<Map<number, string>>(new Map());
   const [folders, setFolders] = useState<Folder[]>([]);
   const [view, setView] = useState("all-notes");
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -74,6 +75,19 @@ export default function Dashboard() {
       mounted = false;
     };
   }, []);
+  useEffect(() => {
+    if (currentId && !loadedContents.has(currentId)) {
+      window.api.getNoteContent(currentId).then(content => {
+        setLoadedContents(prev => new Map(prev).set(currentId, content));
+        setNotes(prev => prev.map(n => {
+          if (n.id === currentId && n.content === undefined) {
+            return { ...n, content };
+          }
+          return n;
+        }));
+      });
+    }
+  }, [currentId, loadedContents]);
 
   const filteredNotes = useMemo(() => {
     let filtered: Note[] = [];
@@ -117,31 +131,67 @@ export default function Dashboard() {
     if (newNote && selectedFolderId) {
       newNote.folderId = selectedFolderId;
       await window.api.updateNote(newNote);
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
-    const ns = await window.api.getAllNotes();
-    setNotes(ns || []);
-    if (newNote) setCurrentId(newNote.id);
+    if (newNote) {
+      setNotes(prev => [...prev, newNote]);
+      setCurrentId(newNote.id);
+    }
   }, [selectedFolderId]);
 
   const saveNote = useCallback((note: Note) => {
+    const preview = (note.content || '')
+      .replace(/!\[.*?\]\(.*?\)/g, '')
+      .replace(/[#*_`~\[\]]/g, '')
+      .trim()
+      .substring(0, 150);
+
+    const noteWithPreview = { ...note, preview };
+
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? noteWithPreview : n)));
+
     if (debRef.current !== undefined) clearTimeout(debRef.current);
     debRef.current = setTimeout(async () => {
-      await window.api.updateNote(note);
-      setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
-    }, 500);
+
+      const imageRegex = /!\[.*?\]\((assets\/.*?)\)/g;
+      const referencedImages: string[] = [];
+      let match;
+      while ((match = imageRegex.exec(note.content || '')) !== null) {
+        referencedImages.push(match[1]);
+      }
+
+
+      if (note.images && note.images.length > 0) {
+        await window.api.cleanUnusedAssets({
+          noteId: note.id,
+          referencedImages
+        });
+      }
+
+
+      noteWithPreview.images = referencedImages;
+
+      await window.api.updateNote(noteWithPreview);
+    }, 200);
   }, []);
 
   const onDelete = useCallback(async (note: Note) => {
     await window.api.deleteNote(note.id);
-    const ns = await window.api.getAllNotes();
-    setNotes(ns || []);
+    setNotes(prev => prev.map(n =>
+      n.id === note.id ? { ...n, deleted: true } : n
+    ));
     setCurrentId(null);
   }, []);
 
-  const onRestore = useCallback(async (notes: Note) => {
-    await window.api.restoreNote(notes.id);
-    const ns = await window.api.getAllNotes();
-    setNotes(ns || []);
+  const onRestore = useCallback(async (note: Note) => {
+    await window.api.restoreNote(note.id);
+    setNotes(prev => prev.map(n => {
+      if (n.id === note.id) {
+        const { deleted, ...rest } = n;
+        return rest;
+      }
+      return n;
+    }));
     setCurrentId(null);
   }, []);
 
@@ -150,8 +200,7 @@ export default function Dashboard() {
       confirm(`Are you sure you want to delete note ${note.name} permanently?`)
     ) {
       await window.api.deleteNotePermanently(note.id);
-      const ns = await window.api.getAllNotes();
-      setNotes(ns || []);
+      setNotes(prev => prev.filter(n => n.id !== note.id));
       setCurrentId(null);
     }
   }, []);
