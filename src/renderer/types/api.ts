@@ -23,6 +23,17 @@ export interface WindowAPI {
   deleteNote: (id: number) => void;
   deleteNotePermanently: (id: number) => void;
   restoreNote: (id: number) => void;
+  getNoteContent: (noteId: number) => Promise<string>;
+  saveAsset: (data: {
+    fileBuffer: ArrayBuffer;
+    fileName: string;
+    noteId: number;
+  }) => Promise<string>;
+  cleanUnusedAssets: (data: {
+    noteId: number;
+    referencedImages: string[];
+  }) => Promise<void>;
+  getDataPath: () => Promise<string>;
 
   // Operaciones de carpetas
   getAllFolders: () => Promise<Folder[]>;

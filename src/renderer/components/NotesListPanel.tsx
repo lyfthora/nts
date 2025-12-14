@@ -88,7 +88,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                   ))}
                 </div>
               )}
-              <div className={n.content ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{n.content || 'Empty note'}</div>
+              <div className={(n.preview || n.content) ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{(n.preview || n.content) || 'Empty note'}</div>
             </div>
           ))
         )}

@@ -2,7 +2,8 @@
 export interface Note {
   id: number;
   name: string;
-  content: string;
+  content?: string;
+  preview?: string;
   color: string;
   x?: number;
   y?: number;
@@ -11,6 +12,7 @@ export interface Note {
   status?: "active" | "onhold" | "completed" | "dropped" | "";
   tags?: string[];
   folderId?: number | null;
+  images?: string[];
   reminder?: {
     date: string;
     time: string;

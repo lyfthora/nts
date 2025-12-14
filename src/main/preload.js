@@ -25,6 +25,10 @@ contextBridge.exposeInMainWorld("api", {
   deleteNotePermanently: (id) =>
     ipcRenderer.send("delete-note-permanently", id),
   restoreNote: (id) => ipcRenderer.send("restore-note", id),
+  getNoteContent: (noteId) => ipcRenderer.invoke("get-note-content", noteId),
+  saveAsset: (data) => ipcRenderer.invoke("save-asset", data),
+  cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
+  getDataPath: () => ipcRenderer.invoke("get-data-path"),
 
   // carpetas
   getAllFolders: () => ipcRenderer.invoke("get-all-folders"),
@@ -38,7 +42,6 @@ contextBridge.exposeInMainWorld("api", {
   onNoteData: (callback) => {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("note-data", handler);
-    // retornamos una función de cleanup opcional
     return () => ipcRenderer.removeListener("note-data", handler);
   },
 

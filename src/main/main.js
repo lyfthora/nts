@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 // const fs = require("fs");
 const path = require("path");
 const Store = require("electron-store");
+const storage = require("./storage.js");
 
 // electron-store startttttttttttttttttttttttttttttttttttttttttttttttttaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const store = new Store({
@@ -153,9 +154,9 @@ function loadNotes() {
     return [];
   }
 }
-function getAllNotes() {
+async function getAllNotes() {
   try {
-    return store.get("notes", []);
+    return await storage.getMetadata();
   } catch (err) {
     console.error("Error reading notes:", err);
     return [];
@@ -163,30 +164,15 @@ function getAllNotes() {
 }
 
 function saveNotes(notes) {
-  try {
-    store.set("notes", notes);
-    console.log("Notes saved successfully!");
-  } catch (err) {
-    console.error("Error saving notes:", err);
-  }
+  console.warn("saveNotes() is deprecated");
 }
 
-function getAllFolders() {
-  try {
-    return store.get("folders", []);
-  } catch (err) {
-    console.error("Error reading folders:", err);
-    return [];
-  }
+async function getAllFolders() {
+  return await storage.getAllFolders();
 }
 
-function saveFolders(folders) {
-  try {
-    store.set("folders", folders);
-    console.log("Folders saved successfully!");
-  } catch (err) {
-    console.error("Error saving folders:", err);
-  }
+async function saveFolders(folders) {
+  await storage.saveFolders(folders);
 }
 
 function saveAll(notes, folders) {
@@ -276,13 +262,10 @@ ipcMain.on("create-note", (event) => {
 });
 
 // Create note from dashboard (does NOT open floating window)
-ipcMain.handle("create-note-dashboard", (event) => {
+ipcMain.handle("create-note-dashboard", async (event) => {
   const { screen } = require("electron");
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width, height } = primaryDisplay.workAreaSize;
-
-  const notes = getAllNotes();
-
   const note = {
     id: Date.now(),
     name: "",
@@ -290,12 +273,10 @@ ipcMain.handle("create-note-dashboard", (event) => {
     y: Math.floor(Math.random() * (height - 300)),
     content: "",
     color: "#ffffff",
+    images: [],
   };
-
-  notes.push(note);
-  saveNotes(notes);
-
-  return note; // Return the created note
+  await storage.addNote(note);
+  return note;
 });
 
 // Open floating window for existing note
@@ -334,48 +315,34 @@ ipcMain.on("open-note-window", (event, noteId, x, y) => {
 });
 
 // update note
-ipcMain.on("update-note", (event, noteData) => {
-  const notes = getAllNotes();
-  const index = notes.findIndex((n) => n.id === noteData.id);
-
-  if (index !== -1) {
-    notes[index] = noteData;
-    saveNotes(notes);
+ipcMain.on("update-note", async (event, noteData) => {
+  try {
+    const { content, ...metadata } = noteData;
+    await storage.saveNoteContent(noteData.id, content || "");
+    await storage.updateMetadata(noteData.id, metadata);
+  } catch (err) {
+    console.error("Error updating note:", err);
   }
 });
 
 // delete note to trash
-ipcMain.on("delete-note", (event, noteId) => {
+ipcMain.on("delete-note", async (event, noteId) => {
   console.log("Deleting note:", noteId);
-  const notes = getAllNotes();
-  const noteIndex = notes.findIndex((n) => n.id === noteId);
-
-  if (noteIndex !== -1) {
-    notes[noteIndex].deleted = true;
-    saveNotes(notes);
-    console.log(`Note ${noteId} deleted.`);
-  }
+  await storage.deleteNote(noteId);
+  console.log(`Note ${noteId} deleted.`);
 });
 
 // restore note from trash
-ipcMain.on("restore-note", (event, noteId) => {
+ipcMain.on("restore-note", async (event, noteId) => {
   console.log("Restoring note:", noteId);
-  const notes = getAllNotes();
-  const noteIndex = notes.findIndex((n) => n.id === noteId);
-
-  if (noteIndex !== -1) {
-    delete notes[noteIndex].deleted;
-    saveNotes(notes);
-    console.log(`Note ${noteId} restored.`);
-  }
+  await storage.restoreNote(noteId);
+  console.log(`Note ${noteId} restored.`);
 });
 
 // delete note permanently
-ipcMain.on("delete-note-permanently", (event, noteId) => {
+ipcMain.on("delete-note-permanently", async (event, noteId) => {
   console.log("Deleting note permanently:", noteId);
-  let notes = getAllNotes();
-  notes = notes.filter((n) => n.id !== noteId);
-  saveNotes(notes);
+  await storage.deleteNotePermanently(noteId);
   console.log(`Note ${noteId} deleted permanently.`);
 });
 
@@ -461,12 +428,22 @@ ipcMain.handle("get-window-size", (event) => {
 });
 
 //Obtener todas las notas
-ipcMain.handle("get-all-notes", () => {
+ipcMain.handle("get-all-notes", async () => {
   try {
-    return store.get("notes", []);
+    return await storage.getMetadata();
   } catch (err) {
     console.error("Error reading notes:", err);
     return [];
+  }
+});
+
+// Obtener contenido de una nota
+ipcMain.handle("get-note-content", async (event, noteId) => {
+  try {
+    return await storage.getNoteContent(noteId);
+  } catch (err) {
+    console.error(`Error loading content for note ${noteId}:`, err);
+    return "";
   }
 });
 
@@ -491,6 +468,33 @@ ipcMain.handle("get-all-reminders", () => {
   return reminders;
 });
 
+ipcMain.handle(
+  "save-asset",
+  async (event, { fileBuffer, fileName, noteId }) => {
+    try {
+      const relativePath = await storage.saveAsset(
+        fileBuffer,
+        fileName,
+        noteId
+      );
+      return relativePath;
+    } catch (err) {
+      console.error("Error saving asset:", err);
+      throw err;
+    }
+  }
+);
+ipcMain.handle(
+  "clean-unused-assets",
+  async (event, { noteId, referencedImages }) => {
+    try {
+      await storage.cleanUnusedAssets(noteId, referencedImages);
+    } catch (err) {
+      console.error("Error cleaning assets:", err);
+    }
+  }
+);
+
 //Cancelar recordatorio
 ipcMain.on("cancel-reminder", (event, noteId) => {
   const notes = getAllNotes();
@@ -501,6 +505,10 @@ ipcMain.on("cancel-reminder", (event, noteId) => {
     saveNotes(notes);
   }
 });
+// Obtener ruta de datos
+ipcMain.handle("get-data-path", () => {
+  return storage.dataPath;
+});
 
 // Sistema de Recordatorios
 const { setReminder } = require("./reminder.js");
@@ -510,12 +518,12 @@ ipcMain.on("set-reminder", (event, data) => {
 });
 
 // obtener todas las carpetas
-ipcMain.handle("get-all-folders", () => {
-  return getAllFolders();
+ipcMain.handle("get-all-folders", async () => {
+  return await storage.getAllFolders();
 });
 // crear carpetas
-ipcMain.handle("create-folder", (event, folderData) => {
-  const folders = getAllFolders();
+ipcMain.handle("create-folder", async (event, folderData) => {
+  const folders = await getAllFolders();
   const newFolder = {
     id: Date.now(),
     type: "folder",
@@ -526,23 +534,23 @@ ipcMain.handle("create-folder", (event, folderData) => {
     createdAt: Date.now(),
   };
   folders.push(newFolder);
-  saveFolders(folders);
+  await saveFolders(folders);
   return newFolder;
 });
 
 // actualizar carpeta
-ipcMain.on("update-folder", (event, folderData) => {
-  const folders = getAllFolders();
+ipcMain.on("update-folder", async (event, folderData) => {
+  const folders = await getAllFolders();
   const index = folders.findIndex((f) => f.id === folderData.id);
   if (index !== -1) {
     folders[index] = { ...folders[index], ...folderData };
-    saveFolders(folders);
+    await saveFolders(folders);
   }
 });
 
 // eliminar carpeta (no se puede al main)
-ipcMain.on("delete-folder", (event, folderId) => {
-  const folders = getAllFolders();
+ipcMain.on("delete-folder", async (event, folderId) => {
+  const folders = await getAllFolders();
   const folder = folders.find((f) => f.id === folderId);
 
   if (folder && folder.isSystem) {
@@ -560,9 +568,9 @@ ipcMain.on("delete-folder", (event, folderId) => {
   }
 
   const remainingFolders = folders.filter((f) => !toDelete.includes(f.id));
-  saveFolders(remainingFolders);
+  await saveFolders(remainingFolders);
 
-  const notes = getAllNotes();
+  const notes = await getAllNotes();
   const updateNotes = notes.map((n) => {
     if (toDelete.includes(n.folderId)) {
       return { ...n, folderId: null };
@@ -573,22 +581,22 @@ ipcMain.on("delete-folder", (event, folderId) => {
 });
 
 //mover carpeta a otra carpeta padre
-ipcMain.on("move-folder", (event, { folderId, newParentId }) => {
-  const folders = getAllFolders();
+ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
+  const folders = await getAllFolders();
   const index = folders.findIndex((f) => f.id === folderId);
   if (index !== -1) {
     if (folderId === newParentId) return;
 
     folders[index].parentId = newParentId;
-    saveFolders(folders);
+    await saveFolders(folders);
   }
 });
 
 // CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await storage.migrateFromElectronStore();
   initializeDefaultStructure();
   createDashboardWindow();
-  // loadNotes(); // Comentado - no carga ventanas flotantes automáticamente
 });
 
 app.on("window-all-closed", () => {
