@@ -1,4 +1,4 @@
-import React, { useState, memo, useCallback } from "react";
+import React, { useState, memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
@@ -42,6 +42,9 @@ const Sidebar = memo(function Sidebar({
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const isResizing = useRef(false);
 
   const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections(prev => ({
@@ -49,6 +52,35 @@ const Sidebar = memo(function Sidebar({
       [sectionId]: !prev[sectionId]
     }));
   }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isResizing.current = true;
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 180 && newWidth <= 400) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    const handleMouseUp = () => {
+      isResizing.current = false;
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+  }, []);
+
+
   const Item = memo(({ view: v, children }: any) => (
     <a
       href="#"
@@ -63,7 +95,7 @@ const Sidebar = memo(function Sidebar({
   ));
 
   return (
-    <div className="sidebar">
+    <div className="sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }}>
       <div className="sidebar-header">
         <pre className="ascii-logo">{`█░░ ▄▀█ █ █▄░█
 █▄▄ █▀█ █ █░▀█`}</pre>
@@ -352,6 +384,10 @@ const Sidebar = memo(function Sidebar({
           setShowCreateModal(false);
         }}
         onCancel={() => setShowCreateModal(false)}
+      />
+      <div
+        className="sidebar-resize-handle"
+        onMouseDown={handleMouseDown}
       />
     </div>
   );
