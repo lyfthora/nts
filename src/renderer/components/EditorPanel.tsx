@@ -16,7 +16,7 @@ import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
 import { gotoLine } from "@codemirror/search";
 import { checkboxPlugin } from "./CheckboxWidget";
-
+import MarkdownPreview from "./MarkdownPreview";
 import "./EditorPanel.css";
 
 interface EditorPanelProps {
@@ -48,8 +48,14 @@ const EditorPanel = memo(function EditorPanel({
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const noteRef = useRef(note);
+  const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    noteRef.current = note;
+  }, [note]);
 
   const getFolderPath = useCallback((folderId: number | null | undefined): string => {
     if (!folderId || !folders || folders.length === 0) return "";
@@ -101,7 +107,11 @@ const EditorPanel = memo(function EditorPanel({
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
-            onChange({ ...note, content: newContent });
+            // Usar noteRef.current para tener la versión actualizada
+            const currentNote = noteRef.current;
+            if (currentNote) {
+              onChange({ ...currentNote, content: newContent });
+            }
           }
         }),
       ],
@@ -142,6 +152,50 @@ const EditorPanel = memo(function EditorPanel({
   const toggleLineNumbers = () => {
     setShowLineNumbers(!showLineNumbers);
   };
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (!viewRef.current || !note) return;
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file =>
+      /\.(png|jpe?g|gif|webp|svg)$/i.test(file.name)
+    );
+
+    if (imageFiles.length === 0) return;
+
+    for (const file of imageFiles) {
+
+      const buffer = await file.arrayBuffer();
+
+
+      const relativePath = await window.api.saveAsset({
+        fileBuffer: buffer,
+        fileName: file.name,
+        noteId: note.id
+      });
+
+
+      const view = viewRef.current;
+      const cursor = view.state.selection.main.head;
+      const markdown = `![](${relativePath})`;
+
+      view.dispatch({
+        changes: { from: cursor, insert: markdown + '\n' }
+      });
+    }
+  }, [note]);
 
 
   if (!note) {
@@ -304,7 +358,10 @@ const EditorPanel = memo(function EditorPanel({
       />
 
       <div className="editor-body">
-        <div ref={editorRef} className={`codemirror-container ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
+        <div ref={editorRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop} className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
 
         {/* Botón de Preview */}
         <button
@@ -319,19 +376,7 @@ const EditorPanel = memo(function EditorPanel({
         </button>
 
         {/* Panel de Preview */}
-        {showPreview && (
-          <div className="markdown-preview-panel">
-            <div
-              className="markdown-preview-content"
-              dangerouslySetInnerHTML={{
-                __html: marked(note?.content || '', {
-                  breaks: true,
-                  gfm: true
-                })
-              }}
-            />
-          </div>
-        )}
+        {showPreview && <MarkdownPreview content={note?.content || ""} />}
       </div>
     </div>
   );

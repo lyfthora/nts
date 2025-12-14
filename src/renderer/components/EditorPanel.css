@@ -170,7 +170,7 @@
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .metadata-item {
@@ -609,3 +609,35 @@ span.tok-heading span.tok-emphasis {
 /* .cm-line {
   cursor: text;
 } */
+
+/* Drag & Drop */
+/* .codemirror-container.dragging {
+  border: 2px dashed #4a9eff;
+  background-color: rgba(74, 158, 255, 0.05);
+  position: relative;
+}
+
+.codemirror-container.dragging::after {
+  content: '⬇ Suelta la imagen aquí';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  font-weight: 600;
+  color: #4a9eff;
+  pointer-events: none;
+  z-index: 1000;
+  background: rgba(13, 13, 13, 0.9);
+  padding: 16px 32px;
+  border-radius: 8px;
+  border: 1px solid #4a9eff;
+} */
+
+.markdown-preview-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 16px 0;
+  display: block;
+}
