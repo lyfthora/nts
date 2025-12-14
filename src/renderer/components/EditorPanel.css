@@ -169,6 +169,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
+  overflow: hidden;
 }
 
 .metadata-item {
@@ -178,6 +180,8 @@
   font-size: 14px;
   color: #999;
   line-height: 1.5;
+  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .metadata-folder {
@@ -201,6 +205,10 @@
 .metadata-folder-name {
   color: white;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
 /* CodeMirror Container */

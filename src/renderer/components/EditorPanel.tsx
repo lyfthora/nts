@@ -21,6 +21,7 @@ import "./EditorPanel.css";
 
 interface EditorPanelProps {
   note: any | null;
+  folders: any[];
   onChange: (n: any) => void;
   onDelete: (n: any) => void;
   onRestore?: (n: any) => void;
@@ -34,6 +35,7 @@ interface EditorPanelProps {
 
 const EditorPanel = memo(function EditorPanel({
   note,
+  folders,
   onChange,
   onDelete,
   onRestore,
@@ -48,6 +50,24 @@ const EditorPanel = memo(function EditorPanel({
   const viewRef = useRef<EditorView | null>(null);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  const getFolderPath = useCallback((folderId: number | null | undefined): string => {
+    if (!folderId || !folders || folders.length === 0) return "";
+
+    const path: string[] = [];
+    let currentId: number | null | undefined = folderId;
+
+    while (currentId) {
+      const folder = folders.find(f => f.id === currentId);
+      if (!folder) break;
+      if (!folder.isSystem) {
+        path.unshift(folder.name);
+      }
+      currentId = folder.parentId;
+    }
+    return path.join(" : ");
+  }, [folders]);
+
 
   useEffect(() => {
     if (!editorRef.current || !note) return;
@@ -252,7 +272,7 @@ const EditorPanel = memo(function EditorPanel({
           >
             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
           </svg>
-          <span className="metadata-folder-name">study</span>
+          <span className="metadata-folder-name">{getFolderPath(note.folderId) || "Index"}</span>
         </div>
         <div className="metadata-item metadata-status">
           <StatusDropdown

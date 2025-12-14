@@ -7,6 +7,9 @@
   flex-direction: column;
   background: #1a1a1a;
   border-right: 1px solid #2d2d2d;
+  position: relative;
+  min-width: 180px;
+  max-width: 400px;
 }
 
 .panel-header {
@@ -176,4 +179,16 @@
   padding: 32px 20px;
   font-size: 13px;
   font-style: italic;
+}
+
+.notes-list-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 1000;
 }

@@ -1,4 +1,4 @@
-import React, { memo } from "react";
+import React, { memo, useState, useRef, useEffect, useCallback } from "react";
 import './NotesListPanel.css';
 
 interface NotesListPanelProps {
@@ -11,8 +11,42 @@ interface NotesListPanelProps {
 }
 
 const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }: NotesListPanelProps) {
+  const [panelWidth, setPanelWidth] = useState(320);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const isResizing = useRef(false);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    isResizing.current = true;
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current || !panelRef.current) return;
+
+      const rect = panelRef.current.getBoundingClientRect();
+      const newWidth = e.clientX - rect.left;
+
+      if (newWidth >= 180 && newWidth <= 400) {
+        setPanelWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizing.current = false;
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   return (
-    <div className="notes-list-panel">
+    <div className="notes-list-panel" ref={panelRef} style={{ width: `${panelWidth}px` }}>
       <div className="panel-header">
         <h2 id="contentTitle">{title || 'All Notes'}</h2>
         <div className="panel-actions">
@@ -59,6 +93,10 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
           ))
         )}
       </div>
+      <div
+        className="notes-list-resize-handle"
+        onMouseDown={handleMouseDown}
+      />
     </div>
   );
 });

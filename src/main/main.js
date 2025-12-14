@@ -205,23 +205,9 @@ function initializeDefaultStructure() {
     const defaultFolders = [
       {
         id: 1,
-        name: "All Notes",
+        name: "Index",
         parentId: null,
         isSystem: true,
-        expanded: true,
-      },
-      {
-        id: 2,
-        name: "Personal",
-        parentId: null,
-        isSystem: false,
-        expanded: true,
-      },
-      {
-        id: 3,
-        name: "Work",
-        parentId: null,
-        isSystem: false,
         expanded: true,
       },
     ];
