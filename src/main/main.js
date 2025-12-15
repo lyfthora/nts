@@ -593,11 +593,50 @@ ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
   }
 });
 
+// Auto-Update Logic
+const { autoUpdater } = require("electron-updater");
+
+autoUpdater.autoDownload = false;
+autoUpdater.logger = console;
+
+ipcMain.handle("check-for-updates", () => {
+  if (!app.isPackaged) return null;
+  return autoUpdater.checkForUpdates();
+});
+
+ipcMain.handle("download-update", () => {
+  return autoUpdater.downloadUpdate();
+});
+
+ipcMain.on("quit-and-install", () => {
+  autoUpdater.quitAndInstall();
+});
+
+autoUpdater.on("update-available", (info) => {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send("update-available", info);
+  }
+});
+
+autoUpdater.on("update-downloaded", () => {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.webContents.send("update-downloaded");
+  }
+});
+
+autoUpdater.on("error", (err) => {
+  console.error("AutoUpdater error:", err);
+});
+
 // CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
 app.whenReady().then(async () => {
   await storage.migrateFromElectronStore();
   await initializeDefaultStructure();
   createDashboardWindow();
+
+  if (app.isPackaged) {
+    autoUpdater.checkForUpdates();
+  }
 });
 
 app.on("window-all-closed", () => {

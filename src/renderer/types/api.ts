@@ -58,6 +58,13 @@ export interface WindowAPI {
   // Utilidades de ventana
   getWindowPosition: () => Promise<[number, number]>;
   getWindowSize: () => Promise<[number, number]>;
+
+  // Auto-Update
+  checkForUpdates: () => Promise<any>;
+  downloadUpdate: () => Promise<any>;
+  quitAndInstall: () => void;
+  onUpdateAvailable: (callback: (info: any) => void) => () => void;
+  onUpdateDownloaded: (callback: () => void) => () => void;
 }
 
 declare global {

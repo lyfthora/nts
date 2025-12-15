@@ -1,0 +1,48 @@
+.update-indicator {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  position: relative;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.update-indicator:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.update-indicator.ready {
+  color: #10b981;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.update-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  border: 1px solid #1f2937;
+}

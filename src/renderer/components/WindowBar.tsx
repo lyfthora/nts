@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import './WindowBar.css';
+import UpdateIndicator from "./UpdateIndicator";
 
 interface WindowBarProps {
   onMinimize: () => void;
@@ -11,6 +12,7 @@ const WindowBar = memo(function WindowBar({ onMinimize, onClose }: WindowBarProp
     <div className="note-window-bar">
       <div className="window-title" />
       <div className="window-controls">
+        <UpdateIndicator />
         <button className="window-btn minimize-btn" onClick={onMinimize} />
         <button className="window-btn close-btn" onClick={onClose} />
       </div>
