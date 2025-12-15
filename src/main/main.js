@@ -1,39 +1,23 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
-const fs = require("fs");
+// const fs = require("fs");
 const path = require("path");
+const Store = require("electron-store");
+const storage = require("./storage.js");
 
-const userDataPath = app.getPath("userData");
-const notesPath = path.join(userDataPath, "notes.json");
+// electron-store startttttttttttttttttttttttttttttttttttttttttttttttttaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+const store = new Store({
+  name: "notes-data",
+  defaults: {
+    notes: [],
+    folders: [],
+  },
+});
 
 let mainWindow = null;
 let listWindow = null;
 let remindersListWindow = null;
+let dashboardWindow = null;
 let noteWindows = [];
-
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 400,
-    height: 115,
-    frame: false,
-    transparent: true,
-    alwaysOnTop: true,
-    resizable: false,
-    webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  mainWindow.loadFile(path.join(__dirname, "../renderer/index.html"));
-  // mainWindow.webContents.openDevTools({ mode: "detach" });
-
-  const { screen } = require("electron");
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width, height } = primaryDisplay.workAreaSize;
-
-  mainWindow.setPosition(width - 420, height - 135);
-}
 
 function createNoteWindow(note) {
   const noteWin = new BrowserWindow({
@@ -54,8 +38,9 @@ function createNoteWindow(note) {
     },
   });
 
-  noteWin.loadFile(path.join(__dirname, "../notes/note.html"));
-  // noteWin.webContents.openDevTools({ mode: "detach" });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
+  noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
@@ -69,7 +54,7 @@ function createNoteWindow(note) {
   return noteWin;
 }
 
-function createListWindow(){
+function createListWindow() {
   if (listWindow && !listWindow.isDestroyed()) {
     listWindow.show();
     listWindow.focus();
@@ -91,14 +76,15 @@ function createListWindow(){
       nodeIntegration: false,
     },
   });
-  listWindow.loadFile(path.join(__dirname, "../notes-list/notes-list.html"));
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  listWindow.loadFile(path.join(__dirname, "../windows/notes-list/index.html"));
 
   listWindow.on("closed", () => {
     listWindow = null;
   });
 }
 
-function createRemindersListWindow(){
+function createRemindersListWindow() {
   if (remindersListWindow && !remindersListWindow.isDestroyed()) {
     remindersListWindow.show();
     remindersListWindow.focus();
@@ -120,48 +106,137 @@ function createRemindersListWindow(){
       nodeIntegration: false,
     },
   });
-  remindersListWindow.loadFile(path.join(__dirname, "../reminders-list/reminders-list.html"));
-  // remindersListWindow.webContents.openDevTools({ mode: "detach" });
+  // NOTE: This path doesn't exist anymore, but keeping logic for future use
+  remindersListWindow.loadFile(
+    path.join(__dirname, "../windows/reminders-list/index.html")
+  );
 
   remindersListWindow.on("closed", () => {
     remindersListWindow = null;
   });
 }
 
+function createDashboardWindow() {
+  if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+    dashboardWindow.show();
+    dashboardWindow.focus();
+    return;
+  }
+
+  dashboardWindow = new BrowserWindow({
+    width: 1200,
+    height: 750,
+    resizable: true,
+    minWidth: 1000,
+    minHeight: 600,
+    frame: false,
+    transparent: false,
+    alwaysOnTop: false, //xd // xd //x d//xd //xd //xd //xd //xd //xd xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    webPreferences: {
+      preload: path.join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  dashboardWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
+  dashboardWindow.webContents.openDevTools({ mode: "detach" });
+
+  dashboardWindow.on("closed", () => {
+    dashboardWindow = null;
+  });
+}
 
 function loadNotes() {
   try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      const notes = JSON.parse(data);
-      notes.forEach((note) => createNoteWindow(note));
-    }
-  } catch (error) {
-    console.error("Error cargando notas:", error);
+    return store.get("notes", []);
+  } catch (err) {
+    console.error("Error loading notes:", err);
+    return [];
+  }
+}
+async function getAllNotes() {
+  try {
+    return await storage.getMetadata();
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
   }
 }
 
 function saveNotes(notes) {
+  console.warn("saveNotes() is deprecated");
+}
+
+async function getAllFolders() {
+  return await storage.getAllFolders();
+}
+
+async function saveFolders(folders) {
+  await storage.saveFolders(folders);
+}
+
+function saveAll(notes, folders) {
   try {
-    fs.writeFileSync(notesPath, JSON.stringify(notes, null, 2));
-  } catch (error) {
-    console.error("Error guardando notas:", error);
+    store.set("notes", notes);
+    store.set("folders", folders);
+  } catch (err) {
+    console.error("Error saving all data:", err);
   }
 }
 
-function getAllNotes() {
-  try {
-    if (fs.existsSync(notesPath)) {
-      const data = fs.readFileSync(notesPath, "utf8");
-      return JSON.parse(data);
-    }
-  } catch (error) {
-    console.error("Error obteniendo notas:", error);
-  }
-  return [];
-}
+async function initializeDefaultStructure() {
+  const folders = await getAllFolders();
 
+  const indexExists = folders.find((f) => f.id === 1);
+
+  if (!indexExists) {
+    const indexFolder = {
+      id: 1,
+      name: "Index",
+      parentId: null,
+      isSystem: true,
+      expanded: true,
+    };
+    folders.push(indexFolder);
+    await saveFolders(folders);
+    console.log("System folder 'Index' created");
+  }
+
+  // const indexExists = folders.find((f) => f.id === INDEX_FOLDER_ID);
+  // if (!indexExists) {
+  //   folders.push({
+  //     id: INDEX_FOLDER_ID,
+  //     type: "folder",
+  //     name: "Index",
+  //     parentId: null,
+  //     isSystem: true,
+  //     expanded: true,
+  //     createdAt: Date.now(),
+  //   });
+  //   console.log("Folder Index created");
+  // }
+
+  // const guideExists = notes.find((n) => n.id === GUIDE_NOTE_ID);
+  // if (!guideExists) {
+  //   notes.push({
+  //     id: GUIDE_NOTE_ID,
+  //     type: "note",
+  //     name: "Guide",
+  //     folderId: INDEX_FOLDER_ID,
+  //     isSystem: true,
+  //     content:
+  //       "# Bienvenido a tu app de notas\n\nEsta es la nota guía del sistema.\n\n## Características:\n- Organiza tus notas en carpetas\n- Usa etiquetas para categorizar\n- Establece estados (Active, On Hold, etc.)\n- Mueve notas a la papelera",
+  //     color: "#667eea",
+  //     status: "",
+  //     tags: [],
+  //     deleted: false,
+  //   });
+  //   console.log("Guide note created");
+  // }
+  // saveAll(notes, folders);
+}
 // IPC handlers
+// Create note from main window (opens floating window)
 ipcMain.on("create-note", (event) => {
   console.log("IPC 'create-note' recibido en main.js");
   const { screen } = require("electron");
@@ -169,18 +244,16 @@ ipcMain.on("create-note", (event) => {
   const { width, height } = primaryDisplay.workAreaSize;
 
   const notes = getAllNotes();
-  const noteNumber = notes.length + 1;
 
   const note = {
     id: Date.now(),
-    name: `Note ${noteNumber}`,
+    name: "",
     x: Math.floor(Math.random() * (width - 300)),
     y: Math.floor(Math.random() * (height - 300)),
     content: "",
     color: "#ffffff",
   };
   console.log("Nueva nota creada:", note);
-
 
   notes.push(note);
   saveNotes(notes);
@@ -189,28 +262,92 @@ ipcMain.on("create-note", (event) => {
   createNoteWindow(note);
 });
 
-ipcMain.on("update-note", (event, noteData) => {
-  const notes = getAllNotes();
-  const index = notes.findIndex((n) => n.id === noteData.id);
+// Create note from dashboard (does NOT open floating window)
+ipcMain.handle("create-note-dashboard", async (event) => {
+  const { screen } = require("electron");
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+  const note = {
+    id: Date.now(),
+    name: "",
+    x: Math.floor(Math.random() * (width - 300)),
+    y: Math.floor(Math.random() * (height - 300)),
+    content: "",
+    color: "#ffffff",
+    images: [],
+  };
+  await storage.addNote(note);
+  return note;
+});
 
-  if (index !== -1) {
-    notes[index] = noteData;
-    saveNotes(notes);
+// Open floating window for existing note
+ipcMain.on("open-note-window", (event, noteId, x, y) => {
+  const notes = getAllNotes();
+  const note = notes.find((n) => n.id === noteId);
+
+  if (note) {
+    const existingWindow = noteWindows.find((win) => {
+      if (!win.isDestroyed()) {
+        const [x, y] = win.getPosition();
+        return x === note.x && y === note.y;
+      }
+      return false;
+    });
+
+    if (existingWindow && !existingWindow.isDestroyed()) {
+      if (x !== undefined && y !== undefined) {
+        existingWindow.setPosition(x, y);
+      }
+      existingWindow.show();
+      existingWindow.focus();
+    } else {
+      if (x !== undefined && y !== undefined) {
+        note.x = x;
+        note.y = y;
+        const noteIndex = notes.findIndex((n) => n.id === noteId);
+        if (noteIndex !== -1) {
+          notes[noteIndex] = note;
+          saveNotes(notes);
+        }
+      }
+      createNoteWindow(note);
+    }
   }
 });
 
-ipcMain.on("delete-note", (event, noteId) => {
-  console.log("Eliminando nota:", noteId);
-  let notes = getAllNotes();
-  const originalLength = notes.length;
-  notes = notes.filter((n) => n.id !== noteId);
-  console.log(`Notas antes: ${originalLength}, después: ${notes.length}`);
-  saveNotes(notes);
-
-  // const win = BrowserWindow.fromWebContents(event.sender);
-  // if (win) win.destroy();
+// update note
+ipcMain.on("update-note", async (event, noteData) => {
+  try {
+    const { content, ...metadata } = noteData;
+    await storage.saveNoteContent(noteData.id, content || "");
+    await storage.updateMetadata(noteData.id, metadata);
+  } catch (err) {
+    console.error("Error updating note:", err);
+  }
 });
 
+// delete note to trash
+ipcMain.on("delete-note", async (event, noteId) => {
+  console.log("Deleting note:", noteId);
+  await storage.deleteNote(noteId);
+  console.log(`Note ${noteId} deleted.`);
+});
+
+// restore note from trash
+ipcMain.on("restore-note", async (event, noteId) => {
+  console.log("Restoring note:", noteId);
+  await storage.restoreNote(noteId);
+  console.log(`Note ${noteId} restored.`);
+});
+
+// delete note permanently
+ipcMain.on("delete-note-permanently", async (event, noteId) => {
+  console.log("Deleting note permanently:", noteId);
+  await storage.deleteNotePermanently(noteId);
+  console.log(`Note ${noteId} deleted permanently.`);
+});
+
+// show all notes
 ipcMain.on("show-all-notes", () => {
   noteWindows.forEach((win) => {
     if (!win.isDestroyed()) {
@@ -219,23 +356,26 @@ ipcMain.on("show-all-notes", () => {
   });
 });
 
-ipcMain.on("show-note-by-id", (event, noteIde) =>{
- const noteWin = noteWindows.find ((win) => {
-  if (!win.isDestroyed ()){
-    const notes = getAllNotes();
-    const note = notes.find((n) => n.id === noteIde);
-    if (note){
-      const [x, y] = win.getPosition();
-      return x === note.x && y === note.y;
+ipcMain.on("show-note-by-id", (event, noteIde) => {
+  const noteWin = noteWindows.find((win) => {
+    if (!win.isDestroyed()) {
+      const notes = getAllNotes();
+      const note = notes.find((n) => n.id === noteIde);
+      if (note) {
+        const [x, y] = win.getPosition();
+        return x === note.x && y === note.y;
+      }
     }
+    return false;
+  });
+  if (noteWin && !noteWin.isDestroyed()) {
+    noteWin.show();
+    noteWin.focus();
   }
-  return false;
- });
- if (noteWin && !noteWin.isDestroyed()){
-  noteWin.show();
-  noteWin.focus();
- }
+});
 
+ipcMain.on("open-dashboard", () => {
+  createDashboardWindow();
 });
 
 ipcMain.on("open-notes-list", () => {
@@ -289,8 +429,23 @@ ipcMain.handle("get-window-size", (event) => {
 });
 
 //Obtener todas las notas
-ipcMain.handle("get-all-notes", () => {
-return getAllNotes();
+ipcMain.handle("get-all-notes", async () => {
+  try {
+    return await storage.getMetadata();
+  } catch (err) {
+    console.error("Error reading notes:", err);
+    return [];
+  }
+});
+
+// Obtener contenido de una nota
+ipcMain.handle("get-note-content", async (event, noteId) => {
+  try {
+    return await storage.getNoteContent(noteId);
+  } catch (err) {
+    console.error(`Error loading content for note ${noteId}:`, err);
+    return "";
+  }
 });
 
 //Obtener todos los recordatorios
@@ -314,6 +469,33 @@ ipcMain.handle("get-all-reminders", () => {
   return reminders;
 });
 
+ipcMain.handle(
+  "save-asset",
+  async (event, { fileBuffer, fileName, noteId }) => {
+    try {
+      const relativePath = await storage.saveAsset(
+        fileBuffer,
+        fileName,
+        noteId
+      );
+      return relativePath;
+    } catch (err) {
+      console.error("Error saving asset:", err);
+      throw err;
+    }
+  }
+);
+ipcMain.handle(
+  "clean-unused-assets",
+  async (event, { noteId, referencedImages }) => {
+    try {
+      await storage.cleanUnusedAssets(noteId, referencedImages);
+    } catch (err) {
+      console.error("Error cleaning assets:", err);
+    }
+  }
+);
+
 //Cancelar recordatorio
 ipcMain.on("cancel-reminder", (event, noteId) => {
   const notes = getAllNotes();
@@ -324,6 +506,10 @@ ipcMain.on("cancel-reminder", (event, noteId) => {
     saveNotes(notes);
   }
 });
+// Obtener ruta de datos
+ipcMain.handle("get-data-path", () => {
+  return storage.dataPath;
+});
 
 // Sistema de Recordatorios
 const { setReminder } = require("./reminder.js");
@@ -332,9 +518,86 @@ ipcMain.on("set-reminder", (event, data) => {
   setReminder(ipcMain, getAllNotes, noteWindows, data);
 });
 
-app.whenReady().then(() => {
-  createMainWindow();
-  loadNotes();
+// obtener todas las carpetas
+ipcMain.handle("get-all-folders", async () => {
+  return await storage.getAllFolders();
+});
+// crear carpetas
+ipcMain.handle("create-folder", async (event, folderData) => {
+  const folders = await getAllFolders();
+  const newFolder = {
+    id: Date.now(),
+    type: "folder",
+    name: folderData.name || "New Folder",
+    parentId: folderData.parentId || null,
+    isSystem: false,
+    expanded: true,
+    createdAt: Date.now(),
+  };
+  folders.push(newFolder);
+  await saveFolders(folders);
+  return newFolder;
+});
+
+// actualizar carpeta
+ipcMain.on("update-folder", async (event, folderData) => {
+  const folders = await getAllFolders();
+  const index = folders.findIndex((f) => f.id === folderData.id);
+  if (index !== -1) {
+    folders[index] = { ...folders[index], ...folderData };
+    await saveFolders(folders);
+  }
+});
+
+// eliminar carpeta (no se puede al main)
+ipcMain.handle("delete-folder", async (event, folderId) => {
+  const folders = await getAllFolders();
+  const folder = folders.find((f) => f.id === folderId);
+
+  if (folder && folder.isSystem) {
+    console.log("Cannot delete system folder");
+    return;
+  }
+
+  const toDelete = [folderId];
+  let i = 0;
+  while (i < toDelete.length) {
+    const currentId = toDelete[i];
+    const subfolders = folders.filter((f) => f.parentId === currentId);
+    toDelete.push(...subfolders.map((f) => f.id));
+    i++;
+  }
+
+  const remainingFolders = folders.filter((f) => !toDelete.includes(f.id));
+  await saveFolders(remainingFolders);
+
+  const notes = await getAllNotes();
+  const updateNotes = notes.map((n) => {
+    if (toDelete.includes(n.folderId)) {
+      return { ...n, deleted: true, folderId: 1 };
+    }
+    return n;
+  });
+  await storage.saveNotesMetadata(updateNotes);
+});
+
+//mover carpeta a otra carpeta padre
+ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
+  const folders = await getAllFolders();
+  const index = folders.findIndex((f) => f.id === folderId);
+  if (index !== -1) {
+    if (folderId === newParentId) return;
+
+    folders[index].parentId = newParentId;
+    await saveFolders(folders);
+  }
+});
+
+// CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
+app.whenReady().then(async () => {
+  await storage.migrateFromElectronStore();
+  await initializeDefaultStructure();
+  createDashboardWindow();
 });
 
 app.on("window-all-closed", () => {

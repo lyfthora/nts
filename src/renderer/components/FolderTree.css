@@ -1,0 +1,109 @@
+.folder-tree {
+  margin: 4px 0;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  border-radius: 4px;
+  /* margin: 2px 4px; */
+}
+
+/* .folder-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+} */
+
+.folder-item.active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.folder-chevron {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.folder-icon {
+  color: #fbbf24;
+  flex-shrink: 0;
+}
+
+.folder-name {
+  flex: 1;
+  font-size: 13px;
+  color: #e5e5e5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-actions {
+  display: none;
+  gap: 4px;
+}
+
+.folder-item:hover .folder-actions {
+  display: flex;
+}
+
+.folder-action-btn {
+  background: transparent;
+  border: 1px solid #4a4a4a;
+  color: #999;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.folder-action-btn:hover {
+  background: #3a3a3a;
+  color: #e5e5e5;
+  border-color: #5a5a5a;
+}
+
+.context-menu {
+  position: fixed;
+  background: #2d2d2d;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 4px 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 150px;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  color: #e5e5e5;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.15s ease;
+}
+
+.context-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* .folder-count {
+  margin-left: auto;
+  color: #999;
+  font-size: 11px;
+  font-weight: 500;
+} */

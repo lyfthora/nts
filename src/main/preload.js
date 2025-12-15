@@ -3,13 +3,15 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("api", {
   // acciones de la ventana main
   createNote: () => ipcRenderer.send("create-note"),
+  createNoteDashboard: () => ipcRenderer.invoke("create-note-dashboard"),
+  openNoteWindow: (noteId, x, y) =>
+    ipcRenderer.send("open-note-window", noteId, x, y),
   showAllNotes: () => ipcRenderer.send("show-all-notes"),
   getAllNotes: () => ipcRenderer.invoke("get-all-notes"),
   showNoteById: (noteId) => ipcRenderer.send("show-note-by-id", noteId),
   openNotesList: () => ipcRenderer.send("open-notes-list"),
   openRemindersList: () => ipcRenderer.send("open-reminders-list"),
-  minimizeMain: () => ipcRenderer.send("window-minimize"),
-  closeMain: () => ipcRenderer.send("window-close"),
+  openDashboard: () => ipcRenderer.send("open-dashboard"),
 
   // acciones (nota o main)
   minimizeWindow: () => ipcRenderer.send("window-minimize"),
@@ -20,12 +22,26 @@ contextBridge.exposeInMainWorld("api", {
   // Notas: enviar/recibir
   updateNote: (note) => ipcRenderer.send("update-note", note),
   deleteNote: (id) => ipcRenderer.send("delete-note", id),
+  deleteNotePermanently: (id) =>
+    ipcRenderer.send("delete-note-permanently", id),
+  restoreNote: (id) => ipcRenderer.send("restore-note", id),
+  getNoteContent: (noteId) => ipcRenderer.invoke("get-note-content", noteId),
+  saveAsset: (data) => ipcRenderer.invoke("save-asset", data),
+  cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
+  getDataPath: () => ipcRenderer.invoke("get-data-path"),
+
+  // carpetas
+  getAllFolders: () => ipcRenderer.invoke("get-all-folders"),
+  createFolder: (folderData) => ipcRenderer.invoke("create-folder", folderData),
+  updateFolder: (folder) => ipcRenderer.send("update-folder", folder),
+  deleteFolder: (id) => ipcRenderer.invoke("delete-folder", id),
+  moveFolder: (folderId, newParentId) =>
+    ipcRenderer.send("move-folder", { folderId, newParentId }),
 
   // recibir datos de la nota
   onNoteData: (callback) => {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("note-data", handler);
-    // retornamos una función de cleanup opcional
     return () => ipcRenderer.removeListener("note-data", handler);
   },
 

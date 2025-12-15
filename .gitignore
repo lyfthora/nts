@@ -2,7 +2,7 @@
 // ignorar node node_modules
 node_modules/
 .agent
-
+dist
 dist/
 build/
 .vscode/
