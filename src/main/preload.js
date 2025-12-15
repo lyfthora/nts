@@ -56,4 +56,20 @@ contextBridge.exposeInMainWorld("api", {
   // Recordatorios - lista
   getAllReminders: () => ipcRenderer.invoke("get-all-reminders"),
   cancelReminder: (noteId) => ipcRenderer.send("cancel-reminder", noteId),
+
+  // Auto-Update
+  checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
+  downloadUpdate: () => ipcRenderer.invoke("download-update"),
+  quitAndInstall: () => ipcRenderer.send("quit-and-install"),
+
+  onUpdateAvailable: (callback) => {
+    const handler = (event, info) => callback(info);
+    ipcRenderer.on("update-available", handler);
+    return () => ipcRenderer.removeListener("update-available", handler);
+  },
+  onUpdateDownloaded: (callback) => {
+    const handler = (event) => callback();
+    ipcRenderer.on("update-downloaded", handler);
+    return () => ipcRenderer.removeListener("update-downloaded", handler);
+  },
 });

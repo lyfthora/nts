@@ -1,11 +1,12 @@
 {
   "name": "nts",
   "version": "1.0.0",
-  "description": "",
+  "description": "A simple note taking app",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",
     "build": "node scripts/build.js",
+    "dist": "npm run build && electron-builder",
     "dev": "node scripts/build.js --watch",
     "typecheck": "tsc --noEmit",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,7 +16,7 @@
     "url": "git+https://github.com/lyfthora/nts.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "lyfthora",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
@@ -26,6 +27,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "electron": "^39.1.2",
+    "electron-builder": "^26.0.12",
     "esbuild": "^0.23.0",
     "typescript": "^5.6.3"
   },
@@ -42,10 +44,30 @@
     "@lezer/markdown": "^1.6.1",
     "codemirror": "^6.0.2",
     "electron-store": "^8.2.0",
+    "electron-updater": "^6.6.2",
     "framer-motion": "^12.23.25",
     "marked": "^17.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.10.1"
+  },
+  "build": {
+    "appId": "com.lyfthora.nts",
+    "productName": "NTS",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "lyfthora",
+        "repo": "nts"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*",
+      "package.json"
+    ]
   }
 }
