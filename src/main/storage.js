@@ -260,6 +260,16 @@ class Storage {
       console.error("Error guardando folders:", err);
     }
   }
+  async saveNotesMetadata(notes) {
+    try {
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      parsed.notes = notes;
+      await fs.writeFile(this.metadataPath, JSON.stringify(parsed, null, 2));
+    } catch (err) {
+      console.error("Error guardando metadata de notas:", err);
+    }
+  }
 }
 
 const storage = new Storage();
