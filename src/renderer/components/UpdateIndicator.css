@@ -3,14 +3,15 @@
   border: none;
   color: #9ca3af;
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 0 4px;
+  margin: -2px 0 0 0;
+  border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
   position: relative;
-  margin-right: 8px;
+  margin-right: 4px;
   -webkit-app-region: no-drag;
 }
 
@@ -26,14 +27,16 @@
 .spinner {
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
   border-top-color: #fff;
   animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .update-badge {

@@ -40,7 +40,7 @@ function createNoteWindow(note) {
 
   // NOTE: This path doesn't exist anymore, but keeping logic for future use
   noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
-  noteWin.webContents.openDevTools({ mode: "detach" });
+  // noteWin.webContents.openDevTools({ mode: "detach" });
 
   noteWin.webContents.on("did-finish-load", () => {
     noteWin.webContents.send("note-data", note);
@@ -139,7 +139,7 @@ function createDashboardWindow() {
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
-  dashboardWindow.webContents.openDevTools({ mode: "detach" });
+  // dashboardWindow.webContents.openDevTools({ mode: "detach" });
 
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
