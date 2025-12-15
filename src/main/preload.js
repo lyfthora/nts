@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld("api", {
   getAllFolders: () => ipcRenderer.invoke("get-all-folders"),
   createFolder: (folderData) => ipcRenderer.invoke("create-folder", folderData),
   updateFolder: (folder) => ipcRenderer.send("update-folder", folder),
-  deleteFolder: (id) => ipcRenderer.send("delete-folder", id),
+  deleteFolder: (id) => ipcRenderer.invoke("delete-folder", id),
   moveFolder: (folderId, newParentId) =>
     ipcRenderer.send("move-folder", { folderId, newParentId }),
 
