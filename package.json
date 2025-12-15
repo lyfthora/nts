@@ -55,6 +55,9 @@
     "appId": "com.lyfthora.nts",
     "productName": "NTS",
     "artifactName": "${productName}.Setup.${version}.${ext}",
+    "directories": {
+      "output": "release"
+    },
     "publish": [
       {
         "provider": "github",
