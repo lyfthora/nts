@@ -184,21 +184,22 @@ function saveAll(notes, folders) {
   }
 }
 
-function initializeDefaultStructure() {
-  const folders = getAllFolders();
+async function initializeDefaultStructure() {
+  const folders = await getAllFolders();
 
-  if (folders.length === 0) {
-    const defaultFolders = [
-      {
-        id: 1,
-        name: "Index",
-        parentId: null,
-        isSystem: true,
-        expanded: true,
-      },
-    ];
-    saveFolders(defaultFolders);
-    console.log("Default folder structure created");
+  const indexExists = folders.find((f) => f.id === 1);
+
+  if (!indexExists) {
+    const indexFolder = {
+      id: 1,
+      name: "Index",
+      parentId: null,
+      isSystem: true,
+      expanded: true,
+    };
+    folders.push(indexFolder);
+    await saveFolders(folders);
+    console.log("System folder 'Index' created");
   }
 
   // const indexExists = folders.find((f) => f.id === INDEX_FOLDER_ID);
@@ -549,7 +550,7 @@ ipcMain.on("update-folder", async (event, folderData) => {
 });
 
 // eliminar carpeta (no se puede al main)
-ipcMain.on("delete-folder", async (event, folderId) => {
+ipcMain.handle("delete-folder", async (event, folderId) => {
   const folders = await getAllFolders();
   const folder = folders.find((f) => f.id === folderId);
 
@@ -573,11 +574,11 @@ ipcMain.on("delete-folder", async (event, folderId) => {
   const notes = await getAllNotes();
   const updateNotes = notes.map((n) => {
     if (toDelete.includes(n.folderId)) {
-      return { ...n, folderId: null };
+      return { ...n, deleted: true, folderId: 1 };
     }
     return n;
   });
-  saveNotes(updateNotes);
+  await storage.saveNotesMetadata(updateNotes);
 });
 
 //mover carpeta a otra carpeta padre
@@ -595,7 +596,7 @@ ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
 // CHANGED: Solo abre el dashboard al inicio, no carga ventanas flotantes
 app.whenReady().then(async () => {
   await storage.migrateFromElectronStore();
-  initializeDefaultStructure();
+  await initializeDefaultStructure();
   createDashboardWindow();
 });
 
