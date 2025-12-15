@@ -62,7 +62,8 @@
       }
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "src/renderer/assets/icons/logoo.png"
     },
     "files": [
       "dist/**/*",
