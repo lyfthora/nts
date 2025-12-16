@@ -243,15 +243,19 @@ export default function Dashboard() {
   const onFolderRename = useCallback(async (id: number, newName: string) => {
     if (!newName.trim()) return;
 
-    const folder = folders.find(f => f.id === id);
-    if (folder) {
-      folder.name = newName;
-      await window.api.updateFolder(folder);
-      const data = await window.api.getAllData();
-      setFolders(data.folders || []);
-      setNotes(data.notes || []);
-    }
-  }, [folders]);
+    setFolders(prev => {
+      const updatedFolders = prev.map(f =>
+        f.id === id ? { ...f, name: newName } : f
+      );
+
+      const folder = updatedFolders.find(f => f.id === id);
+      if (folder) {
+        window.api.updateFolder(folder);
+      }
+
+      return updatedFolders;
+    });
+  }, []);
 
   const onFolderDelete = useCallback(async (id: number) => {
     if (!confirm("¿Eliminar carpeta y todo su contenido?")) return;
