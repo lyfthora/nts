@@ -7,6 +7,7 @@ export interface WindowAPI {
   openNoteWindow: (noteId: number, x: number, y: number) => void;
   showAllNotes: () => void;
   getAllNotes: () => Promise<Note[]>;
+  getAllData: () => Promise<{ notes: Note[]; folders: Folder[] }>;
   showNoteById: (noteId: number) => void;
   openNotesList: () => void;
   openRemindersList: () => void;
@@ -65,6 +66,9 @@ export interface WindowAPI {
   quitAndInstall: () => void;
   onUpdateAvailable: (callback: (info: any) => void) => () => void;
   onUpdateDownloaded: (callback: () => void) => () => void;
+  // onInitialData: (
+  //   callback: (data: { notes: Note[]; folders: Folder[] }) => void
+  // ) => () => void;
 }
 
 declare global {
