@@ -14,3 +14,8 @@ coverage/
 *.log
 *.tsbuildinfo
 
+tests/
+test-results/
+playwright.config.ts
+playwright-report/
+test-data-*
