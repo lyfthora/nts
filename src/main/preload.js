@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.send("open-note-window", noteId, x, y),
   showAllNotes: () => ipcRenderer.send("show-all-notes"),
   getAllNotes: () => ipcRenderer.invoke("get-all-notes"),
+  getAllData: () => ipcRenderer.invoke("get-all-data"),
   showNoteById: (noteId) => ipcRenderer.send("show-note-by-id", noteId),
   openNotesList: () => ipcRenderer.send("open-notes-list"),
   openRemindersList: () => ipcRenderer.send("open-reminders-list"),
@@ -72,4 +73,9 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.on("update-downloaded", handler);
     return () => ipcRenderer.removeListener("update-downloaded", handler);
   },
+  // onInitialData: (callback) => {
+  //   const handler = (event, data) => callback(data);
+  //   ipcRenderer.once("initial-data", handler);
+  //   return () => ipcRenderer.removeListener("initial-data", handler);
+  // },
 });

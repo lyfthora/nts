@@ -116,7 +116,7 @@ function createRemindersListWindow() {
   });
 }
 
-function createDashboardWindow() {
+async function createDashboardWindow() {
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
     dashboardWindow.show();
     dashboardWindow.focus();
@@ -131,15 +131,27 @@ function createDashboardWindow() {
     minHeight: 600,
     frame: false,
     transparent: false,
-    alwaysOnTop: false, //xd // xd //x d//xd //xd //xd //xd //xd //xd xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    alwaysOnTop: false,
+    show: false,
+    backgroundColor: "#1a1a1a",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
   dashboardWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
   // dashboardWindow.webContents.openDevTools({ mode: "detach" });
+
+  // Esperar 1 segundo después de que React esté listo para asegurar que los datos estén cargados
+  dashboardWindow.webContents.once("did-finish-load", () => {
+    setTimeout(() => {
+      if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+        dashboardWindow.show();
+      }
+    }, 1000); // Delay de 1 segundo
+  });
 
   dashboardWindow.on("closed", () => {
     dashboardWindow = null;
@@ -437,7 +449,15 @@ ipcMain.handle("get-all-notes", async () => {
     return [];
   }
 });
-
+// Obtener todos los datos (notas + carpetas) en una sola llamada
+ipcMain.handle("get-all-data", async () => {
+  try {
+    return await storage.getAllData();
+  } catch (err) {
+    console.error("Error reading all data:", err);
+    return { notes: [], folders: [] };
+  }
+});
 // Obtener contenido de una nota
 ipcMain.handle("get-note-content", async (event, noteId) => {
   try {
