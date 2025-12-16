@@ -62,19 +62,17 @@ export default function Dashboard() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      window.api.getAllNotes(),
-      window.api.getAllFolders()
-    ]).then(([ns, fs]) => {
+    window.api.getAllData().then(data => {
       if (mounted) {
-        setNotes(ns || []);
-        setFolders(fs || []);
+        setNotes(data.notes || []);
+        setFolders(data.folders || []);
       }
     });
     return () => {
       mounted = false;
     };
   }, []);
+
   useEffect(() => {
     if (currentId && !loadedContents.has(currentId)) {
       window.api.getNoteContent(currentId).then(content => {
@@ -237,30 +235,35 @@ export default function Dashboard() {
     if (!name.trim()) return;
 
     await window.api.createFolder({ name, parentId });
-    const fs = await window.api.getAllFolders();
-    setFolders(fs || []);
+    const data = await window.api.getAllData();
+    setFolders(data.folders || []);
+    setNotes(data.notes || []);
   }, []);
 
   const onFolderRename = useCallback(async (id: number, newName: string) => {
     if (!newName.trim()) return;
 
-    const folder = folders.find(f => f.id === id);
-    if (folder) {
-      folder.name = newName;
-      await window.api.updateFolder(folder);
-      const fs = await window.api.getAllFolders();
-      setFolders(fs || []);
-    }
-  }, [folders]);
+    setFolders(prev => {
+      const updatedFolders = prev.map(f =>
+        f.id === id ? { ...f, name: newName } : f
+      );
+
+      const folder = updatedFolders.find(f => f.id === id);
+      if (folder) {
+        window.api.updateFolder(folder);
+      }
+
+      return updatedFolders;
+    });
+  }, []);
 
   const onFolderDelete = useCallback(async (id: number) => {
     if (!confirm("¿Eliminar carpeta y todo su contenido?")) return;
 
     await window.api.deleteFolder(id);
-    const fs = await window.api.getAllFolders();
-    const ns = await window.api.getAllNotes();
-    setFolders(fs || []);
-    setNotes(ns || []);
+    const data = await window.api.getAllData();
+    setFolders(data.folders || []);
+    setNotes(data.notes || []);
 
     if (selectedFolderId === id) {
       setSelectedFolderId(null);

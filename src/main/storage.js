@@ -270,6 +270,19 @@ class Storage {
       console.error("Error guardando metadata de notas:", err);
     }
   }
+  async getAllData() {
+    try {
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      return {
+        notes: parsed.notes || [],
+        folders: parsed.folders || [],
+      };
+    } catch (err) {
+      console.error("Error leyendo datos:", err);
+      return { notes: [], folders: [] };
+    }
+  }
 }
 
 const storage = new Storage();

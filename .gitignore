@@ -5,6 +5,7 @@ node_modules/
 dist
 dist/
 build/
+release/
 .vscode/
 .DS_Store
 npm-debug.log
@@ -14,3 +15,8 @@ coverage/
 *.log
 *.tsbuildinfo
 
+tests/
+test-results/
+playwright.config.ts
+playwright-report/
+test-data-*

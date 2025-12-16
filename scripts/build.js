@@ -19,6 +19,12 @@ async function buildAll(watch = false) {
         fs.copyFileSync(src, dest);
       }
     }
+
+    const htmlSrc = path.join(__dirname, "../src/renderer/index.html");
+    const htmlDest = path.join(distDir, "index.html");
+    if (fs.existsSync(htmlSrc)) {
+      fs.copyFileSync(htmlSrc, htmlDest);
+    }
   };
 
   for (const e of entries) {
@@ -32,8 +38,8 @@ async function buildAll(watch = false) {
       target: ["es2020"],
       format: "esm",
       loader: {
-        '.png': 'file',
-        '.css': 'css'
+        ".png": "file",
+        ".css": "css",
       },
       sourcemap: false,
     };
@@ -53,7 +59,7 @@ async function buildAll(watch = false) {
   }
 }
 
-const watchMode = process.argv.includes('--watch');
+const watchMode = process.argv.includes("--watch");
 buildAll(watchMode).catch((err) => {
   console.error(err);
   process.exit(1);
