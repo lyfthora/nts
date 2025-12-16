@@ -5,6 +5,7 @@ node_modules/
 dist
 dist/
 build/
+release/
 .vscode/
 .DS_Store
 npm-debug.log
