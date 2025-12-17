@@ -401,12 +401,12 @@ ipcMain.on("open-reminders-list", () => {
 // Control de ventanas desde preload
 ipcMain.on("window-minimize", (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && !win.isDestroyed()) win.hide();
+  if (win && !win.isDestroyed()) win.minimize();
 });
 
 ipcMain.on("window-close", (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
-  if (win && !win.isDestroyed()) win.hide();
+  if (win && !win.isDestroyed()) win.close();
 });
 
 ipcMain.on("window-destroy", (event) => {

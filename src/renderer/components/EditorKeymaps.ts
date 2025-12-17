@@ -70,6 +70,36 @@ export const applyFormat = (view: EditorView, type: string): boolean => {
   return true;
 };
 
+const cycleHeading = (view: EditorView): boolean => {
+  const { from } = view.state.selection.main;
+  const line = view.state.doc.lineAt(from);
+  const lineText = line.text;
+
+  const headingMatch = lineText.match(/^(#{1,4})\s/);
+
+  let newText: string;
+
+  if (!headingMatch) {
+    newText = `# ${lineText}`;
+  } else {
+    const currentLevel = headingMatch[1].length;
+
+    if (currentLevel >= 4) {
+      newText = lineText.replace(/^#{1,4}\s/, "");
+    } else {
+      const newHashes = "#".repeat(currentLevel + 1);
+      newText = lineText.replace(/^#{1,4}\s/, `${newHashes} `);
+    }
+  }
+
+  view.dispatch({
+    changes: { from: line.from, to: line.to, insert: newText },
+    selection: { anchor: line.from + newText.length },
+  });
+
+  return true;
+};
+
 export const markdownKeymap = Prec.highest(
   keymap.of([
     {
@@ -79,6 +109,10 @@ export const markdownKeymap = Prec.highest(
     {
       key: "Mod-i",
       run: (view) => applyFormat(view, "italic"),
+    },
+    {
+      key: "Mod-h",
+      run: (view) => cycleHeading(view),
     },
     {
       key: "Mod-k",

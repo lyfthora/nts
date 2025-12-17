@@ -10,7 +10,8 @@
     "dev": "node scripts/build.js --watch",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "clean:test": "powershell -Command \"Remove-Item -Recurse -Force test-data-* -ErrorAction SilentlyContinue\""
+    "clean:test": "powershell -Command \"Remove-Item -Recurse -Force test-data-* -ErrorAction SilentlyContinue\"",
+    "clean:dist": "powershell -Command \"Remove-Item -Recurse -Force dist, release -ErrorAction SilentlyContinue\""
   },
   "repository": {
     "type": "git",

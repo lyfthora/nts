@@ -33,6 +33,7 @@ export default function FolderTree({
   onRenameFolder,
 }: FolderTreeProps) {
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; folderId: number } | null>(null);
+  const [activeFolderId, setActiveFolderId] = React.useState<number | null>(null);
   const [editingFolderId, setEditingFolderId] = React.useState<number | null>(null);
   const [editingName, setEditingName] = React.useState("");
   const [modalType, setModalType] = useState<'create' | 'rename' | null>(null);
@@ -55,6 +56,7 @@ export default function FolderTree({
 
   const handleCreateSubfolder = () => {
     if (!contextMenu) return;
+    setActiveFolderId(contextMenu.folderId);
     setModalType('create');
   };
 
@@ -62,6 +64,7 @@ export default function FolderTree({
     if (!contextMenu) return;
     const folder = folders.find(f => f.id === contextMenu.folderId);
     if (!folder) return;
+    setActiveFolderId(contextMenu.folderId);
     setEditingName(folder.name);
     setModalType('rename');
   };
@@ -175,13 +178,14 @@ export default function FolderTree({
         defaultValue={modalType === 'rename' ? editingName : ''}
         placeholder={modalType === 'create' ? 'Subfolder Name' : 'Folder Name'}
         onConfirm={(name) => {
-          if (modalType === 'create' && contextMenu) {
-            onCreateFolder(contextMenu.folderId, name);
-          } else if (modalType === 'rename' && contextMenu) {
-            onRenameFolder(contextMenu.folderId, name);
+          if (modalType === 'create' && activeFolderId !== null) {
+            onCreateFolder(activeFolderId, name);
+          } else if (modalType === 'rename' && activeFolderId !== null) {
+            onRenameFolder(activeFolderId, name);
           }
           setModalType(null);
           closeContextMenu();
+          setActiveFolderId(null);
         }}
         onCancel={() => {
           setModalType(null);

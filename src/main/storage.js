@@ -19,7 +19,8 @@ const crypto = require("crypto");
 
 class Storage {
   constructor() {
-    this.dataPath = path.join(app.getPath("userData"), "nts-data");
+    const dataDirName = app.isPackaged ? "nts-data" : "nts-dev-data";
+    this.dataPath = path.join(app.getPath("userData"), dataDirName);
     this.metadataPath = path.join(this.dataPath, "metadata.json");
     this.notesDir = path.join(this.dataPath, "notes");
     this.assetsDir = path.join(this.dataPath, "assets");
