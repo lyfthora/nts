@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "./InputModal.css";
 
@@ -20,9 +20,15 @@ export default function InputModal({
   onCancel,
 }: InputModalProps) {
   const [value, setValue] = useState(defaultValue);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setValue(defaultValue);
+    if (isOpen) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
+    }
   }, [defaultValue, isOpen]);
 
   const handleConfirm = () => {
@@ -50,6 +56,7 @@ export default function InputModal({
           >
             <div className="input-modal-title">{title}</div>
             <input
+              ref={inputRef}
               className="input-modal-input"
               value={value}
               onChange={(e) => setValue(e.target.value)}
