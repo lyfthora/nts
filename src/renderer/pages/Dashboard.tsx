@@ -237,7 +237,15 @@ export default function Dashboard() {
     await window.api.createFolder({ name, parentId });
     const data = await window.api.getAllData();
     setFolders(data.folders || []);
-    setNotes(data.notes || []);
+    setNotes(prevNotes => {
+      return (data.notes || []).map((n: Note) => {
+        const existing = prevNotes.find(p => p.id === n.id);
+        if (existing && existing.content !== undefined) {
+          return { ...n, content: existing.content };
+        }
+        return n;
+      });
+    });
   }, []);
 
   const onFolderRename = useCallback(async (id: number, newName: string) => {
@@ -263,7 +271,15 @@ export default function Dashboard() {
     await window.api.deleteFolder(id);
     const data = await window.api.getAllData();
     setFolders(data.folders || []);
-    setNotes(data.notes || []);
+    setNotes(prevNotes => {
+      return (data.notes || []).map((n: Note) => {
+        const existing = prevNotes.find(p => p.id === n.id);
+        if (existing && existing.content !== undefined) {
+          return { ...n, content: existing.content };
+        }
+        return n;
+      });
+    });
 
     if (selectedFolderId === id) {
       setSelectedFolderId(null);
