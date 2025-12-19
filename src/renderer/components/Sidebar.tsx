@@ -136,6 +136,23 @@ const Sidebar = memo(function Sidebar({
               {String(notes.filter((n: any) => !n.deleted && n.pinned).length)}
             </span>
           </Item>
+          <Item view="trash">
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            <span>Trash</span>
+            <span className="nav-count" id="trashCount">
+              {String(notes.filter((n: any) => n.deleted).length)}
+            </span>
+          </Item>
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
@@ -155,16 +172,6 @@ const Sidebar = memo(function Sidebar({
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-            </svg>
             <span>Notebooks</span>
             <button
               className="section-action-btn"
@@ -208,25 +215,6 @@ const Sidebar = memo(function Sidebar({
           </AnimatePresence>
         </div>
         <div className="nav-section">
-          <Item view="trash">
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-            <span>Trash</span>
-            <span className="nav-count" id="trashCount">
-              {String(notes.filter((n: any) => n.deleted).length)}
-            </span>
-          </Item>
-        </div>
-        <div className="nav-section">
           <div className="nav-section-header">
             <button
               className={`nav-collapse-btn ${collapsedSections['status'] ? 'collapsed' : ''}`}
@@ -244,17 +232,6 @@ const Sidebar = memo(function Sidebar({
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <circle cx={12} cy={12} r={10} />
-              <path d="M12 6v6l4 2" />
-            </svg>
             <span>Status</span>
           </div>
           <AnimatePresence initial={false}>
@@ -330,17 +307,6 @@ const Sidebar = memo(function Sidebar({
                 <polyline points="9 18 15 12 9 6" />
               </svg>
             </button>
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-              <line x1={7} y1={7} x2={7.01} y2={7} />
-            </svg>
             <span>Tags</span>
           </div>
           <AnimatePresence initial={false}>
