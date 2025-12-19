@@ -78,7 +78,9 @@ export default function FolderTree({
         <div key={folder.id}>
           <div
             className={`folder-item ${selectedFolderId === folder.id ? "active" : ""}`}
-            style={{ paddingLeft: `${level * 16 + 12}px`, cursor: 'pointer' }}
+            style={{
+              paddingLeft: `${(level * 5 + (folder.isSystem ? 20 : 0)) - (!folder.isSystem && folders.some(f => f.parentId === folder.id) ? 16 : 0)}px`
+            }}
             onClick={() => onSelectFolder(folder.id)}
             onContextMenu={(e) => handleContextMenu(e, folder.id, folder.isSystem)}
           >
@@ -88,6 +90,9 @@ export default function FolderTree({
                 onClick={(e) => {
                   e.stopPropagation();
                   onToggleExpand(folder.id);
+                }}
+                style={{
+                  visibility: folders.some(f => f.parentId === folder.id) ? 'visible' : 'hidden'
                 }}
               >
                 <svg
@@ -141,7 +146,7 @@ export default function FolderTree({
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </div >
       ));
   };
 
