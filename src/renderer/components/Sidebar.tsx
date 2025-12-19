@@ -101,7 +101,7 @@ const Sidebar = memo(function Sidebar({
 █▄▄ █▀█ █ █░▀█`}</pre>
       </div>
       <nav className="sidebar-nav">
-        <div className="nav-section">
+        <div className="nav-section" id="mainLinksSection">
           <Item view="all-notes">
             <svg
               width={16}

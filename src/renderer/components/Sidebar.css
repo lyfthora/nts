@@ -114,7 +114,6 @@
   font-size: 9px;
   color: #6b7280;
   font-weight: 600;
-  /* background: #2a2a2a; */
   padding: 2px 6px;
   border-radius: 4px;
   min-width: 20px;
@@ -145,11 +144,6 @@
   border-radius: 6px;
   transition: all 0.15s ease;
 }
-
-/* .nav-section-header:hover {
-  background: #2d2d2d;
-  color: #b0b0b0;
-} */
 
 .nav-collapse-btn {
   background: none;
@@ -187,7 +181,6 @@
   margin-top: 4px;
   margin-left: 8px;
   padding-left: 12px;
-  /* border-left: 1px solid #2d2d2d; */
   max-height: 500px;
   overflow: hidden;
   transition: max-height 0.3s ease;
@@ -293,15 +286,461 @@
   z-index: 1000;
 }
 
-/* ... existing code ... */
+#foldersSection {
+  margin-left: -8px;
+  color: #e5e5e5;
+}
+
+*/ .nav-item.active {
+  background: #2d2d2d;
+  color: white;
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+}
+
+.nav-item span:not(.nav-count):not(.status-dot):not(.tag-hash) {
+  flex: 1;
+}
+
+.nav-count {
+  font-size: 9px;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* .nav-item.active .nav-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.nav-item:hover .nav-count {
+  background: #3a3a3a;
+  color: #e5e5e5;
+} */
+
+.nav-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #808080;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.nav-collapse-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.nav-collapse-btn .chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-collapse-btn.collapsed .chevron {
+  transform: rotate(0deg);
+}
+
+.nav-collapse-btn:not(.collapsed) .chevron {
+  transform: rotate(90deg);
+}
+
+.nav-section-header svg:not(.chevron) {
+  flex-shrink: 0;
+}
+
+.nav-section-header span {
+  flex: 1;
+}
+
+.nav-subsection {
+  margin-top: 4px;
+  margin-left: 8px;
+  padding-left: 12px;
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.nav-subsection.collapsed {
+  max-height: 0;
+}
+
+.nav-item.nav-nested {
+  padding: 6px 12px;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.nav-item.nav-nested-child {
+  padding: 6px 12px 6px 24px;
+  font-size: 12px;
+}
+
+.nav-nested-items {
+  margin-left: 12px;
+}
+
+.chevron-small {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.status-active {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-onhold {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-completed {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-dropped {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.tag-hash {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a9eff;
+  flex-shrink: 0;
+}
+
+.nav-item.nav-nested.active {
+  background: #2d2d2d;
+  color: white;
+}
+
+/* resizeeee */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 1000;
+}
 
 #foldersSection {
   margin-left: -8px;
-  /* Compensa el padding del sidebar-nav */
+  margin-left: -8px;
+  color: #e5e5e5;
+}
+
+*/ .nav-item.active {
+  background: #2d2d2d;
+  color: white;
+}
+
+.nav-item svg {
+  flex-shrink: 0;
+}
+
+.nav-item span:not(.nav-count):not(.status-dot):not(.tag-hash) {
+  flex: 1;
+}
+
+.nav-count {
+  font-size: 9px;
+  color: #6b7280;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* .nav-item.active .nav-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.nav-item:hover .nav-count {
+  background: #3a3a3a;
+  color: #e5e5e5;
+} */
+
+.nav-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  color: #808080;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.nav-collapse-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  transition: transform 0.2s ease;
+}
+
+.nav-collapse-btn .chevron {
+  transition: transform 0.2s ease;
+}
+
+.nav-collapse-btn.collapsed .chevron {
+  transform: rotate(0deg);
+}
+
+.nav-collapse-btn:not(.collapsed) .chevron {
+  transform: rotate(90deg);
+}
+
+.nav-section-header svg:not(.chevron) {
+  flex-shrink: 0;
+}
+
+.nav-section-header span {
+  flex: 1;
+}
+
+.nav-subsection {
+  margin-top: 4px;
+  margin-left: 8px;
+  padding-left: 12px;
+  max-height: 500px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.nav-subsection.collapsed {
+  max-height: 0;
+}
+
+.nav-item.nav-nested {
+  padding: 6px 12px;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.nav-item.nav-nested-child {
+  padding: 6px 12px 6px 24px;
+  font-size: 12px;
+}
+
+.nav-nested-items {
+  margin-left: 12px;
+}
+
+.chevron-small {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.status-active {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-onhold {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-completed {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.status-dot.status-dropped {
+  background-size: contain;
+  background-position: center center;
+  background-repeat: no-repeat;
+  border-radius: 0;
+  width: 18px;
+  height: 18px;
+  margin: -3px;
+  transform: none;
+}
+
+.tag-hash {
+  font-size: 14px;
+  font-weight: 700;
+  color: #4a9eff;
+  flex-shrink: 0;
+}
+
+.nav-item.nav-nested.active {
+  background: #2d2d2d;
+  color: white;
+}
+
+/* resizeeee */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 1000;
+}
+
+#foldersSection {
+  margin-left: -8px;
   margin-right: -8px;
-  /* Compensa el padding del sidebar-nav */
   padding-left: 0;
-  /* Elimina el padding interno */
   width: calc(100% + 16px);
-  /* Asegura el ancho completo */
+}
+
+/* Main Links, Status and Tags Section Styles */
+#mainLinksSection,
+#statusSection,
+#tagsSection {
+  margin-left: -8px;
+  margin-right: -8px;
+  padding-left: 0;
+  width: calc(100% + 16px);
+}
+
+#mainLinksSection .nav-item,
+#statusSection .nav-item,
+#tagsSection .nav-item {
+  border-radius: 0;
+  position: relative;
+  border-left: 4px solid transparent;
+  padding-left: 24px;
+  /* Align with folders */
+}
+
+#mainLinksSection .nav-item::before,
+#statusSection .nav-item::before,
+#tagsSection .nav-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#mainLinksSection .nav-item>*,
+#statusSection .nav-item>*,
+#tagsSection .nav-item>* {
+  position: relative;
+  z-index: 1;
+}
+
+/* Disable default hover/active background */
+#mainLinksSection .nav-item:hover,
+#mainLinksSection .nav-item.active,
+#statusSection .nav-item:hover,
+#statusSection .nav-item.active,
+#tagsSection .nav-item:hover,
+#tagsSection .nav-item.active {
+  background: transparent;
+}
+
+#mainLinksSection .nav-item.active,
+#statusSection .nav-item.active,
+#tagsSection .nav-item.active {
+  border-left-color: #4a9eff;
+}
+
+#mainLinksSection .nav-item.active::before,
+#statusSection .nav-item.active::before,
+#tagsSection .nav-item.active::before {
+  background: rgba(255, 255, 255, 0.1);
 }
