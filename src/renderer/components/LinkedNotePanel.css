@@ -1,0 +1,15 @@
+.linked-note-panel {
+  display: flex;
+  flex-direction: column;
+  width: 400px;
+  min-width: 300px;
+  max-width: 600px;
+  border-left: 1px solid #333;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.linked-note-panel .note-editor-panel {
+  flex: 1;
+  overflow: hidden;
+}
