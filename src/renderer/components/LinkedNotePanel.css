@@ -1,15 +1,31 @@
 .linked-note-panel {
   display: flex;
   flex-direction: column;
-  width: 400px;
-  min-width: 300px;
-  max-width: 600px;
+  min-width: 150px;
+  /* max-width: 800px; removed to allow free resizing */
   border-left: 1px solid #333;
   background: #1a1a1a;
   overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
 }
+
+.linked-note-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 1000;
+}
+
+
 
 .linked-note-panel .note-editor-panel {
   flex: 1;
   overflow: hidden;
+  min-width: 0;
 }
