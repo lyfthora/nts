@@ -101,12 +101,7 @@
   line-height: 1.6;
   color: #ffffff;
   background: #0d0d0d;
-  font-family:
-    "Segoe UI",
-    Tahoma,
-    Geneva,
-    Verdana,
-    sans-serif;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   resize: none;
   padding: 20px;
 }
@@ -189,6 +184,7 @@
   border-radius: 6px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
+  margin: 0 0 -3px 0;
 }
 
 .metadata-folder:hover {
@@ -222,7 +218,7 @@
 
 .codemirror-container .cm-editor {
   height: 100%;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -544,7 +540,7 @@ span.tok-heading span.tok-emphasis {
 .markdown-preview-content {
   padding: 20px;
   color: #e5e5e5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -587,7 +583,7 @@ span.tok-heading span.tok-emphasis {
   background: #2d2d2d;
   padding: 2px 6px;
   border-radius: 3px;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 0.9em;
 }
 
@@ -665,4 +661,28 @@ span.tok-heading span.tok-emphasis {
   border-radius: 8px;
   margin: 16px 0;
   display: block;
+}
+
+.note-title-input.linked-note-title {
+  color: #61afef;
+  font-weight: 600;
+  cursor: default;
+}
+
+.note-title-input.linked-note-title:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.cm-note-link {
+  color: #61afef;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.cm-note-link:hover {
+  color: #7cc5ff;
+  text-decoration-style: solid;
 }
