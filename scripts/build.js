@@ -40,6 +40,10 @@ async function buildAll(watch = false) {
       loader: {
         ".png": "file",
         ".css": "css",
+        ".woff2": "file",
+        ".woff": "file",
+        ".ttf": "file",
+        ".eot": "file",
       },
       sourcemap: false,
     };
