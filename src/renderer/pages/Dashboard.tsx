@@ -10,6 +10,7 @@ import WindowBar from "../components/WindowBar";
 import Sidebar from "../components/Sidebar";
 import NotesListPanel from "../components/NotesListPanel";
 import EditorPanel from "../components/EditorPanel";
+import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -19,11 +20,14 @@ export default function Dashboard() {
   const [view, setView] = useState("all-notes");
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
   const [currentId, setCurrentId] = useState<number | null>(null);
+  const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
   );
+
+
   const counts = useMemo<StatusCounts>(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
     const c: StatusCounts = {
@@ -37,6 +41,12 @@ export default function Dashboard() {
     });
     return c;
   }, [notes]);
+
+
+  const linkedNote = useMemo<Note | null>(
+    () => notes.find((n) => n.id === linkedNoteId) || null,
+    [notes, linkedNoteId]
+  );
 
   const folderCounts = useMemo<FolderCounts>(() => {
     const counts: FolderCounts = {};
@@ -86,6 +96,20 @@ export default function Dashboard() {
       });
     }
   }, [currentId, loadedContents]);
+
+  useEffect(() => {
+    if (linkedNoteId && !loadedContents.has(linkedNoteId)) {
+      window.api.getNoteContent(linkedNoteId).then(content => {
+        setLoadedContents(prev => new Map(prev).set(linkedNoteId, content));
+        setNotes(prev => prev.map(n => {
+          if (n.id === linkedNoteId && n.content === undefined) {
+            return { ...n, content };
+          }
+          return n;
+        }));
+      });
+    }
+  }, [linkedNoteId, loadedContents]);
 
   const filteredNotes = useMemo(() => {
     let filtered: Note[] = [];
@@ -321,7 +345,20 @@ export default function Dashboard() {
     },
     [saveNote]
   );
+  const handleNoteLinkClick = useCallback((noteName: string) => {
+    const note = notes.find(n =>
+      !n.deleted && n.name.toLowerCase() === noteName.toLowerCase()
+    );
+    if (note) {
+      setLinkedNoteId(note.id);
+    } else {
+      alert(`Note "${noteName}" not found`);
+    }
+  }, [notes]);
 
+  const handleCloseLinkedNote = useCallback(() => {
+    setLinkedNoteId(null);
+  }, []);
 
   const onPin = useCallback(
     (note: Note) => {
@@ -382,7 +419,21 @@ export default function Dashboard() {
             onTagRemove={onTagRemove}
             onPin={onPin}
             isTrashView={view === "trash"}
+            onNoteLinkClick={handleNoteLinkClick}
           />
+          {linkedNote && (
+            <LinkedNotePanel
+              note={linkedNote}
+              folders={folders}
+              onClose={handleCloseLinkedNote}
+              onChange={onChange}
+              onDelete={onDelete}
+              onStatus={onStatus}
+              onTagAdd={onTagAdd}
+              onTagRemove={onTagRemove}
+              onPin={onPin}
+            />
+          )}
         </div>
 
       </div>
