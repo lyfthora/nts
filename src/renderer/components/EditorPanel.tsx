@@ -61,6 +61,41 @@ const EditorPanel = memo(function EditorPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(600);
+  const editorBodyRef = useRef<HTMLDivElement>(null);
+
+  const isResizingPreview = useRef(false);
+
+  const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
+    isResizingPreview.current = true;
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingPreview.current || !editorBodyRef.current) return;
+
+      const containerRect = editorBodyRef.current.getBoundingClientRect();
+      // Calculate width: Right edge of container - mouse X
+      const newWidth = containerRect.right - e.clientX;
+
+      if (newWidth >= 200 && newWidth <= containerRect.width - 100) {
+        setPreviewWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingPreview.current = false;
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   useEffect(() => {
     noteRef.current = note;
@@ -395,7 +430,7 @@ const EditorPanel = memo(function EditorPanel({
         />
       )}
 
-      <div className="editor-body">
+      <div className="editor-body" ref={editorBodyRef}>
         <div ref={editorRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -414,7 +449,15 @@ const EditorPanel = memo(function EditorPanel({
         </button>
 
         {/* Panel de Preview */}
-        {showPreview && <MarkdownPreview content={note?.content || ""} />}
+        {showPreview && (
+          <div className="preview-container" style={{ width: previewWidth }}>
+            <div
+              className="preview-resize-handle"
+              onMouseDown={handlePreviewMouseDown}
+            />
+            <MarkdownPreview content={note?.content || ""} />
+          </div>
+        )}
       </div>
     </div>
   );

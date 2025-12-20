@@ -510,6 +510,34 @@ span.tok-heading span.tok-emphasis {
 
 /* Markdown Preview Panel */
 /* Markdown Preview Panel */
+/* Markdown Preview Panel */
+.preview-container {
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  min-width: 200px;
+  max-width: 90%;
+  flex-shrink: 0;
+}
+
+.preview-resize-handle {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 10;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.preview-resize-handle:hover,
+.preview-resize-handle:active {
+  background: rgba(74, 158, 255, 0.1);
+}
+
 .markdown-preview-panel {
   flex: 1;
   height: 100%;
@@ -518,6 +546,7 @@ span.tok-heading span.tok-emphasis {
   overflow-y: auto;
   overflow-x: hidden;
   transition: flex 0.3s ease;
+  min-width: 0;
 }
 
 .markdown-preview-panel::-webkit-scrollbar {
