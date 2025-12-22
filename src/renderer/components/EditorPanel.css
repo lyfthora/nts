@@ -101,12 +101,7 @@
   line-height: 1.6;
   color: #ffffff;
   background: #0d0d0d;
-  font-family:
-    "Segoe UI",
-    Tahoma,
-    Geneva,
-    Verdana,
-    sans-serif;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   resize: none;
   padding: 20px;
 }
@@ -189,6 +184,7 @@
   border-radius: 6px;
   border: 1px solid transparent;
   transition: all 0.2s ease;
+  margin: 0 0 -3px 0;
 }
 
 .metadata-folder:hover {
@@ -222,7 +218,7 @@
 
 .codemirror-container .cm-editor {
   height: 100%;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -514,6 +510,34 @@ span.tok-heading span.tok-emphasis {
 
 /* Markdown Preview Panel */
 /* Markdown Preview Panel */
+/* Markdown Preview Panel */
+.preview-container {
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  min-width: 200px;
+  max-width: 90%;
+  flex-shrink: 0;
+}
+
+.preview-resize-handle {
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 10;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.preview-resize-handle:hover,
+.preview-resize-handle:active {
+  background: rgba(74, 158, 255, 0.1);
+}
+
 .markdown-preview-panel {
   flex: 1;
   height: 100%;
@@ -522,6 +546,7 @@ span.tok-heading span.tok-emphasis {
   overflow-y: auto;
   overflow-x: hidden;
   transition: flex 0.3s ease;
+  min-width: 0;
 }
 
 .markdown-preview-panel::-webkit-scrollbar {
@@ -544,7 +569,7 @@ span.tok-heading span.tok-emphasis {
 .markdown-preview-content {
   padding: 20px;
   color: #e5e5e5;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   line-height: 1.6;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -587,7 +612,7 @@ span.tok-heading span.tok-emphasis {
   background: #2d2d2d;
   padding: 2px 6px;
   border-radius: 3px;
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
   font-size: 0.9em;
 }
 
@@ -665,4 +690,28 @@ span.tok-heading span.tok-emphasis {
   border-radius: 8px;
   margin: 16px 0;
   display: block;
+}
+
+.note-title-input.linked-note-title {
+  color: #61afef;
+  font-weight: 600;
+  cursor: default;
+}
+
+.note-title-input.linked-note-title:focus {
+  outline: none;
+  border-color: #333;
+}
+
+.cm-note-link {
+  color: #61afef;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.cm-note-link:hover {
+  color: #7cc5ff;
+  text-decoration-style: solid;
 }

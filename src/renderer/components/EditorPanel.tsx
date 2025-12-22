@@ -17,6 +17,7 @@ import { Strikethrough } from "@lezer/markdown";
 import { gotoLine } from "@codemirror/search";
 import { checkboxPlugin } from "./CheckboxWidget";
 import MarkdownPreview from "./MarkdownPreview";
+import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
 
 interface EditorPanelProps {
@@ -31,6 +32,10 @@ interface EditorPanelProps {
   onTagRemove: (n: any) => void;
   onPin: (n: any) => void;
   isTrashView?: boolean;
+  onNoteLinkClick?: (noteName: string) => void;
+  hideToolbar?: boolean;
+  isLinkedNote?: boolean;
+  onCloseLinkedNote?: () => void;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -45,6 +50,10 @@ const EditorPanel = memo(function EditorPanel({
   onTagRemove,
   onPin,
   isTrashView,
+  onNoteLinkClick,
+  hideToolbar,
+  isLinkedNote,
+  onCloseLinkedNote,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -52,6 +61,41 @@ const EditorPanel = memo(function EditorPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(600);
+  const editorBodyRef = useRef<HTMLDivElement>(null);
+
+  const isResizingPreview = useRef(false);
+
+  const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
+    isResizingPreview.current = true;
+    e.preventDefault();
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingPreview.current || !editorBodyRef.current) return;
+
+      const containerRect = editorBodyRef.current.getBoundingClientRect();
+      // Calculate width: Right edge of container - mouse X
+      const newWidth = containerRect.right - e.clientX;
+
+      if (newWidth >= 200 && newWidth <= containerRect.width - 100) {
+        setPreviewWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingPreview.current = false;
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   useEffect(() => {
     noteRef.current = note;
@@ -102,7 +146,7 @@ const EditorPanel = memo(function EditorPanel({
                 return true;
               },
             },
-          ])
+          ]),
         ),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
@@ -114,6 +158,7 @@ const EditorPanel = memo(function EditorPanel({
             }
           }
         }),
+        ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
       ],
     });
 
@@ -224,11 +269,19 @@ const EditorPanel = memo(function EditorPanel({
       <div className="editor-header">
         <input
           type="text"
-          className="note-title-input"
+          className={`note-title-input ${isLinkedNote ? 'linked-note-title' : ''}`}
           id="noteTitleInput"
           placeholder="Untitled"
-          value={note.name || ""}
-          onChange={(e) => onChange({ ...note, name: e.target.value })}
+          value={isLinkedNote ? `@${note.name || ""}` : (note.name || "")}
+          onChange={(e) => {
+            if (isLinkedNote) {
+              const value = e.target.value.startsWith('@') ? e.target.value.slice(1) : e.target.value;
+              onChange({ ...note, name: value });
+            } else {
+              onChange({ ...note, name: e.target.value });
+            }
+          }}
+          readOnly={isLinkedNote}
         />
         <div className="editor-actions">
           {isTrashView ? (
@@ -272,6 +325,24 @@ const EditorPanel = memo(function EditorPanel({
                 </svg>
               </button>
             </>
+          ) : isLinkedNote ? (
+            <button
+              className="editor-action-btn"
+              title="Close Linked Note"
+              onClick={() => onCloseLinkedNote && onCloseLinkedNote()}
+            >
+              <svg
+                width={16}
+                height={16}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <line x1={18} y1={6} x2={6} y2={18} />
+                <line x1={6} y1={6} x2={18} y2={18} />
+              </svg>
+            </button>
           ) : (
             <>
               <button
@@ -351,13 +422,15 @@ const EditorPanel = memo(function EditorPanel({
         />
       </div>
 
-      <MarkdownToolbar
-        onFormat={handleFormat}
-        onToggleLineNumbers={toggleLineNumbers}
-        showLineNumbers={showLineNumbers}
-      />
+      {!hideToolbar && (
+        <MarkdownToolbar
+          onFormat={handleFormat}
+          onToggleLineNumbers={toggleLineNumbers}
+          showLineNumbers={showLineNumbers}
+        />
+      )}
 
-      <div className="editor-body">
+      <div className="editor-body" ref={editorBodyRef}>
         <div ref={editorRef}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -376,7 +449,15 @@ const EditorPanel = memo(function EditorPanel({
         </button>
 
         {/* Panel de Preview */}
-        {showPreview && <MarkdownPreview content={note?.content || ""} />}
+        {showPreview && (
+          <div className="preview-container" style={{ width: previewWidth }}>
+            <div
+              className="preview-resize-handle"
+              onMouseDown={handlePreviewMouseDown}
+            />
+            <MarkdownPreview content={note?.content || ""} />
+          </div>
+        )}
       </div>
     </div>
   );
