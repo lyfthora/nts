@@ -2,7 +2,7 @@
 
 # NTS - Notes App
 
-### 🚀 Características Principales
+### Características Principales
 
 - Editor Markdown Avanzado (CodeMirror 6)
 - Sistema de almacenamiento optimizado "Split JSON"
@@ -12,7 +12,7 @@
 - Interfaz oscura minimalista y animada
 - Almacenamiento 100% local y privado
 
-### 🛠️ Stack Tecnológico
+### Stack Tecnológico
 
 - **Core:** Electron, Node.js
 - **Frontend:** React, TypeScript, CSS Variables
