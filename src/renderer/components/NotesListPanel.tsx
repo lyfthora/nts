@@ -63,7 +63,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         ) : (
           notes.map(n => (
             <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} onClick={() => onSelect(n)}>
-              <div className="note-list-item-title">
+              <div className="note-list-item-title" title={n.name || 'Untitled'}>
                 {n.pinned && (
                   <svg
                     className="pin-icon"
