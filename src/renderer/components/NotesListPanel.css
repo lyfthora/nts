@@ -199,3 +199,29 @@
   transition: background 0.2s ease;
   z-index: 1000;
 }
+
+.status-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.status-icon-active {
+  filter: brightness(1.1);
+}
+
+.status-icon-onhold {
+  filter: brightness(1.1);
+}
+
+.status-icon-completed {
+  filter: brightness(1.1);
+}
+
+.status-icon-dropped {
+  filter: brightness(1.1);
+}
