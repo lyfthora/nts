@@ -1,6 +1,16 @@
 import { EditorView, keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
 
+const getBlockPattern = (type: "ul" | "ol" | "task" | "quote"): RegExp => {
+  const patterns = {
+    ul: /^\s*-\s/,
+    ol: /^\s*\d+\.\s/,
+    task: /^\s*-\s\[[ x]\]\s/,
+    quote: /^\s*>\s/,
+  };
+  return patterns[type];
+};
+
 const toggleFormat = (
   view: EditorView,
   token: string,
@@ -12,7 +22,6 @@ const toggleFormat = (
   const relFrom = from - line.from;
   const relTo = to - line.from;
 
-  // Find all token pairs in the line
   const indices: number[] = [];
   let pos = 0;
   while ((pos = lineText.indexOf(token, pos)) !== -1) {
@@ -20,18 +29,15 @@ const toggleFormat = (
     pos += token.length;
   }
 
-  // Check if selection is inside/covers any pair
   for (let i = 0; i < indices.length - 1; i += 2) {
     const start = indices[i];
     const end = indices[i + 1];
     const blockEnd = end + token.length;
 
-    // If selection is contained within this block (inclusive)
     if (relFrom >= start && relTo <= blockEnd) {
       const startPos = line.from + start;
       const endPos = line.from + end;
 
-      // Helper to map position after removal
       const mapPos = (p: number) => {
         const relP = p - line.from;
         if (relP <= start) return p;
@@ -52,7 +58,6 @@ const toggleFormat = (
     }
   }
 
-  // Default: Add format
   const text = view.state.sliceDoc(from, to);
   view.dispatch({
     changes: { from, to, insert: `${token}${text}${token}` },
@@ -69,21 +74,13 @@ const toggleBlockFormat = (
   const { from, to } = view.state.selection.main;
   const startLine = view.state.doc.lineAt(from);
   const endLine = view.state.doc.lineAt(to);
+  const pattern = getBlockPattern(type);
 
-  let allHavePrefix = true;
   const changes: any[] = [];
+  let allHavePrefix = true;
 
   for (let i = startLine.number; i <= endLine.number; i++) {
-    const line = view.state.doc.line(i);
-    const lineText = line.text;
-    let hasPrefix = false;
-
-    if (type === "ul") hasPrefix = /^\s*-\s/.test(lineText);
-    else if (type === "ol") hasPrefix = /^\s*\d+\.\s/.test(lineText);
-    else if (type === "task") hasPrefix = /^\s*-\s\[[ x]\]\s/.test(lineText);
-    else if (type === "quote") hasPrefix = /^\s*>\s/.test(lineText);
-
-    if (!hasPrefix) {
+    if (!pattern.test(view.state.doc.line(i).text)) {
       allHavePrefix = false;
       break;
     }
@@ -91,61 +88,34 @@ const toggleBlockFormat = (
 
   for (let i = startLine.number; i <= endLine.number; i++) {
     const line = view.state.doc.line(i);
-    const lineText = line.text;
+    const hasPrefix = pattern.test(line.text);
 
-    if (allHavePrefix) {
-      let matchLength = 0;
-      if (type === "ul") matchLength = lineText.match(/^\s*-\s/)![0].length;
-      else if (type === "ol")
-        matchLength = lineText.match(/^\s*\d+\.\s/)![0].length;
-      else if (type === "task")
-        matchLength = lineText.match(/^\s*-\s\[[ x]\]\s/)![0].length;
-      else if (type === "quote")
-        matchLength = lineText.match(/^\s*>\s/)![0].length;
-
+    if (allHavePrefix && hasPrefix) {
+      const matchLength = line.text.match(pattern)![0].length;
       changes.push({
         from: line.from,
         to: line.from + matchLength,
         insert: "",
       });
-    } else {
-      let hasPrefix = false;
-      if (type === "ul") hasPrefix = /^\s*-\s/.test(lineText);
-      else if (type === "ol") hasPrefix = /^\s*\d+\.\s/.test(lineText);
-      else if (type === "task") hasPrefix = /^\s*-\s\[[ x]\]\s/.test(lineText);
-      else if (type === "quote") hasPrefix = /^\s*>\s/.test(lineText);
-
-      if (!hasPrefix) {
-        changes.push({
-          from: line.from,
-          to: line.from,
-          insert: prefix,
-        });
-      }
+    } else if (!allHavePrefix && !hasPrefix) {
+      changes.push({ from: line.from, to: line.from, insert: prefix });
     }
   }
 
-  const startLineNum = view.state.doc.lineAt(from).number;
   const firstLineChange = changes.find(
-    (c: any) => view.state.doc.lineAt(c.from).number === startLineNum
+    (c) => view.state.doc.lineAt(c.from).number === startLine.number
   );
 
-  let newCursor = from;
-  if (firstLineChange) {
-    if (allHavePrefix) {
-      newCursor = Math.max(
-        from - (firstLineChange.to - firstLineChange.from),
-        firstLineChange.from
-      );
-    } else {
-      newCursor = from + (firstLineChange.insert?.length || 0);
-    }
-  }
+  const newCursor = firstLineChange
+    ? allHavePrefix
+      ? Math.max(
+          from - (firstLineChange.to - firstLineChange.from),
+          firstLineChange.from
+        )
+      : from + (firstLineChange.insert?.length || 0)
+    : from;
 
-  view.dispatch({
-    changes,
-    selection: { anchor: newCursor },
-  });
+  view.dispatch({ changes, selection: { anchor: newCursor } });
   return true;
 };
 
