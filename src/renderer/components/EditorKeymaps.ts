@@ -122,49 +122,43 @@ const toggleBlockFormat = (
 const toggleCodeBlock = (view: EditorView): boolean => {
   const { from, to } = view.state.selection.main;
   const doc = view.state.doc;
+  const startLineNum = doc.lineAt(from).number;
 
-  const startLine = doc.lineAt(from);
-  const endLine = doc.lineAt(to);
+  let startLine = null,
+    endLine = null;
 
-  let codeBlockStart = -1;
-  let codeBlockEnd = -1;
-
-  for (let i = startLine.number; i >= 1; i--) {
+  for (let i = startLineNum; i >= 1; i--) {
     const line = doc.line(i);
     if (line.text.trim().startsWith("```")) {
-      codeBlockStart = line.from;
+      startLine = line;
       break;
     }
   }
 
-  if (codeBlockStart !== -1) {
-    for (let i = startLine.number + 1; i <= doc.lines; i++) {
+  if (startLine) {
+    for (let i = startLineNum + 1; i <= doc.lines; i++) {
       const line = doc.line(i);
       if (line.text.trim() === "```") {
-        codeBlockEnd = line.to;
+        endLine = line;
         break;
       }
     }
   }
 
-  if (codeBlockStart !== -1 && codeBlockEnd !== -1) {
-    const startLineFull = doc.lineAt(codeBlockStart);
-    const endLineFull = doc.lineAt(codeBlockEnd);
-
+  if (startLine && endLine) {
     view.dispatch({
       changes: [
-        { from: startLineFull.from, to: startLineFull.to + 1, insert: "" },
-        { from: endLineFull.from - 1, to: endLineFull.to, insert: "" },
+        { from: startLine.from, to: startLine.to + 1, insert: "" },
+        { from: endLine.from - 1, to: endLine.to, insert: "" },
       ],
-      selection: { anchor: from - startLineFull.text.length - 1 },
+      selection: { anchor: from - startLine.text.length - 1 },
     });
     return true;
   }
 
   const selectedText = view.state.sliceDoc(from, to);
-  const insert = `\`\`\`\n${selectedText}\n\`\`\``;
   view.dispatch({
-    changes: { from, to, insert },
+    changes: { from, to, insert: `\`\`\`\n${selectedText}\n\`\`\`` },
     selection: { anchor: from + 4 },
   });
   return true;
@@ -225,48 +219,6 @@ const toggleLink = (view: EditorView): boolean => {
   });
   return true;
 };
-
-export const applyFormat = (view: EditorView, type: string): boolean => {
-  const { from, to } = view.state.selection.main;
-  const selectedText = view.state.sliceDoc(from, to);
-
-  switch (type) {
-    case "bold":
-      return toggleFormat(view, "**", 2);
-    case "italic":
-      return toggleFormat(view, "*", 1);
-    case "strikethrough":
-      return toggleFormat(view, "~~", 2);
-    case "inlineCode":
-      return toggleFormat(view, "`", 1);
-
-    case "h1":
-      return cycleHeading(view);
-
-    case "ul":
-      return toggleBlockFormat(view, "- ", "ul");
-    case "ol":
-      return toggleBlockFormat(view, "1. ", "ol");
-    case "task":
-      return toggleBlockFormat(view, "- [ ] ", "task");
-    case "quote":
-      return toggleBlockFormat(view, "> ", "quote");
-
-    case "code":
-      return toggleCodeBlock(view);
-
-    case "link":
-      return toggleLink(view);
-
-    case "hr":
-      view.dispatch({
-        changes: { from, to, insert: "\n---\n" },
-      });
-      return true;
-  }
-  return false;
-};
-
 const cycleHeading = (view: EditorView): boolean => {
   const { from } = view.state.selection.main;
   const line = view.state.doc.lineAt(from);
@@ -294,44 +246,55 @@ const cycleHeading = (view: EditorView): boolean => {
 
   return true;
 };
+const formatActions: Record<string, (view: EditorView) => boolean> = {
+  bold: (v) => toggleFormat(v, "**", 2),
+  italic: (v) => toggleFormat(v, "*", 1),
+  strikethrough: (v) => toggleFormat(v, "~~", 2),
+  inlineCode: (v) => toggleFormat(v, "`", 1),
+  h1: cycleHeading,
+  ul: (v) => toggleBlockFormat(v, "- ", "ul"),
+  ol: (v) => toggleBlockFormat(v, "1. ", "ol"),
+  task: (v) => toggleBlockFormat(v, "- [ ] ", "task"),
+  quote: (v) => toggleBlockFormat(v, "> ", "quote"),
+  code: toggleCodeBlock,
+  link: toggleLink,
+  hr: (v) => {
+    const { from, to } = v.state.selection.main;
+    v.dispatch({ changes: { from, to, insert: "\n---\n" } });
+    return true;
+  },
+};
+
+export const applyFormat = (view: EditorView, type: string): boolean => {
+  return formatActions[type] ? formatActions[type](view) : false;
+};
+
+const shortcuts = [
+  { key: "Mod-b", action: "bold" },
+  { key: "Mod-i", action: "italic" },
+  { key: "Mod-h", action: "h1" },
+  { key: "Mod-k", action: "link" },
+  { key: "Mod-e", action: "inlineCode" },
+  { key: "Mod-u", action: "strikethrough" },
+  { key: "Mod-t", action: "code" },
+  { key: "Mod-Shift-8", action: "ul" },
+  { key: "Mod-Shift-9", action: "ol" },
+  { key: "Mod-Shift-7", action: "task" },
+  { key: "Mod-Shift-.", action: "quote" },
+];
 
 export const markdownKeymap = Prec.highest(
   keymap.of([
-    {
-      key: "Mod-b",
-      run: (view) => applyFormat(view, "bold"),
-    },
-    {
-      key: "Mod-i",
-      run: (view) => applyFormat(view, "italic"),
-    },
-    {
-      key: "Mod-h",
-      run: (view) => cycleHeading(view),
-    },
-    {
-      key: "Mod-k",
-      run: (view) => applyFormat(view, "link"),
-    },
-    {
-      key: "Mod-e",
-      run: (view) => applyFormat(view, "inlineCode"),
-    },
-    {
-      key: "Mod-u",
-      run: (view) => applyFormat(view, "strikethrough"),
-    },
-    {
-      key: "Mod-t",
-      run: (view) => applyFormat(view, "code"),
-    },
+    ...shortcuts.map(({ key, action }) => ({
+      key,
+      run: (view: EditorView) => applyFormat(view, action),
+    })),
+
     {
       key: "Mod-q",
       run: (view) => {
         const line = view.state.doc.lineAt(view.state.selection.main.head);
-        view.dispatch({
-          selection: { anchor: line.from, head: line.to },
-        });
+        view.dispatch({ selection: { anchor: line.from, head: line.to } });
         return true;
       },
     },
@@ -339,9 +302,7 @@ export const markdownKeymap = Prec.highest(
       key: "Mod-.",
       run: (view) => {
         const line = view.state.doc.lineAt(view.state.selection.main.head);
-        view.dispatch({
-          selection: { anchor: line.to },
-        });
+        view.dispatch({ selection: { anchor: line.to } });
         return true;
       },
     },
@@ -349,9 +310,7 @@ export const markdownKeymap = Prec.highest(
       key: "Mod-,",
       run: (view) => {
         const line = view.state.doc.lineAt(view.state.selection.main.head);
-        view.dispatch({
-          selection: { anchor: line.from },
-        });
+        view.dispatch({ selection: { anchor: line.from } });
         return true;
       },
     },
