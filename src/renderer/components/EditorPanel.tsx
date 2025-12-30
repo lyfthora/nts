@@ -19,6 +19,7 @@ import { checkboxPlugin } from "./CheckboxWidget";
 import MarkdownPreview from "./MarkdownPreview";
 import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
+import { languages } from "@codemirror/language-data";
 
 interface EditorPanelProps {
   note: any | null;
@@ -126,7 +127,7 @@ const EditorPanel = memo(function EditorPanel({
       doc: note.content || "",
       extensions: [
         basicSetup,
-        markdown({ extensions: [Strikethrough] }),
+        markdown({ extensions: [Strikethrough], codeLanguages: languages }),
         oneDark,
         syntaxHighlighting(classHighlighter),
 
