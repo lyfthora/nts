@@ -627,8 +627,11 @@ span.tok-heading span.tok-emphasis {
 }
 
 .markdown-preview-content pre code {
-  background: transparent;
+  background: transparent !important;
   padding: 0;
+  color: inherit;
+  display: block;
+  overflow-x: auto;
 }
 
 .markdown-preview-content a {
