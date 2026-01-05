@@ -37,6 +37,7 @@ interface EditorPanelProps {
   hideToolbar?: boolean;
   isLinkedNote?: boolean;
   onCloseLinkedNote?: () => void;
+  existingTags?: string[];
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -55,6 +56,7 @@ const EditorPanel = memo(function EditorPanel({
   hideToolbar,
   isLinkedNote,
   onCloseLinkedNote,
+  existingTags = [],
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -408,6 +410,7 @@ const EditorPanel = memo(function EditorPanel({
         </div>
         <TagsEditor
           tags={note.tags || []}
+          existingTags={existingTags}
           onAdd={(t) =>
             onTagAdd({
               ...note,

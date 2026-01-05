@@ -420,6 +420,7 @@ export default function Dashboard() {
             onPin={onPin}
             isTrashView={view === "trash"}
             onNoteLinkClick={handleNoteLinkClick}
+            existingTags={tags.map(t => t.name)}
           />
           {linkedNote && (
             <LinkedNotePanel
