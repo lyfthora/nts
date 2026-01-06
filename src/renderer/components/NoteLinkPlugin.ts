@@ -44,12 +44,14 @@ export function noteLinkPlugin(onClick: (noteName: string) => void) {
 
       handleMouseDown = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
+
         if (target.classList.contains("cm-note-link")) {
           e.preventDefault();
           e.stopPropagation();
 
           const text = target.textContent || "";
           const match = text.match(/@([^\s]+)/);
+
           if (match) {
             onClick(match[1]);
           }

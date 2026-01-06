@@ -21,3 +21,40 @@
   overflow: hidden;
   position: relative;
 }
+
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #2d2d2d;
+  color: #e5e5e5;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 1000;
+  border-left: 3px solid #ff6b6b;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastSlideIn 0.25s ease-out;
+}
+
+.toast-notification::before {
+  content: '⚠';
+  font-size: 14px;
+  color: #ff6b6b;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
