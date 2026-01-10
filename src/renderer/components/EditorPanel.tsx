@@ -20,6 +20,7 @@ import MarkdownPreview from "./MarkdownPreview";
 import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
 import { languages } from "@codemirror/language-data";
+import { imagePreviewPlugin } from "./ImagePreviewPlugin";
 
 interface EditorPanelProps {
   note: any | null;
@@ -66,6 +67,7 @@ const EditorPanel = memo(function EditorPanel({
   const [showPreview, setShowPreview] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(600);
   const editorBodyRef = useRef<HTMLDivElement>(null);
+  const [dataPath, setDataPath] = useState<string>("");
 
   const isResizingPreview = useRef(false);
 
@@ -74,12 +76,18 @@ const EditorPanel = memo(function EditorPanel({
     e.preventDefault();
   }, []);
 
+
+  useEffect(() => {
+    window.api.getDataPath().then(setDataPath);
+  }, []);
+
+
+
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizingPreview.current || !editorBodyRef.current) return;
 
       const containerRect = editorBodyRef.current.getBoundingClientRect();
-      // Calculate width: Right edge of container - mouse X
       const newWidth = containerRect.right - e.clientX;
 
       if (newWidth >= 200 && newWidth <= containerRect.width - 100) {
@@ -123,7 +131,7 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    if (!editorRef.current || !note) return;
+    if (!editorRef.current || !note || !dataPath) return;
 
     const startState = EditorState.create({
       doc: note.content || "",
@@ -136,6 +144,7 @@ const EditorPanel = memo(function EditorPanel({
         EditorView.lineWrapping,
         markdownKeymap,
         checkboxPlugin,
+        ...(dataPath ? [imagePreviewPlugin(dataPath)] : []),
         Prec.highest(
           keymap.of([
             {
@@ -154,7 +163,6 @@ const EditorPanel = memo(function EditorPanel({
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
-            // Usar noteRef.current para tener la versión actualizada
             const currentNote = noteRef.current;
             if (currentNote) {
               onChange({ ...currentNote, content: newContent });
@@ -176,7 +184,7 @@ const EditorPanel = memo(function EditorPanel({
       view.destroy();
       viewRef.current = null;
     };
-  }, [note?.id]);
+  }, [note?.id, dataPath]);
 
   useEffect(() => {
     if (!viewRef.current || !note) return;

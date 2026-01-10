@@ -693,7 +693,7 @@ span.tok-heading span.tok-emphasis {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  margin: 16px 0;
+  margin: 0px 0;
   display: block;
 }
 
@@ -719,4 +719,16 @@ span.tok-heading span.tok-emphasis {
 .cm-note-link:hover {
   color: #7cc5ff;
   text-decoration-style: solid;
+}
+
+.cm-image-preview {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  display: block;
+  border: 1px solid var(--border-color, #333);
+  margin: 8px 0 -1.2em 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
