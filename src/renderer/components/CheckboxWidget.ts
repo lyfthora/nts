@@ -34,8 +34,11 @@ export const checkboxPlugin = ViewPlugin.fromClass(
 
           if (text.match(/^(\s*)-\s\[([ x])\]/)) {
             const lineStart = view.coordsAtPos(line.from);
-            if (lineStart && e.clientX - lineStart.left < 60) {
-              return toggleCheckbox(view, pos);
+            if (lineStart) {
+              const offset = e.clientX - lineStart.left;
+              if (offset >= 15 && offset < 35) {
+                return toggleCheckbox(view, pos);
+              }
             }
           }
         }
@@ -49,9 +52,12 @@ export const checkboxPlugin = ViewPlugin.fromClass(
 
           if (text.match(/^(\s*)-\s\[([ x])\]/)) {
             const lineStart = view.coordsAtPos(line.from);
-            if (lineStart && e.clientX - lineStart.left < 60) {
-              view.dom.style.cursor = "pointer";
-              return false;
+            if (lineStart) {
+              const offset = e.clientX - lineStart.left;
+              if (offset >= 15 && offset < 35) {
+                view.dom.style.cursor = "pointer";
+                return false;
+              }
             }
           }
         }
