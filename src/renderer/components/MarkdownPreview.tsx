@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { marked } from "marked";
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -27,9 +29,16 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
         renderer,
       });
       setHtml(rendered as string);
+
+      setTimeout(() => {
+        document.querySelectorAll('.markdown-preview-content pre code').forEach((block) => {
+          hljs.highlightElement(block as HTMLElement);
+        });
+      }, 0);
     };
     renderMarkdown();
   }, [content]);
+
   return (
     <div className="markdown-preview-panel">
       <div

@@ -213,6 +213,7 @@
   height: 100%;
   overflow: auto;
   transition: flex 0.3s ease;
+  outline: none;
 
 }
 
@@ -238,6 +239,7 @@
   display: flex;
   flex-direction: row;
   position: relative;
+  outline: none;
 }
 
 .cm-editor {
@@ -519,6 +521,7 @@ span.tok-heading span.tok-emphasis {
   min-width: 200px;
   max-width: 90%;
   flex-shrink: 0;
+  outline: none;
 }
 
 .preview-resize-handle {
@@ -531,12 +534,10 @@ span.tok-heading span.tok-emphasis {
   position: absolute;
   left: 0;
   top: 0;
+  outline: none;
 }
 
-.preview-resize-handle:hover,
-.preview-resize-handle:active {
-  background: rgba(74, 158, 255, 0.1);
-}
+
 
 .markdown-preview-panel {
   flex: 1;
@@ -547,6 +548,7 @@ span.tok-heading span.tok-emphasis {
   overflow-x: hidden;
   transition: flex 0.3s ease;
   min-width: 0;
+  outline: none;
 }
 
 .markdown-preview-panel::-webkit-scrollbar {
@@ -625,8 +627,11 @@ span.tok-heading span.tok-emphasis {
 }
 
 .markdown-preview-content pre code {
-  background: transparent;
+  background: transparent !important;
   padding: 0;
+  color: inherit;
+  display: block;
+  overflow-x: auto;
 }
 
 .markdown-preview-content a {
@@ -688,7 +693,7 @@ span.tok-heading span.tok-emphasis {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
-  margin: 16px 0;
+  margin: 0px 0;
   display: block;
 }
 
@@ -714,4 +719,16 @@ span.tok-heading span.tok-emphasis {
 .cm-note-link:hover {
   color: #7cc5ff;
   text-decoration-style: solid;
+}
+
+.cm-image-preview {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  display: block;
+  border: 1px solid var(--border-color, #333);
+  margin: 8px 0 -1.2em 0;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }

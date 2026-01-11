@@ -1,5 +1,10 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import './NotesListPanel.css';
+import buttonIcon from '../assets/icons/button.png';
+import pauseIcon from '../assets/icons/pause.png';
+import checkedIcon from '../assets/icons/checked.png';
+import removeIcon from '../assets/icons/remove.png';
 
 interface NotesListPanelProps {
   notes: any[];
@@ -19,6 +24,16 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
     isResizing.current = true;
     e.preventDefault();
   }, []);
+
+
+  const getIconForStatus = (s?: string) => {
+    if (s === 'active') return buttonIcon;
+    if (s === 'onhold') return pauseIcon;
+    if (s === 'completed') return checkedIcon;
+    if (s === 'dropped') return removeIcon;
+    return null;
+  };
+
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -63,7 +78,27 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         ) : (
           notes.map(n => (
             <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} onClick={() => onSelect(n)}>
-              <div className="note-list-item-title">
+              <div className="note-list-item-title" title={n.name || 'Untitled'}>
+                <AnimatePresence mode="popLayout">
+                  {n.status && (
+                    <motion.span
+                      key={n.status}
+                      className={`status-icon status-icon-${n.status}`}
+                      style={{
+                        backgroundImage: `url(${getIconForStatus(n.status)})`,
+                        marginRight: '6px'
+                      }}
+                      initial={{ opacity: 0, scale: 0.5, x: -10 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      exit={{ opacity: 0, scale: 0.5, x: -10 }}
+                      transition={{
+                        duration: 0.2,
+                        ease: "easeOut",
+                        scale: { type: "spring", stiffness: 300, damping: 20 }
+                      }}
+                    />
+                  )}
+                </AnimatePresence>
                 {n.pinned && (
                   <svg
                     className="pin-icon"
@@ -79,7 +114,12 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                     <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
                   </svg>
                 )}
-                {n.name || 'Untitled'}
+                <motion.span
+                  layout
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
+                  {n.name || 'Untitled'}
+                </motion.span>
               </div>
               {n.tags && n.tags.length > 0 && (
                 <div className="note-list-item-tags">

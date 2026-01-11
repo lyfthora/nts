@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
@@ -349,12 +350,15 @@ export default function Dashboard() {
     const note = notes.find(n =>
       !n.deleted && n.name.toLowerCase() === noteName.toLowerCase()
     );
+
     if (note) {
       setLinkedNoteId(note.id);
+      setToastMessage(null);
     } else {
-      alert(`Note "${noteName}" not found`);
+      setToastMessage(`Note "${noteName}" not found`);
+      setTimeout(() => setToastMessage(null), 3000);
     }
-  }, [notes]);
+  }, [notes])
 
   const handleCloseLinkedNote = useCallback(() => {
     setLinkedNoteId(null);
@@ -420,6 +424,7 @@ export default function Dashboard() {
             onPin={onPin}
             isTrashView={view === "trash"}
             onNoteLinkClick={handleNoteLinkClick}
+            existingTags={tags.map(t => t.name)}
           />
           {linkedNote && (
             <LinkedNotePanel
@@ -436,6 +441,11 @@ export default function Dashboard() {
           )}
         </div>
 
+        {toastMessage && (
+          <div className="toast-notification">
+            {toastMessage}
+          </div>
+        )}
       </div>
     </div>
   );

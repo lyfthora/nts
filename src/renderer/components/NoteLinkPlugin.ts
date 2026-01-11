@@ -10,17 +10,18 @@ import { Range } from "@codemirror/state";
 function findNoteLinks(view: EditorView): Range<Decoration>[] {
   const decorations: Range<Decoration>[] = [];
   const text = view.state.doc.toString();
-  const regex = /@([^\s]+)/g;
+  const regex = /@"([^"]+)"|@([^\s]+)/g;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
     const from = match.index;
     const to = from + match[0].length;
+    const noteName = match[1] || match[2];
 
     const deco = Decoration.mark({
       class: "cm-note-link",
       attributes: {
-        title: `Click to open "@${match[1]}"`,
+        title: `Click to open "@${noteName}"`,
       },
     });
 
@@ -38,20 +39,23 @@ export function noteLinkPlugin(onClick: (noteName: string) => void) {
       constructor(view: EditorView) {
         this.decorations = Decoration.set(findNoteLinks(view));
 
-        // Añadir event listener para Ctrl+Click
+        //  Ctrl+Click
         view.dom.addEventListener("mousedown", this.handleMouseDown);
       }
 
       handleMouseDown = (e: MouseEvent) => {
         const target = e.target as HTMLElement;
+
         if (target.classList.contains("cm-note-link")) {
           e.preventDefault();
           e.stopPropagation();
 
           const text = target.textContent || "";
-          const match = text.match(/@([^\s]+)/);
+          const match = text.match(/@"([^"]+)"|@([^\s]+)/);
+
           if (match) {
-            onClick(match[1]);
+            const noteName = match[1] || match[2];
+            onClick(noteName);
           }
         }
       };
