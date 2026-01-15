@@ -20,6 +20,7 @@ interface FolderTreeProps {
   onCreateFolder: (parentId: number | null, name: string) => void;
   onDeleteFolder: (id: number) => void;
   onRenameFolder: (id: number, newName: string) => void;
+  onNoteDrop?: (noteId: number, targetFolderId: number) => void;
 }
 
 export default function FolderTree({
@@ -31,12 +32,14 @@ export default function FolderTree({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onNoteDrop,
 }: FolderTreeProps) {
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; folderId: number } | null>(null);
   const [activeFolderId, setActiveFolderId] = React.useState<number | null>(null);
   const [editingFolderId, setEditingFolderId] = React.useState<number | null>(null);
   const [editingName, setEditingName] = React.useState("");
   const [modalType, setModalType] = useState<'create' | 'rename' | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = React.useState<number | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem: boolean) => {
     if (isSystem) return;
@@ -77,12 +80,32 @@ export default function FolderTree({
       .map(folder => (
         <div key={folder.id}>
           <div
-            className={`folder-item ${selectedFolderId === folder.id ? "active" : ""}`}
+            className={`folder-item ${selectedFolderId === folder.id ? "active" : ""} ${dragOverFolderId === folder.id ? "drag-over" : ""}`}
             style={{
               paddingLeft: `${level * 12 + (folder.isSystem ? 22 : 2)}px`
             }}
             onClick={() => onSelectFolder(folder.id)}
             onContextMenu={(e) => handleContextMenu(e, folder.id, folder.isSystem)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+              setDragOverFolderId(folder.id);
+            }}
+            onDragLeave={(e) => {
+              // Solo limpiar si realmente salimos del elemento
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOverFolderId(null);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const noteId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+              if (!isNaN(noteId) && onNoteDrop) {
+                onNoteDrop(noteId, folder.id);
+              }
+              setDragOverFolderId(null);
+            }}
           >
             {!folder.isSystem && (
               <button
