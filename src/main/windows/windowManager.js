@@ -1,7 +1,6 @@
 const { BrowserWindow } = require("electron");
 const path = require("path");
 
-let mainWindow = null;
 let listWindow = null;
 let remindersListWindow = null;
 let dashboardWindow = null;

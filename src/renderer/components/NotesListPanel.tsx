@@ -1,6 +1,5 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from "react";
-import type { Note } from "../types/models";
-// import { AnimatePresence, motion } from "framer-motion";
+import type { Note, NoteStatus } from "../types/models";
 import './NotesListPanel.css';
 import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
@@ -28,7 +27,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
   }, []);
 
 
-  const getIconForStatus = (s?: string) => {
+  const getIconForStatus = (s?: NoteStatus) => {
     if (s === 'active') return buttonIcon;
     if (s === 'onhold') return pauseIcon;
     if (s === 'completed') return checkedIcon;

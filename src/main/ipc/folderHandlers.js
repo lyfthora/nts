@@ -1,5 +1,6 @@
 const { ipcMain } = require("electron");
 const storage = require("../storage.js");
+const { isValidFolder, isValidId } = require("../utils/validation.js");
 
 function registerFolderHandlers() {
   // Get all folders
@@ -9,6 +10,14 @@ function registerFolderHandlers() {
 
   // Create folder
   ipcMain.handle("create-folder", async (event, folderData) => {
+    if (!isValidFolder(folderData)) {
+      console.error(
+        "[IPC] Invalid folder data received in create-folder:",
+        folderData
+      );
+      throw new Error("Invalid folder data");
+    }
+
     const folders = await storage.getAllFolders();
     const newFolder = {
       id: Date.now(),
@@ -26,6 +35,14 @@ function registerFolderHandlers() {
 
   // Update folder
   ipcMain.on("update-folder", async (event, folderData) => {
+    if (!isValidFolder(folderData) || !folderData.id) {
+      console.error(
+        "[IPC] Invalid folder data received in update-folder:",
+        folderData
+      );
+      return;
+    }
+
     const folders = await storage.getAllFolders();
     const index = folders.findIndex((f) => f.id === folderData.id);
     if (index !== -1) {
@@ -36,6 +53,14 @@ function registerFolderHandlers() {
 
   // Delete folder
   ipcMain.handle("delete-folder", async (event, folderId) => {
+    if (!isValidId(folderId)) {
+      console.error(
+        "[IPC] Invalid folderId received in delete-folder:",
+        folderId
+      );
+      return;
+    }
+
     const folders = await storage.getAllFolders();
     const folder = folders.find((f) => f.id === folderId);
 
@@ -68,6 +93,11 @@ function registerFolderHandlers() {
 
   // Move folder
   ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
+    if (!isValidId(folderId)) {
+      console.error("[IPC] Invalid folderId in move-folder:", folderId);
+      return;
+    }
+
     const folders = await storage.getAllFolders();
     const index = folders.findIndex((f) => f.id === folderId);
     if (index !== -1) {

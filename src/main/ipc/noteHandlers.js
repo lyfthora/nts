@@ -5,6 +5,13 @@ const {
   getNoteWindows,
 } = require("../windows/windowManager.js");
 const { setReminder } = require("../reminder.js");
+const {
+  isValidNote,
+  isValidId,
+  isValidAssetData,
+  isValidArray,
+  isValidReminderData,
+} = require("../utils/validation.js");
 
 function registerNoteHandlers() {
   // Create note from main window (opens floating window)
@@ -76,6 +83,14 @@ function registerNoteHandlers() {
 
   // Update note
   ipcMain.on("update-note", async (event, noteData) => {
+    if (!isValidNote(noteData)) {
+      console.error(
+        "[IPC] Invalid note data received in update-note:",
+        noteData
+      );
+      return;
+    }
+
     try {
       const { content, ...metadata } = noteData;
       await storage.saveNoteContent(noteData.id, content || "");
@@ -167,34 +182,44 @@ function registerNoteHandlers() {
   });
 
   // Save asset
-  ipcMain.handle(
-    "save-asset",
-    async (event, { fileBuffer, fileName, noteId }) => {
-      try {
-        const relativePath = await storage.saveAsset(
-          fileBuffer,
-          fileName,
-          noteId
-        );
-        return relativePath;
-      } catch (err) {
-        console.error("Error saving asset:", err);
-        throw err;
-      }
+  ipcMain.handle("save-asset", async (event, data) => {
+    if (!isValidAssetData(data)) {
+      console.error("[IPC] Invalid asset data received in save-asset:", data);
+      throw new Error("Invalid asset data");
     }
-  );
+
+    try {
+      const { fileBuffer, fileName, noteId } = data;
+      const relativePath = await storage.saveAsset(
+        fileBuffer,
+        fileName,
+        noteId
+      );
+      return relativePath;
+    } catch (err) {
+      console.error("Error saving asset:", err);
+      throw err;
+    }
+  });
 
   // Clean unused assets
-  ipcMain.handle(
-    "clean-unused-assets",
-    async (event, { noteId, referencedImages }) => {
-      try {
-        await storage.cleanUnusedAssets(noteId, referencedImages);
-      } catch (err) {
-        console.error("Error cleaning assets:", err);
-      }
+  ipcMain.handle("clean-unused-assets", async (event, data) => {
+    if (
+      !data ||
+      !isValidId(data.noteId) ||
+      !isValidArray(data.referencedImages)
+    ) {
+      console.error("[IPC] Invalid data in clean-unused-assets:", data);
+      return;
     }
-  );
+
+    try {
+      const { noteId, referencedImages } = data;
+      await storage.cleanUnusedAssets(noteId, referencedImages);
+    } catch (err) {
+      console.error("Error cleaning assets:", err);
+    }
+  });
 
   // Get data path
   ipcMain.handle("get-data-path", () => {
@@ -224,6 +249,14 @@ function registerNoteHandlers() {
 
   // Set reminder
   ipcMain.on("set-reminder", async (event, data) => {
+    if (!isValidReminderData(data)) {
+      console.error(
+        "[IPC] Invalid reminder data received in set-reminder:",
+        data
+      );
+      return;
+    }
+
     const notes = await storage.getMetadata();
     setReminder(ipcMain, () => notes, getNoteWindows(), data);
   });
