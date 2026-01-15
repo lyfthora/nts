@@ -14,24 +14,6 @@ const {
 } = require("../utils/validation.js");
 
 function registerNoteHandlers() {
-  // Create note from main window (opens floating window)
-  ipcMain.on("create-note", (event) => {
-    const { screen } = require("electron");
-    const primaryDisplay = screen.getPrimaryDisplay();
-    const { width, height } = primaryDisplay.workAreaSize;
-
-    const note = {
-      id: Date.now(),
-      name: "",
-      x: Math.floor(Math.random() * (width - 300)),
-      y: Math.floor(Math.random() * (height - 300)),
-      content: "",
-      color: "#ffffff",
-    };
-
-    createNoteWindow(note);
-  });
-
   // Create note from dashboard (does NOT open floating window)
   ipcMain.handle("create-note-dashboard", async (event) => {
     const { screen } = require("electron");

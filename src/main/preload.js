@@ -2,7 +2,6 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
   // acciones de la ventana main
-  createNote: () => ipcRenderer.send("create-note"),
   createNoteDashboard: () => ipcRenderer.invoke("create-note-dashboard"),
   openNoteWindow: (noteId, x, y) =>
     ipcRenderer.send("open-note-window", noteId, x, y),

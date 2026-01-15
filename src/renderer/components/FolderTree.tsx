@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "./FolderTree.css";
 import InputModal from "./InputModal";
@@ -28,12 +28,12 @@ export default function FolderTree({
   onRenameFolder,
   onNoteDrop,
 }: FolderTreeProps) {
-  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; folderId: number } | null>(null);
-  const [activeFolderId, setActiveFolderId] = React.useState<number | null>(null);
-  const [editingFolderId, setEditingFolderId] = React.useState<number | null>(null);
-  const [editingName, setEditingName] = React.useState("");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; folderId: number } | null>(null);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+  const [editingFolderId, setEditingFolderId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
   const [modalType, setModalType] = useState<'create' | 'rename' | null>(null);
-  const [dragOverFolderId, setDragOverFolderId] = React.useState<number | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<number | null>(null);
 
   const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem?: boolean) => {
     if (isSystem) return;
@@ -44,7 +44,7 @@ export default function FolderTree({
 
   const closeContextMenu = () => setContextMenu(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (contextMenu) {
       document.addEventListener('click', closeContextMenu);
       return () => document.removeEventListener('click', closeContextMenu);

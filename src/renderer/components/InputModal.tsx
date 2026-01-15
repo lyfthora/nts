@@ -25,9 +25,16 @@ export default function InputModal({
   useEffect(() => {
     setValue(defaultValue);
     if (isOpen) {
+      const previouslyFocused = document.activeElement as HTMLElement;
+
       setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
+      return () => {
+        if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+          previouslyFocused.focus();
+        }
+      };
     }
   }, [defaultValue, isOpen]);
 
