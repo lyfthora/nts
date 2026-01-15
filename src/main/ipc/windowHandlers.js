@@ -1,9 +1,4 @@
 const { ipcMain, BrowserWindow } = require("electron");
-const {
-  createDashboardWindow,
-  createListWindow,
-  createRemindersListWindow,
-} = require("../windows/windowManager.js");
 
 function registerWindowHandlers() {
   // Window minimize
@@ -16,21 +11,6 @@ function registerWindowHandlers() {
   ipcMain.on("window-close", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) win.close();
-  });
-
-  // Window destroy
-  ipcMain.on("window-destroy", (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) win.destroy();
-  });
-
-  // Window maximize/unmaximize toggle
-  ipcMain.on("window-maximize", (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) {
-      if (win.isMaximized()) win.unmaximize();
-      else win.maximize();
-    }
   });
 
   // Get window position
@@ -49,21 +29,6 @@ function registerWindowHandlers() {
       return win.getSize();
     }
     return [355, 355];
-  });
-
-  // Open dashboard
-  ipcMain.on("open-dashboard", () => {
-    createDashboardWindow();
-  });
-
-  // Open notes list
-  ipcMain.on("open-notes-list", () => {
-    createListWindow();
-  });
-
-  // Open reminders list
-  ipcMain.on("open-reminders-list", () => {
-    createRemindersListWindow();
   });
 }
 

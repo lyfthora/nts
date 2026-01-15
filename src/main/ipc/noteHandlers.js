@@ -1,16 +1,10 @@
 const { ipcMain } = require("electron");
 const storage = require("../storage.js");
 const {
-  createNoteWindow,
-  getNoteWindows,
-} = require("../windows/windowManager.js");
-const { setReminder } = require("../reminder.js");
-const {
   isValidNote,
   isValidId,
   isValidAssetData,
   isValidArray,
-  isValidReminderData,
 } = require("../utils/validation.js");
 
 function registerNoteHandlers() {
@@ -30,37 +24,6 @@ function registerNoteHandlers() {
     };
     await storage.addNote(note);
     return note;
-  });
-
-  // Open floating window for existing note
-  ipcMain.on("open-note-window", async (event, noteId, x, y) => {
-    const notes = await storage.getMetadata();
-    const note = notes.find((n) => n.id === noteId);
-    const noteWindows = getNoteWindows();
-
-    if (note) {
-      const existingWindow = noteWindows.find((win) => {
-        if (!win.isDestroyed()) {
-          const [wx, wy] = win.getPosition();
-          return wx === note.x && wy === note.y;
-        }
-        return false;
-      });
-
-      if (existingWindow && !existingWindow.isDestroyed()) {
-        if (x !== undefined && y !== undefined) {
-          existingWindow.setPosition(x, y);
-        }
-        existingWindow.show();
-        existingWindow.focus();
-      } else {
-        if (x !== undefined && y !== undefined) {
-          note.x = x;
-          note.y = y;
-        }
-        createNoteWindow(note);
-      }
-    }
   });
 
   // Update note
@@ -101,46 +64,6 @@ function registerNoteHandlers() {
     console.log("Deleting note permanently:", noteId);
     await storage.deleteNotePermanently(noteId);
     console.log(`Note ${noteId} deleted permanently.`);
-  });
-
-  // Show all notes
-  ipcMain.on("show-all-notes", () => {
-    const noteWindows = getNoteWindows();
-    noteWindows.forEach((win) => {
-      if (!win.isDestroyed()) {
-        win.show();
-      }
-    });
-  });
-
-  // Show note by id
-  ipcMain.on("show-note-by-id", async (event, noteId) => {
-    const notes = await storage.getMetadata();
-    const noteWindows = getNoteWindows();
-    const noteWin = noteWindows.find((win) => {
-      if (!win.isDestroyed()) {
-        const note = notes.find((n) => n.id === noteId);
-        if (note) {
-          const [x, y] = win.getPosition();
-          return x === note.x && y === note.y;
-        }
-      }
-      return false;
-    });
-    if (noteWin && !noteWin.isDestroyed()) {
-      noteWin.show();
-      noteWin.focus();
-    }
-  });
-
-  // Get all notes
-  ipcMain.handle("get-all-notes", async () => {
-    try {
-      return await storage.getMetadata();
-    } catch (err) {
-      console.error("Error reading notes:", err);
-      return [];
-    }
   });
 
   // Get all data (notes + folders)
@@ -206,46 +129,6 @@ function registerNoteHandlers() {
   // Get data path
   ipcMain.handle("get-data-path", () => {
     return storage.dataPath;
-  });
-
-  // Get all reminders
-  ipcMain.handle("get-all-reminders", async () => {
-    const notes = await storage.getMetadata();
-    const reminders = [];
-
-    notes.forEach((note) => {
-      if (note.reminder) {
-        reminders.push({
-          noteId: note.id,
-          noteName: note.name,
-          date: note.reminder.date,
-          time: note.reminder.time,
-          repeat: note.reminder.repeat || false,
-          color: note.color || "#ffffff",
-        });
-      }
-    });
-
-    return reminders;
-  });
-
-  // Set reminder
-  ipcMain.on("set-reminder", async (event, data) => {
-    if (!isValidReminderData(data)) {
-      console.error(
-        "[IPC] Invalid reminder data received in set-reminder:",
-        data
-      );
-      return;
-    }
-
-    const notes = await storage.getMetadata();
-    setReminder(ipcMain, () => notes, getNoteWindows(), data);
-  });
-
-  // Cancel reminder
-  ipcMain.on("cancel-reminder", async (event, noteId) => {
-    await storage.updateMetadata(noteId, { reminder: undefined });
   });
 }
 
