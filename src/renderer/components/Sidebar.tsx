@@ -23,6 +23,7 @@ interface SidebarProps {
   folderCounts: Record<number, number>;
   counts: StatusCounts;
   tags: Tag[];
+  onNoteDrop?: (noteId: number, targetFolderId: number) => void;
 }
 
 const Sidebar = memo(function Sidebar({
@@ -39,6 +40,7 @@ const Sidebar = memo(function Sidebar({
   onFolderRename,
   counts,
   tags,
+  onNoteDrop,
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -209,6 +211,7 @@ const Sidebar = memo(function Sidebar({
                   onCreateFolder={onFolderCreate}
                   onDeleteFolder={onFolderDelete}
                   onRenameFolder={onFolderRename}
+                  onNoteDrop={onNoteDrop}
                 />
               </motion.div>
             )}

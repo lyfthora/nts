@@ -1,7 +1,7 @@
 import React, { memo, useEffect, useRef, useState } from "react";
 import { marked } from "marked";
 import { useCallback } from "react";
-import { EditorView, basicSetup } from "codemirror";
+import { EditorView } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorState, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -21,6 +21,8 @@ import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
 import { languages } from "@codemirror/language-data";
 import { imagePreviewPlugin } from "./ImagePreviewPlugin";
+import { setupWithoutKeymaps } from "./customSetup";
+
 
 interface EditorPanelProps {
   note: any | null;
@@ -136,7 +138,7 @@ const EditorPanel = memo(function EditorPanel({
     const startState = EditorState.create({
       doc: note.content || "",
       extensions: [
-        basicSetup,
+        ...setupWithoutKeymaps,
         markdown({ extensions: [Strikethrough], codeLanguages: languages }),
         oneDark,
         syntaxHighlighting(classHighlighter),
