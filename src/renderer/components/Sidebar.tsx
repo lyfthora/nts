@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { StatusCounts, Tag } from "../types/models";
+import type { Note, Folder, StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
 import FolderTree from "./FolderTree";
 import InputModal from "./InputModal";
@@ -10,8 +10,8 @@ import checkedIcon from "../assets/icons/checked.png";
 import removeIcon from "../assets/icons/remove.png";
 
 interface SidebarProps {
-  notes: any[];
-  folders: any[];
+  notes: Note[];
+  folders: Folder[];
   view: string;
   selectedFolderId: number | null;
   onViewChange: (v: string) => void;
@@ -83,7 +83,7 @@ const Sidebar = memo(function Sidebar({
   }, []);
 
 
-  const Item = memo(({ view: v, children }: any) => (
+  const Item = memo(({ view: v, children }: { view: string; children: React.ReactNode }) => (
     <a
       href="#"
       className={`nav-item${view === v ? " active" : ""}`}
@@ -118,7 +118,7 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>All Notes</span>
             <span className="nav-count" id="allNotesCount">
-              {String(notes.filter((n: any) => !n.deleted).length)}
+              {String(notes.filter((n) => !n.deleted).length)}
             </span>
           </Item>
           <Item view="pinned">
@@ -135,7 +135,7 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Pinned Notes</span>
             <span className="nav-count" id="pinnedCount">
-              {String(notes.filter((n: any) => !n.deleted && n.pinned).length)}
+              {String(notes.filter((n) => !n.deleted && n.pinned).length)}
             </span>
           </Item>
           <Item view="trash">
@@ -152,7 +152,7 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Trash</span>
             <span className="nav-count" id="trashCount">
-              {String(notes.filter((n: any) => n.deleted).length)}
+              {String(notes.filter((n) => n.deleted).length)}
             </span>
           </Item>
         </div>

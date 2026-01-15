@@ -1,4 +1,5 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from "react";
+import type { Note } from "../types/models";
 // import { AnimatePresence, motion } from "framer-motion";
 import './NotesListPanel.css';
 import buttonIcon from '../assets/icons/button.png';
@@ -7,10 +8,10 @@ import checkedIcon from '../assets/icons/checked.png';
 import removeIcon from '../assets/icons/remove.png';
 
 interface NotesListPanelProps {
-  notes: any[];
+  notes: Note[];
   currentNoteId: number | null;
   onAddNote: () => void;
-  onSelect: (n: any) => void;
+  onSelect: (n: Note) => void;
   isTrashView?: boolean;
   title?: string;
   onNoteDrag?: (noteId: number, targetFolderId: number) => void;

@@ -1,4 +1,5 @@
 import React, { memo, useEffect, useRef, useState } from "react";
+import type { Note, Folder, } from "../types/models";
 import { marked } from "marked";
 import { useCallback } from "react";
 import { EditorView } from "codemirror";
@@ -25,16 +26,16 @@ import { setupWithoutKeymaps } from "./customSetup";
 
 
 interface EditorPanelProps {
-  note: any | null;
-  folders: any[];
-  onChange: (n: any) => void;
-  onDelete: (n: any) => void;
-  onRestore?: (n: any) => void;
-  onDeletePermanently?: (n: any) => void;
-  onStatus: (n: any) => void;
-  onTagAdd: (n: any) => void;
-  onTagRemove: (n: any) => void;
-  onPin: (n: any) => void;
+  note: Note | null;
+  folders: Folder[];
+  onChange: (n: Note) => void;
+  onDelete: (n: Note) => void;
+  onRestore?: (n: Note) => void;
+  onDeletePermanently?: (n: Note) => void;
+  onStatus: (n: Note) => void;
+  onTagAdd: (n: Note) => void;
+  onTagRemove: (n: Note) => void;
+  onPin: (n: Note) => void;
   isTrashView?: boolean;
   onNoteLinkClick?: (noteName: string) => void;
   hideToolbar?: boolean;

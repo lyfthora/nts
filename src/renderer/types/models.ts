@@ -42,3 +42,5 @@ export interface Tag {
 export interface FolderCounts {
   [folderId: number]: number;
 }
+
+export type NoteStatus = "" | "active" | "onhold" | "completed" | "dropped";

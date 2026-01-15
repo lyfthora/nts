@@ -2,14 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "./FolderTree.css";
 import InputModal from "./InputModal";
+import type { Folder } from "../types/models";
 
-interface Folder {
-  id: number;
-  name: string;
-  parentId: number | null;
-  isSystem: boolean;
-  expanded: boolean;
-}
 
 interface FolderTreeProps {
   folders: Folder[];
@@ -41,7 +35,7 @@ export default function FolderTree({
   const [modalType, setModalType] = useState<'create' | 'rename' | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = React.useState<number | null>(null);
 
-  const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem: boolean) => {
+  const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem?: boolean) => {
     if (isSystem) return;
     e.preventDefault();
     e.stopPropagation();

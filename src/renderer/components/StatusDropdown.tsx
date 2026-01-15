@@ -5,17 +5,18 @@ import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
 import checkedIcon from '../assets/icons/checked.png';
 import removeIcon from '../assets/icons/remove.png';
+import type { NoteStatus } from "../types/models";
 
 interface StatusDropdownProps {
-  status: string;
-  onChange: (s: string) => void;
+  status: NoteStatus;
+  onChange: (s: NoteStatus) => void;
 }
 
 const StatusDropdown = memo(function StatusDropdown({ status, onChange }: StatusDropdownProps) {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen(v => !v), []);
 
-  const getIconForStatus = (s: string) => {
+  const getIconForStatus = (s: NoteStatus) => {
     if (s === 'active') return buttonIcon;
     if (s === 'onhold') return pauseIcon;
     if (s === 'completed') return checkedIcon;
@@ -27,7 +28,7 @@ const StatusDropdown = memo(function StatusDropdown({ status, onChange }: Status
   const text = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Status';
   const currentIcon = getIconForStatus(status);
 
-  const Option = (s: string, label: string, cls?: string) => {
+  const Option = (s: NoteStatus, label: string, cls?: string) => {
     const icon = getIconForStatus(s);
     return (
       <div className="status-option" onClick={() => { onChange(s); setOpen(false); }}>
