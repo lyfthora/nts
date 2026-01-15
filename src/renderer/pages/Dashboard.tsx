@@ -50,9 +50,27 @@ export default function Dashboard() {
   );
 
   const folderCounts = useMemo<FolderCounts>(() => {
+    const getAllDescendantIds = (parentId: number): number[] => {
+      const children = folders.filter(f => f.parentId === parentId);
+      const ids: number[] = [];
+      children.forEach(child => {
+        ids.push(child.id);
+        ids.push(...getAllDescendantIds(child.id));
+      })
+      return ids;
+    };
+
     const counts: FolderCounts = {};
     folders.forEach(folder => {
-      counts[folder.id] = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
+      const directCount = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
+      if (!folder.expanded) {
+        const descendantIds = getAllDescendantIds(folder.id);
+        const descendantCount = notes.filter(n => !n.deleted && descendantIds.includes(n.folderId as number)).length;
+        counts[folder.id] = directCount + descendantCount;
+      } else {
+        counts[folder.id] = directCount;
+      }
+
     });
     return counts;
   }, [notes, folders]);
@@ -372,6 +390,17 @@ export default function Dashboard() {
     [saveNote]
   );
 
+  const onNoteDrop = useCallback((noteId: number, targetFolderId: number) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      const updatedNote = { ...note, folderId: targetFolderId };
+      setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
+      window.api.updateNote(updatedNote);
+    }
+  }, [notes]);
+
+
+
   const onSelect = useCallback((n: Note) => setCurrentId(n.id), []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
   const onClose = useCallback(() => window.api.closeWindow(), []);
@@ -392,6 +421,7 @@ export default function Dashboard() {
         onFolderRename={onFolderRename}
         counts={counts}
         tags={tags}
+        onNoteDrop={onNoteDrop}
       />
       <div className="main-content">
         <WindowBar onMinimize={onMinimize} onClose={onClose} />
