@@ -13,9 +13,10 @@ interface NotesListPanelProps {
   onSelect: (n: any) => void;
   isTrashView?: boolean;
   title?: string;
+  onNoteDrag?: (noteId: number, targetFolderId: number) => void;
 }
 
-const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }: NotesListPanelProps) {
+const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title, onNoteDrag }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -77,7 +78,20 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
           <div className="no-items-message">No notes</div>
         ) : (
           notes.map(n => (
-            <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} onClick={() => onSelect(n)}>
+            <div
+              key={n.id}
+              className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`}
+              onClick={() => onSelect(n)}
+              draggable={!isTrashView}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', String(n.id));
+                e.dataTransfer.effectAllowed = 'move';
+                (e.target as HTMLElement).classList.add('dragging');
+              }}
+              onDragEnd={(e) => {
+                (e.target as HTMLElement).classList.remove('dragging');
+              }}
+            >
               <div className="note-list-item-title" title={n.name || 'Untitled'}>
                 {n.status && (
                   <span
