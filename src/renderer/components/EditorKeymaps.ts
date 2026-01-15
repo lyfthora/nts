@@ -314,5 +314,9 @@ export const markdownKeymap = Prec.highest(
         return true;
       },
     },
+    {
+      key: "Mod-w",
+      run: () => true,
+    },
   ])
 );
