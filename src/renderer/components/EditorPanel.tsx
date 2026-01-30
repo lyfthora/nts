@@ -191,15 +191,22 @@ const EditorPanel = memo(function EditorPanel({
 
   useEffect(() => {
     if (!viewRef.current || !note) return;
-
     const currentContent = viewRef.current.state.doc.toString();
     if (currentContent !== note.content) {
+      const scrollInfo = viewRef.current.scrollDOM.scrollTop;
+
       viewRef.current.dispatch({
         changes: {
           from: 0,
           to: currentContent.length,
           insert: note.content || "",
         },
+      });
+
+      requestAnimationFrame(() => {
+        if (viewRef.current) {
+          viewRef.current.scrollDOM.scrollTop = scrollInfo;
+        }
       });
     }
   }, [note?.content]);
@@ -470,7 +477,9 @@ const EditorPanel = memo(function EditorPanel({
               className="preview-resize-handle"
               onMouseDown={handlePreviewMouseDown}
             />
-            <MarkdownPreview content={note?.content || ""} />
+            <MarkdownPreview content={note?.content || ""}
+              onContentChange={(newContent) => onChange({ ...note, content: newContent })}
+            />
           </div>
         )}
       </div>
