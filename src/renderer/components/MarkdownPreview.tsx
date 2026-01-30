@@ -22,8 +22,9 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => {
         }
         return `<img src="${src}" alt="${text}" title="${title || ""}" />`;
       };
+      const cleanedContent = content.replace(/\{width=\d+\}/g, '');
 
-      const rendered = marked(content, {
+      const rendered = marked(cleanedContent, {
         breaks: true,
         gfm: true,
         renderer,
