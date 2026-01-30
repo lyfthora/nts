@@ -691,6 +691,7 @@ span.tok-heading span.tok-emphasis {
 
 .markdown-preview-content img {
   max-width: 100%;
+  max-height: 300px;
   height: auto;
   border-radius: 8px;
   margin: 0px 0;
@@ -723,12 +724,65 @@ span.tok-heading span.tok-emphasis {
 
 .cm-image-preview {
   max-width: 100%;
-  max-height: 300px;
   border-radius: 4px;
   display: block;
   border: 1px solid var(--border-color, #333);
-  margin: 8px 0 -1.2em 0;
+  margin: 0 0 -1.2em 0;
   position: relative;
   z-index: 1;
   pointer-events: auto;
+}
+
+/* rezize img */
+.cm-image-wrapper {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0;
+
+}
+
+.cm-image-wrapper .cm-image-preview {
+  display: block;
+  max-width: 100%;
+}
+
+.cm-image-wrapper:hover .cm-image-resize-handle {
+  opacity: 1;
+}
+
+/* resize handle */
+.cm-image-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  background: rgba(74, 74, 74, 0.9);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 10;
+}
+
+.cm-image-resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
+}
+
+.cm-image-wrapper:hover .cm-image-resize-handle::before,
+.cm-image-wrapper.resizing .cm-image-resize-handle::before {
+  border-color: #fff;
+}
+
+.cm-image-width-hidden {
+  display: none;
 }
