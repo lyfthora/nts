@@ -12,6 +12,7 @@ import NotesListPanel from "../components/NotesListPanel";
 import EditorPanel from "../components/EditorPanel";
 import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
+import FolderSearchModal from "../components/FolderSearchModal";
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -23,6 +24,7 @@ export default function Dashboard() {
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
   const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
@@ -100,6 +102,18 @@ export default function Dashboard() {
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        e.preventDefault();
+        setIsFolderSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   useEffect(() => {
@@ -246,12 +260,16 @@ export default function Dashboard() {
     }
   }, []);
 
-
   const onFolderSelect = useCallback((id: number) => {
     setSelectedFolderId(id);
     setView('folder');
     setCurrentId(null);
   }, []);
+
+  const onFolderSearchSelect = useCallback((folderId: number) => {
+    setIsFolderSearchOpen(false);
+    onFolderSelect(folderId);
+  }, [onFolderSelect]);
 
   const onFolderToggle = useCallback((id: number) => {
     setFolders(prev => {
@@ -477,6 +495,13 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      <FolderSearchModal
+        isOpen={isFolderSearchOpen}
+        folders={folders}
+        folderCounts={folderCounts}
+        onSelect={onFolderSearchSelect}
+        onCancel={() => setIsFolderSearchOpen(false)}
+      />
     </div>
   );
 }
