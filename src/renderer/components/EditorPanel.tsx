@@ -68,7 +68,7 @@ const EditorPanel = memo(function EditorPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [previewWidth, setPreviewWidth] = useState(600);
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const [dataPath, setDataPath] = useState<string>("");
 
@@ -110,6 +110,13 @@ const EditorPanel = memo(function EditorPanel({
       document.removeEventListener('mouseup', handleMouseUp);
     };
   }, []);
+
+  useEffect(() => {
+    if (showPreview && previewWidth === null && editorBodyRef.current) {
+      const containerWidth = editorBodyRef.current.getBoundingClientRect().width;
+      setPreviewWidth(Math.floor(containerWidth * 0.5));
+    }
+  }, [showPreview, previewWidth]);
 
   useEffect(() => {
     noteRef.current = note;
@@ -462,7 +469,12 @@ const EditorPanel = memo(function EditorPanel({
         <button
           className="preview-toggle-btn"
           title="Toggle Preview (Ctrl+P)"
-          onClick={() => setShowPreview(!showPreview)}
+          onClick={() => {
+            if (showPreview) {
+              setPreviewWidth(null);
+            }
+            setShowPreview(!showPreview);
+          }}
         >
           <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -472,7 +484,7 @@ const EditorPanel = memo(function EditorPanel({
 
         {/* Panel de Preview */}
         {showPreview && (
-          <div className="preview-container" style={{ width: previewWidth }}>
+          <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
             <div
               className="preview-resize-handle"
               onMouseDown={handlePreviewMouseDown}
