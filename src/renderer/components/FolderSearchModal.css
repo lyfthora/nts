@@ -1,0 +1,164 @@
+.folder-search-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+  z-index: 10000;
+}
+
+.folder-search-content {
+  background: #2d2d2d;
+  border-radius: 10px;
+  width: 450px;
+  max-width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid #4a4a4a;
+  overflow: hidden;
+}
+
+.folder-search-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #3a3a3a;
+  gap: 10px;
+}
+
+.folder-search-icon {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.folder-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #e5e5e5;
+  font-size: 15px;
+  outline: none;
+}
+
+.folder-search-input::placeholder {
+  color: #666;
+}
+
+.folder-search-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.folder-search-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.folder-search-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.folder-search-list::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 3px;
+}
+
+.folder-search-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  cursor: pointer;
+  gap: 10px;
+  transition: background 0.1s ease;
+}
+
+.folder-search-item:hover,
+.folder-search-item.selected {
+  background: #3a3a3a;
+}
+
+.folder-search-item.selected {
+  background: #404050;
+}
+
+.folder-search-item-icon {
+  color: #667eea;
+  flex-shrink: 0;
+}
+
+.folder-search-path {
+  flex: 1;
+  color: #e5e5e5;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.folder-search-highlight {
+  background: rgba(102, 126, 234, 0.3);
+  color: #a3b3ff;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.folder-search-hint {
+  font-size: 11px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.folder-search-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+}
+
+.folder-search-footer {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 16px;
+  border-top: 1px solid #3a3a3a;
+  background: #262626;
+}
+
+.folder-search-shortcut {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #666;
+}
+
+.folder-search-shortcut kbd {
+  background: #3a3a3a;
+  border: 1px solid #4a4a4a;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: inherit;
+  font-size: 10px;
+  color: #999;
+}
+
+.folder-search-section-label {
+  padding: 6px 16px;
+  font-size: 11px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.folder-search-count {
+  color: #ffffff;
+  font-size: 11px;
+  padding: 2px 6px;
+  min-width: 18px;
+  text-align: center;
+  flex-shrink: 0;
+}
