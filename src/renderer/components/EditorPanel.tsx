@@ -15,7 +15,7 @@ import { applyFormat, markdownKeymap } from "./EditorKeymaps";
 import { lineNumbers, keymap } from "@codemirror/view";
 import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
-import { gotoLine } from "@codemirror/search";
+import { gotoLine, closeSearchPanel } from "@codemirror/search";
 import { checkboxPlugin } from "./CheckboxWidget";
 import MarkdownPreview from "./MarkdownPreview";
 import { noteLinkPlugin } from "./NoteLinkPlugin";
@@ -195,6 +195,40 @@ const EditorPanel = memo(function EditorPanel({
       viewRef.current = null;
     };
   }, [note?.id, dataPath]);
+
+
+  useEffect(() => {
+    const handleGotoLineClose = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && viewRef.current) {
+        const gotoLinePanel = document.querySelector(".cm-panel.cm-gotoLine");
+        if (gotoLinePanel) {
+          closeSearchPanel(viewRef.current);
+          viewRef.current.focus();
+        }
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!viewRef.current) return;
+      const gotoLinePanel = document.querySelector(".cm-panel.cm-gotoLine");
+      if (gotoLinePanel && !gotoLinePanel.contains(e.target as Node)) {
+        closeSearchPanel(viewRef.current);
+        viewRef.current.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleGotoLineClose);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", handleGotoLineClose);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+
+
 
   useEffect(() => {
     if (!viewRef.current || !note) return;

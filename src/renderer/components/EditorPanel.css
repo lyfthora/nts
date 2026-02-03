@@ -631,7 +631,26 @@ span.tok-heading span.tok-emphasis {
   padding: 0;
   color: inherit;
   display: block;
-  overflow-x: auto;
+  overflow-x: visible;
+}
+
+/* Scrollbar para code blocks en preview */
+.markdown-preview-content pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
 }
 
 .markdown-preview-content a {
