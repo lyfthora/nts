@@ -77,11 +77,11 @@
 
 .folder-search-item:hover,
 .folder-search-item.selected {
-  background: #3a3a3a;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .folder-search-item.selected {
-  background: #404050;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .folder-search-item-icon {
