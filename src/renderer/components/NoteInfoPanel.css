@@ -1,0 +1,104 @@
+.note-info-panel {
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+}
+
+.note-info-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 8px 12px;
+}
+
+.note-info-item {
+  display: flex;
+  gap: 0;
+  padding: 0 5px 0 5px;
+  border-right: 1px solid #333;
+}
+
+.note-info-item:last-child {
+  border-right: none;
+}
+
+.note-info-label {
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.note-info-label::after {
+  content: ":";
+  margin-right: 6px;
+}
+
+.note-info-value {
+  color: #8a8a8a;
+}
+
+/* Backlinks Toggle */
+.note-info-backlinks-toggle {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.note-info-backlinks-toggle:hover {
+  color: #fff;
+}
+
+.note-info-backlinks-toggle:hover .note-info-label,
+.note-info-backlinks-toggle:hover .note-info-value {
+  color: #bbb;
+}
+
+.backlinks-arrow {
+  color: #666;
+  margin-right: 6px;
+  font-size: 9px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.backlinks-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+/* Backlinks List */
+.note-info-backlinks {
+  padding: 4px 12px 8px 24px;
+  border-top: 1px dashed #2a2a2a;
+}
+
+.backlink-item {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.backlink-item:hover {
+  color: #61afef;
+}
+
+.backlink-item:hover .backlink-name {
+  color: #61afef;
+  text-decoration: underline;
+}
+
+.backlink-tree {
+  color: #444;
+  margin-right: 8px;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.backlink-name {
+  color: #888;
+}
+
+.note-info-empty {
+  color: #555;
+  font-style: italic;
+}
