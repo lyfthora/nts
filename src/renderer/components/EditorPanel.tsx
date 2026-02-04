@@ -23,6 +23,7 @@ import "./EditorPanel.css";
 import { languages } from "@codemirror/language-data";
 import { imagePreviewPlugin } from "./ImagePreviewPlugin";
 import { setupWithoutKeymaps } from "./customSetup";
+import NoteInfoPanel from "./NoteInfoPanel";
 
 
 interface EditorPanelProps {
@@ -493,41 +494,46 @@ const EditorPanel = memo(function EditorPanel({
         />
       )}
 
-      <div className="editor-body" ref={editorBodyRef}>
-        <div ref={editorRef}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop} className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
-
-        {/* Botón de Preview */}
-        <button
-          className="preview-toggle-btn"
-          title="Toggle Preview (Ctrl+P)"
-          onClick={() => {
-            if (showPreview) {
-              setPreviewWidth(null);
-            }
-            setShowPreview(!showPreview);
-          }}
-        >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx={12} cy={12} r={3} />
-          </svg>
-        </button>
-
-        {/* Panel de Preview */}
-        {showPreview && (
-          <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
-            <div
-              className="preview-resize-handle"
-              onMouseDown={handlePreviewMouseDown}
-            />
-            <MarkdownPreview content={note?.content || ""}
-              onContentChange={(newContent) => onChange({ ...note, content: newContent })}
-            />
-          </div>
-        )}
+      <div className="editor-main-container">
+        <div className="editor-body" ref={editorBodyRef}>
+          <div ref={editorRef}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop} className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
+          {/* Botón de Preview */}
+          <button
+            className="preview-toggle-btn"
+            title="Toggle Preview (Ctrl+P)"
+            onClick={() => {
+              if (showPreview) {
+                setPreviewWidth(null);
+              }
+              setShowPreview(!showPreview);
+            }}
+          >
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx={12} cy={12} r={3} />
+            </svg>
+          </button>
+          {/* Panel de Preview */}
+          {showPreview && (
+            <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
+              <div
+                className="preview-resize-handle"
+                onMouseDown={handlePreviewMouseDown}
+              />
+              <NoteInfoPanel
+                note={note}
+                folders={folders}
+                onBacklinkClick={onNoteLinkClick}
+              />
+              <MarkdownPreview content={note?.content || ""}
+                onContentChange={(newContent) => onChange({ ...note, content: newContent })}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
