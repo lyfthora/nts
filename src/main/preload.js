@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld("api", {
   cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
   getDataPath: () => ipcRenderer.invoke("get-data-path"),
 
+  // backlinks
+  getBacklinks: (noteName) => ipcRenderer.invoke("get-backlinks", noteName),
+
   // carpetas
   createFolder: (folderData) => ipcRenderer.invoke("create-folder", folderData),
   updateFolder: (folder) => ipcRenderer.send("update-folder", folder),

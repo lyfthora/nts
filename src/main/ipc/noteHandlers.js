@@ -21,6 +21,8 @@ function registerNoteHandlers() {
       content: "",
       color: "#ffffff",
       images: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     await storage.addNote(note);
     return note;
@@ -31,13 +33,14 @@ function registerNoteHandlers() {
     if (!isValidNote(noteData)) {
       console.error(
         "[IPC] Invalid note data received in update-note:",
-        noteData
+        noteData,
       );
       return;
     }
 
     try {
       const { content, ...metadata } = noteData;
+      metadata.updatedAt = Date.now();
       await storage.saveNoteContent(noteData.id, content || "");
       await storage.updateMetadata(noteData.id, metadata);
     } catch (err) {
@@ -98,7 +101,7 @@ function registerNoteHandlers() {
       const relativePath = await storage.saveAsset(
         fileBuffer,
         fileName,
-        noteId
+        noteId,
       );
       return relativePath;
     } catch (err) {
@@ -129,6 +132,10 @@ function registerNoteHandlers() {
   // Get data path
   ipcMain.handle("get-data-path", () => {
     return storage.dataPath;
+  });
+  // get backlinks
+  ipcMain.handle("get-backlinks", async (event, noteName) => {
+    return await storage.getBacklinks(noteName);
   });
 }
 
