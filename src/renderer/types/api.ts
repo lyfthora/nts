@@ -26,6 +26,15 @@ export interface WindowAPI {
   }) => Promise<void>;
   getDataPath: () => Promise<string>;
 
+  // Backlinks
+  getBacklinks: (noteName: string) => Promise<
+    {
+      id: number;
+      name: string;
+      preview: string;
+    }[]
+  >;
+
   // Operaciones de carpetas
   createFolder: (folderData: Partial<Folder>) => Promise<Folder>;
   updateFolder: (folder: Folder) => void;

@@ -18,6 +18,8 @@ export interface Note {
     time: string;
     repeat?: boolean;
   };
+  createdAt?: number;
+  updatedAt?: number;
 }
 export interface Folder {
   id: number;
