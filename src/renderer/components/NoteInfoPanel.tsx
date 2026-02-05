@@ -21,6 +21,20 @@ const NoteInfoPanel = memo(function NoteInfoPanel({
 }: NoteInfoPanelProps) {
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [lastModified, setLastModified] = useState<number>(note?.updatedAt || Date.now());
+
+  useEffect(() => {
+    if (note?.content !== undefined) {
+      setLastModified(Date.now());
+    }
+  }, [note?.content]);
+
+  useEffect(() => {
+    if (note?.updatedAt) {
+      setLastModified(note.updatedAt);
+    }
+  }, [note?.id]);
+
 
   useEffect(() => {
     if (!note?.name) {
@@ -70,7 +84,7 @@ const NoteInfoPanel = memo(function NoteInfoPanel({
         </div>
         <div className="note-info-item">
           <span className="note-info-label">Modified</span>
-          <span className="note-info-value">{formatDate(note.updatedAt)}</span>
+          <span className="note-info-value">{formatDate(lastModified)}</span>
         </div>
         <div className="note-info-item">
           <span className="note-info-label">Folder</span>
