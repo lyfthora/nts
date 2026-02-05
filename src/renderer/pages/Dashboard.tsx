@@ -214,7 +214,7 @@ export default function Dashboard() {
       .trim()
       .substring(0, 150);
 
-    const noteWithPreview = { ...note, preview };
+    const noteWithPreview = { ...note, preview, updatedAt: Date.now() };
 
     setNotes((prev) => prev.map((n) => (n.id === note.id ? noteWithPreview : n)));
 

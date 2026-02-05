@@ -35,6 +35,44 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
     return null;
   };
 
+  const formatDate = (timestamp?: number): string => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    if (date.toDateString() === now.toDateString()) {
+      return timeStr;
+    }
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    if (date >= startOfWeek) {
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      return `${dayName} ${timeStr}`;
+    }
+    if (date.getFullYear() === now.getFullYear()) {
+      const dateStr = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+      return `${dateStr}, ${timeStr}`;
+    }
+
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    return `${dateStr}, ${timeStr}`;
+  };
+
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -77,7 +115,11 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         {notes.length === 0 ? (
           <div className="no-items-message">No notes</div>
         ) : (
-          notes.map(n => (
+          [...notes].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return (b.updatedAt || 0) - (a.updatedAt || 0);
+          }).map(n => (
             <div
               key={n.id}
               className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`}
@@ -127,6 +169,11 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                 </div>
               )}
               <div className={(n.preview || n.content) ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{(n.preview || n.content) || 'Empty note'}</div>
+              {n.updatedAt && (
+                <div className="note-list-item-meta">
+                  <span>{formatDate(n.updatedAt)}</span>
+                </div>
+              )}
             </div>
           ))
         )}
