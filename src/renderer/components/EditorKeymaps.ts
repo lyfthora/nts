@@ -14,7 +14,7 @@ const getBlockPattern = (type: "ul" | "ol" | "task" | "quote"): RegExp => {
 const toggleFormat = (
   view: EditorView,
   token: string,
-  cursorOffset: number
+  cursorOffset: number,
 ): boolean => {
   const { from, to, head, anchor } = view.state.selection.main;
   const line = view.state.doc.lineAt(from);
@@ -69,7 +69,7 @@ const toggleFormat = (
 const toggleBlockFormat = (
   view: EditorView,
   prefix: string,
-  type: "ul" | "ol" | "task" | "quote"
+  type: "ul" | "ol" | "task" | "quote",
 ): boolean => {
   const { from, to } = view.state.selection.main;
   const startLine = view.state.doc.lineAt(from);
@@ -103,14 +103,14 @@ const toggleBlockFormat = (
   }
 
   const firstLineChange = changes.find(
-    (c) => view.state.doc.lineAt(c.from).number === startLine.number
+    (c) => view.state.doc.lineAt(c.from).number === startLine.number,
   );
 
   const newCursor = firstLineChange
     ? allHavePrefix
       ? Math.max(
           from - (firstLineChange.to - firstLineChange.from),
-          firstLineChange.from
+          firstLineChange.from,
         )
       : from + (firstLineChange.insert?.length || 0)
     : from;
@@ -318,5 +318,5 @@ export const markdownKeymap = Prec.highest(
       key: "Mod-w",
       run: () => true,
     },
-  ])
+  ]),
 );
