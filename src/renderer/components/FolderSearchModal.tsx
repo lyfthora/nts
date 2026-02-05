@@ -26,8 +26,10 @@ export default function FolderSearchModal({
 }: FolderSearchModalProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<"recent" | "all">("recent");
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const MAX_ALL = 10;
 
   const RECENT_FOLDERS_KEY = "nts-recent-folders";
   const MAX_RECENT = 5;
@@ -71,18 +73,23 @@ export default function FolderSearchModal({
   }, [recentFolderIds, foldersWithPaths]);
 
 
-  const isShowingRecent = !query.trim();
   const filteredFolders = useMemo<FolderWithPath[]>(() => {
-    if (!query.trim()) {
-      return recentFolders.length > 0 ? recentFolders : [];
+    if (query.trim()) {
+      const lowerQuery = query.toLowerCase();
+      return foldersWithPaths.filter(
+        ({ path, folder }) =>
+          path.toLowerCase().includes(lowerQuery) ||
+          folder.name.toLowerCase().includes(lowerQuery)
+      );
     }
-    const lowerQuery = query.toLowerCase();
-    return foldersWithPaths.filter(
-      ({ path, folder }) =>
-        path.toLowerCase().includes(lowerQuery) ||
-        folder.name.toLowerCase().includes(lowerQuery)
-    );
-  }, [foldersWithPaths, recentFolders, query]);
+    if (viewMode === "all") {
+      return foldersWithPaths.slice(0, MAX_ALL);
+    }
+    return recentFolders;
+  }, [foldersWithPaths, recentFolders, query, viewMode]);
+
+  const isShowingRecent = !query.trim() && viewMode === "recent";
+  const isShowingAll = !query.trim() && viewMode === "all";
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -92,6 +99,7 @@ export default function FolderSearchModal({
     if (isOpen) {
       setQuery("");
       setSelectedIndex(0);
+      setViewMode("recent");
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
@@ -145,6 +153,20 @@ export default function FolderSearchModal({
           e.preventDefault();
           if (filteredFolders.length > 0 && filteredFolders[selectedIndex]) {
             setQuery(filteredFolders[selectedIndex].path);
+          }
+          break;
+        case "r":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            setViewMode("recent");
+            setSelectedIndex(0);
+          }
+          break;
+        case "a":
+          if (e.ctrlKey) {
+            e.preventDefault();
+            setViewMode("all");
+            setSelectedIndex(0);
           }
           break;
         case "Enter":
@@ -228,8 +250,10 @@ export default function FolderSearchModal({
             <div className="folder-search-list" ref={listRef}>
               {filteredFolders.length > 0 ? (
                 <>
-                  {isShowingRecent && (
-                    <div className="folder-search-section-label">Recent</div>
+                  {(isShowingRecent || isShowingAll) && (
+                    <div className="folder-search-section-label">
+                      {isShowingRecent ? "Recent" : "All"}
+                    </div>
                   )}
                   {filteredFolders.map(({ folder, path }, index) => (
                     <div key={folder.id}
@@ -266,7 +290,7 @@ export default function FolderSearchModal({
                 </>
               ) : (
                 <div className="folder-search-empty">
-                  {isShowingRecent ? "No recent folders" : "No folders found"}
+                  {query.trim() ? "No folders found" : (isShowingRecent ? "No recent folders" : "No folders")}
                 </div>
               )}
             </div>
@@ -275,10 +299,13 @@ export default function FolderSearchModal({
                 <kbd>↑↓</kbd> navigate
               </span>
               <span className="folder-search-shortcut">
-                <kbd>Tab</kbd> autocomplete
+                <kbd>Enter</kbd> select
               </span>
               <span className="folder-search-shortcut">
-                <kbd>Enter</kbd> select
+                <kbd>Ctrl+R</kbd> recent
+              </span>
+              <span className="folder-search-shortcut">
+                <kbd>Ctrl+A</kbd> all
               </span>
               <span className="folder-search-shortcut">
                 <kbd>Esc</kbd> close
