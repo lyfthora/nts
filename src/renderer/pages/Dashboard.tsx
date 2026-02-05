@@ -14,6 +14,7 @@ import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
 import FolderSearchModal from "../components/FolderSearchModal";
 
+
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadedContents, setLoadedContents] = useState<Map<number, string>>(new Map());
@@ -25,6 +26,9 @@ export default function Dashboard() {
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+
   const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
@@ -61,10 +65,15 @@ export default function Dashboard() {
       })
       return ids;
     };
-
     const counts: FolderCounts = {};
     folders.forEach(folder => {
-      const directCount = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
+      const directCount = notes.filter(n => {
+        if (n.deleted) return false;
+        if (folder.id === 1) {
+          return n.folderId === null || n.folderId === undefined || n.folderId === 1;
+        }
+        return n.folderId === folder.id;
+      }).length;
       if (!folder.expanded) {
         const descendantIds = getAllDescendantIds(folder.id);
         const descendantCount = notes.filter(n => !n.deleted && descendantIds.includes(n.folderId as number)).length;
@@ -72,7 +81,6 @@ export default function Dashboard() {
       } else {
         counts[folder.id] = directCount;
       }
-
     });
     return counts;
   }, [notes, folders]);
@@ -109,6 +117,11 @@ export default function Dashboard() {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
         setIsFolderSearchOpen(true);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+        e.preventDefault();
+        setIsFocusMode(prev => !prev);
       }
     };
 
@@ -425,40 +438,44 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <Sidebar
-        notes={notes}
-        folders={folders}
-        view={view}
-        selectedFolderId={selectedFolderId}
-        onViewChange={onViewChange}
-        onFolderSelect={onFolderSelect}
-        folderCounts={folderCounts}
-        onFolderToggle={onFolderToggle}
-        onFolderCreate={onFolderCreate}
-        onFolderDelete={onFolderDelete}
-        onFolderRename={onFolderRename}
-        counts={counts}
-        tags={tags}
-        onNoteDrop={onNoteDrop}
-      />
+      {!isFocusMode && (
+        <Sidebar
+          notes={notes}
+          folders={folders}
+          view={view}
+          selectedFolderId={selectedFolderId}
+          onViewChange={onViewChange}
+          onFolderSelect={onFolderSelect}
+          folderCounts={folderCounts}
+          onFolderToggle={onFolderToggle}
+          onFolderCreate={onFolderCreate}
+          onFolderDelete={onFolderDelete}
+          onFolderRename={onFolderRename}
+          counts={counts}
+          tags={tags}
+          onNoteDrop={onNoteDrop}
+        />
+      )}
       <div className="main-content">
         <WindowBar onMinimize={onMinimize} onClose={onClose} />
         <div className="content-container">
-          <NotesListPanel
-            notes={filteredNotes}
-            currentNoteId={currentId}
-            onAddNote={onAddNote}
-            onSelect={onSelect}
-            isTrashView={view === 'trash'}
-            title={
-              view === 'trash' ? 'Trash' :
-                view === 'pinned' ? 'Pinned Notes' :
-                  view === 'all-notes' ? 'All Notes' :
-                    view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) :
-                      view.startsWith('tag-') ? `#${view.replace('tag-', '')}` :
-                        'Notes'
-            }
-          />
+          {!isFocusMode && (
+            <NotesListPanel
+              notes={filteredNotes}
+              currentNoteId={currentId}
+              onAddNote={onAddNote}
+              onSelect={onSelect}
+              isTrashView={view === 'trash'}
+              title={
+                view === 'trash' ? 'Trash' :
+                  view === 'pinned' ? 'Pinned Notes' :
+                    view === 'all-notes' ? 'All Notes' :
+                      view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) :
+                        view.startsWith('tag-') ? `#${view.replace('tag-', '')}` :
+                          'Notes'
+              }
+            />
+          )}
           <EditorPanel
             note={currentNote}
             folders={folders}
