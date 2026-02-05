@@ -175,7 +175,7 @@ const EditorPanel = memo(function EditorPanel({
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
             const currentNote = noteRef.current;
-            if (currentNote) {
+            if (currentNote && newContent !== currentNote.content) {
               onChange({ ...currentNote, content: newContent });
             }
           }
