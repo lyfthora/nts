@@ -119,7 +119,7 @@ export default function Dashboard() {
         setIsFolderSearchOpen(true);
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
         e.preventDefault();
         setIsFocusMode(prev => !prev);
       }
@@ -430,7 +430,14 @@ export default function Dashboard() {
     }
   }, [notes]);
 
-
+  const onFolderDrop = useCallback(async (folderId: number, targetFolderId: number | null) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+      const updatedFolder = { ...folder, parentId: targetFolderId };
+      setFolders(prev => prev.map(f => f.id === folderId ? updatedFolder : f));
+      await window.api.updateFolder(updatedFolder);
+    }
+  }, [folders]);
 
   const onSelect = useCallback((n: Note) => setCurrentId(n.id), []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
@@ -454,6 +461,7 @@ export default function Dashboard() {
           counts={counts}
           tags={tags}
           onNoteDrop={onNoteDrop}
+          onFolderDrop={onFolderDrop}
         />
       )}
       <div className="main-content">
