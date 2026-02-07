@@ -1,5 +1,11 @@
 import { EditorView, keymap } from "@codemirror/view";
 import { Prec } from "@codemirror/state";
+import {
+  cursorCharLeft,
+  cursorCharRight,
+  cursorGroupLeft,
+  cursorGroupRight,
+} from "@codemirror/commands";
 
 const getBlockPattern = (type: "ul" | "ol" | "task" | "quote"): RegExp => {
   const patterns = {
@@ -270,17 +276,17 @@ export const applyFormat = (view: EditorView, type: string): boolean => {
 };
 
 const shortcuts = [
-  { key: "Mod-b", action: "bold" },
-  { key: "Mod-i", action: "italic" },
-  { key: "Mod-h", action: "h1" },
-  { key: "Mod-k", action: "link" },
-  { key: "Mod-e", action: "inlineCode" },
-  { key: "Mod-u", action: "strikethrough" },
-  { key: "Mod-t", action: "code" },
-  { key: "Mod-Shift-8", action: "ul" },
-  { key: "Mod-Shift-9", action: "ol" },
-  { key: "Mod-Shift-7", action: "task" },
-  { key: "Mod-Shift-.", action: "quote" },
+  { key: "Alt-b", action: "bold" },
+  { key: "Alt-i", action: "italic" },
+  { key: "Alt-h", action: "h1" },
+  { key: "Alt-k", action: "link" },
+  { key: "Alt-e", action: "inlineCode" },
+  { key: "Alt-u", action: "strikethrough" },
+  { key: "Alt-t", action: "code" },
+  { key: "Alt-8", action: "ul" },
+  { key: "Alt-9", action: "ol" },
+  { key: "Alt-7", action: "task" },
+  { key: "Alt-.", action: "quote" },
 ];
 
 export const markdownKeymap = Prec.highest(
@@ -289,6 +295,11 @@ export const markdownKeymap = Prec.highest(
       key,
       run: (view: EditorView) => applyFormat(view, action),
     })),
+
+    { key: "Mod-h", run: cursorCharLeft },
+    { key: "Mod-l", run: cursorCharRight },
+    { key: "Mod-b", run: cursorGroupLeft },
+    { key: "Mod-w", run: cursorGroupRight },
 
     {
       key: "Mod-q",
@@ -313,10 +324,6 @@ export const markdownKeymap = Prec.highest(
         view.dispatch({ selection: { anchor: line.from } });
         return true;
       },
-    },
-    {
-      key: "Mod-w",
-      run: () => true,
     },
   ]),
 );
