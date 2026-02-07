@@ -72,6 +72,7 @@ const EditorPanel = memo(function EditorPanel({
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const [dataPath, setDataPath] = useState<string>("");
+  const [showToolbar, setShowToolbar] = useState(true);
 
   const isResizingPreview = useRef(false);
 
@@ -166,6 +167,13 @@ const EditorPanel = memo(function EditorPanel({
               key: "Mod-p",
               run: () => {
                 setShowPreview(prev => !prev);
+                return true;
+              },
+            },
+            {
+              key: "mod-shift-m",
+              run: () => {
+                setShowToolbar(prev => !prev);
                 return true;
               },
             },
@@ -486,7 +494,7 @@ const EditorPanel = memo(function EditorPanel({
         />
       </div>
 
-      {!hideToolbar && (
+      {!hideToolbar && showToolbar && (
         <MarkdownToolbar
           onFormat={handleFormat}
           onToggleLineNumbers={toggleLineNumbers}
