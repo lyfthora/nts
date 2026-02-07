@@ -420,6 +420,26 @@ export default function Dashboard() {
     },
     [saveNote]
   );
+  const panelTitle = useMemo(() => {
+    const titleMap: Record<string, string> = {
+      'trash': 'Trash',
+      'pinned': 'Pinned Notes',
+      'all-notes': 'All Notes',
+    };
+
+    if (titleMap[view]) return titleMap[view];
+
+    if (view.startsWith('status-')) {
+      const status = view.replace('status-', '');
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    if (view.startsWith('tag-')) {
+      return `#${view.replace('tag-', '')}`;
+    }
+
+    return 'Notes';
+  }, [view]);
 
   const onNoteDrop = useCallback((noteId: number, targetFolderId: number) => {
     const note = notes.find(n => n.id === noteId);
@@ -474,14 +494,7 @@ export default function Dashboard() {
               onAddNote={onAddNote}
               onSelect={onSelect}
               isTrashView={view === 'trash'}
-              title={
-                view === 'trash' ? 'Trash' :
-                  view === 'pinned' ? 'Pinned Notes' :
-                    view === 'all-notes' ? 'All Notes' :
-                      view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) :
-                        view.startsWith('tag-') ? `#${view.replace('tag-', '')}` :
-                          'Notes'
-              }
+              title={panelTitle}
             />
           )}
           <EditorPanel
