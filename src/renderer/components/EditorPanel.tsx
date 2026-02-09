@@ -24,6 +24,8 @@ import { languages } from "@codemirror/language-data";
 import { imagePreviewPlugin } from "./ImagePreviewPlugin";
 import { setupWithoutKeymaps } from "./customSetup";
 import NoteInfoPanel from "./NoteInfoPanel";
+import DrawingCanvas from './DrawingCanvas';
+import DrawingToolbar from './DrawingToolbar';
 
 
 interface EditorPanelProps {
@@ -73,8 +75,35 @@ const EditorPanel = memo(function EditorPanel({
   const editorBodyRef = useRef<HTMLDivElement>(null);
   const [dataPath, setDataPath] = useState<string>("");
   const [showToolbar, setShowToolbar] = useState(true);
+  const [drawingColor, setDrawingColor] = useState('#FFFFFF');
+  const [drawingWidth, setDrawingWidth] = useState(2);
+  const [drawingBackground, setDrawingBackground] = useState<'black' | 'white' | 'grid'>('black');
+  const [isEraser, setIsEraser] = useState(false);
 
   const isResizingPreview = useRef(false);
+
+  const handleDrawingChange = useCallback((canvasJSON: string) => {
+    if (!note) return;
+    onChange({ ...note, drawingData: canvasJSON });
+  }, [note, onChange]);
+
+  const handleBackgroundChange = useCallback((bg: 'black' | 'white' | 'grid') => {
+    setDrawingBackground(bg);
+  }, []);
+  const handleClearCanvas = useCallback(() => {
+    if (note && confirm('Clear canvas?')) {
+      // Limpiar el canvas pasando un drawingData vacío
+      onChange({
+        ...note, drawingData: JSON.stringify({
+          version: '1.0',
+          background: drawingBackground,
+          strokes: []
+        })
+      });
+    }
+  }, [note, onChange, drawingBackground]);
+
+
 
   const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
     isResizingPreview.current = true;
@@ -143,7 +172,7 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    if (!editorRef.current || !note || !dataPath) return;
+    if (!editorRef.current || !note || !dataPath || note.noteType === 'drawing') return;
 
     const startState = EditorState.create({
       doc: note.content || "",
@@ -494,52 +523,88 @@ const EditorPanel = memo(function EditorPanel({
         />
       </div>
 
-      {!hideToolbar && showToolbar && (
-        <MarkdownToolbar
-          onFormat={handleFormat}
-          onToggleLineNumbers={toggleLineNumbers}
-          showLineNumbers={showLineNumbers}
+      {note.noteType === 'drawing' ? (
+        <DrawingToolbar
+          currentColor={drawingColor}
+          lineWidth={drawingWidth}
+          background={drawingBackground}
+          onColorChange={(newColor) => {
+            setDrawingColor(newColor);
+          }}
+          onWidthChange={(newWidth) => {
+            setDrawingWidth(newWidth);
+          }}
+          onBackgroundChange={handleBackgroundChange}
+          onClear={handleClearCanvas}
+          onEraserToggle={() => {
+            setIsEraser(prev => !prev);
+          }}
+          isEraser={isEraser}
         />
+      ) : (
+        !hideToolbar && showToolbar && (
+          <MarkdownToolbar
+            onFormat={handleFormat}
+            onToggleLineNumbers={toggleLineNumbers}
+            showLineNumbers={showLineNumbers}
+          />
+        )
       )}
-
       <div className="editor-main-container">
         <div className="editor-body" ref={editorBodyRef}>
-          <div ref={editorRef}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop} className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
-          {/* Botón de Preview */}
-          <button
-            className="preview-toggle-btn"
-            title="Toggle Preview (Ctrl+P)"
-            onClick={() => {
-              if (showPreview) {
-                setPreviewWidth(null);
-              }
-              setShowPreview(!showPreview);
-            }}
-          >
-            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx={12} cy={12} r={3} />
-            </svg>
-          </button>
-          {/* Panel de Preview */}
-          {showPreview && (
-            <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
+          {/* Editor condicional según tipo de nota */}
+          {note.noteType === 'drawing' ? (
+            <DrawingCanvas
+              drawingData={note.drawingData}
+              background={drawingBackground}
+              onChange={handleDrawingChange}
+              color={drawingColor}
+              lineWidth={drawingWidth}
+              isEraser={isEraser}
+            />
+          ) : (
+            <>
               <div
-                className="preview-resize-handle"
-                onMouseDown={handlePreviewMouseDown}
+                ref={editorRef}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}
               />
-              <NoteInfoPanel
-                note={note}
-                folders={folders}
-                onBacklinkClick={onNoteLinkClick}
-              />
-              <MarkdownPreview content={note?.content || ""}
-                onContentChange={(newContent) => onChange({ ...note, content: newContent })}
-              />
-            </div>
+              {/* Botón de Preview y panel solo para notas de texto */}
+              <button
+                className="preview-toggle-btn"
+                title="Toggle Preview (Ctrl+P)"
+                onClick={() => {
+                  if (showPreview) {
+                    setPreviewWidth(null);
+                  }
+                  setShowPreview(!showPreview);
+                }}
+              >
+                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx={12} cy={12} r={3} />
+                </svg>
+              </button>
+              {showPreview && (
+                <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
+                  <div
+                    className="preview-resize-handle"
+                    onMouseDown={handlePreviewMouseDown}
+                  />
+                  <NoteInfoPanel
+                    note={note}
+                    folders={folders}
+                    onBacklinkClick={onNoteLinkClick}
+                  />
+                  <MarkdownPreview
+                    content={note?.content || ""}
+                    onContentChange={(newContent) => onChange({ ...note, content: newContent })}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
