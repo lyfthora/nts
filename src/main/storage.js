@@ -27,6 +27,7 @@ class Storage {
     this.oldStorePath = path.join(app.getPath("userData"), "notes-data.json");
 
     this._ensureDirectories();
+    this.addMissingFields();
   }
 
   _ensureDirectories() {
@@ -102,6 +103,28 @@ class Storage {
     await fs.writeFile(this.metadataPath, JSON.stringify(emptyData, null, 2));
   }
 
+  async addMissingFields() {
+    try {
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      let modified = false;
+
+      parsed.notes = parsed.notes.map((note) => {
+        if (!note.noteType) {
+          modified = true;
+          return { ...note, noteType: "text" };
+        }
+        return note;
+      });
+      if (modified) {
+        await fs.writeFile(this.metadataPath, JSON.stringify(parsed, null, 2));
+        console.log("Migration completed: added noteType field to notes");
+      }
+    } catch (err) {
+      console.error("Error during migration:", err);
+    }
+  }
+
   async getMetadata() {
     try {
       const data = await fs.readFile(this.metadataPath, "utf-8");
@@ -112,25 +135,36 @@ class Storage {
     }
   }
 
-  async getNoteContent(noteId) {
+  async getNoteData(noteId) {
     try {
       const notePath = path.join(this.notesDir, `note-${noteId}.json`);
       const data = await fs.readFile(notePath, "utf-8");
       const parsed = JSON.parse(data);
-      return parsed.content || "";
+      return {
+        content: parsed.content || "",
+        drawingData: parsed.drawingData,
+      };
     } catch (err) {
-      console.error(`Error leyendo contenido de nota ${noteId}:`, err);
-      return "";
+      console.error(`Error leyendo datos de nota ${noteId}:`, err);
+      return { content: "", drawingData: undefined };
     }
   }
 
-  async saveNoteContent(noteId, content) {
+  async saveNoteContent(noteId, content, drawingData) {
     try {
       const notePath = path.join(this.notesDir, `note-${noteId}.json`);
-      await fs.writeFile(notePath, JSON.stringify({ content }, null, 2));
+      const data = { content };
+      if (drawingData !== undefined) {
+        data.drawingData = drawingData;
+      }
+      await fs.writeFile(notePath, JSON.stringify(data, null, 2));
     } catch (err) {
       console.error(`Error guardando contenido de nota ${noteId}:`, err);
     }
+  }
+  async getNoteContent(noteId) {
+    const data = await this.getNoteData(noteId);
+    return data.content;
   }
 
   async updateMetadata(noteId, updates) {

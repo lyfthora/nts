@@ -23,6 +23,7 @@ function registerNoteHandlers() {
       images: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      noteType: "text",
     };
     await storage.addNote(note);
     return note;
@@ -39,9 +40,16 @@ function registerNoteHandlers() {
     }
 
     try {
-      const { content, ...metadata } = noteData;
+      const { content, drawingData, ...metadata } = noteData;
       metadata.updatedAt = Date.now();
-      await storage.saveNoteContent(noteData.id, content || "");
+
+      // Guardar contenido (texto o dibujo)
+      if (noteData.noteType === "drawing" && drawingData !== undefined) {
+        await storage.saveNoteContent(noteData.id, "", drawingData);
+      } else {
+        await storage.saveNoteContent(noteData.id, content || "");
+      }
+
       await storage.updateMetadata(noteData.id, metadata);
     } catch (err) {
       console.error("Error updating note:", err);
