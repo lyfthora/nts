@@ -22,6 +22,7 @@ export interface Note {
   updatedAt?: number;
   noteType?: "text" | "drawing";
   drawingData?: string;
+  hasDrawingData?: boolean;
 }
 export interface Folder {
   id: number;

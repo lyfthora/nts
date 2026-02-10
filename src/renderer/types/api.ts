@@ -25,6 +25,7 @@ export interface WindowAPI {
     referencedImages: string[];
   }) => Promise<void>;
   getDataPath: () => Promise<string>;
+  getDrawingData: (noteId: number) => Promise<string | undefined>;
 
   // Backlinks
   getBacklinks: (noteName: string) => Promise<
