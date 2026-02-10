@@ -167,6 +167,11 @@ class Storage {
     return data.content;
   }
 
+  async getDrawingData(noteId) {
+    const data = await this.getNoteData(noteId);
+    return data.drawingData;
+  }
+
   async updateMetadata(noteId, updates) {
     try {
       const data = await fs.readFile(this.metadataPath, "utf-8");

@@ -45,6 +45,14 @@ function registerNoteHandlers() {
 
       // Guardar contenido (texto o dibujo)
       if (noteData.noteType === "drawing" && drawingData !== undefined) {
+        try {
+          const parsed = JSON.parse(drawingData);
+          metadata.hasDrawingData = !!(
+            parsed.strokes && parsed.strokes.length > 0
+          );
+        } catch {
+          metadata.hasDrawingData = false;
+        }
         await storage.saveNoteContent(noteData.id, "", drawingData);
       } else {
         await storage.saveNoteContent(noteData.id, content || "");
@@ -94,6 +102,16 @@ function registerNoteHandlers() {
     } catch (err) {
       console.error(`Error loading content for note ${noteId}:`, err);
       return "";
+    }
+  });
+
+  // get drawing data
+  ipcMain.handle("get-drawing-data", async (event, noteId) => {
+    try {
+      return await storage.getDrawingData(noteId);
+    } catch (err) {
+      console.error(`Error loading drawing data for note ${noteId}:`, err);
+      return undefined;
     }
   });
 

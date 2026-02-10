@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("api", {
   saveAsset: (data) => ipcRenderer.invoke("save-asset", data),
   cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
   getDataPath: () => ipcRenderer.invoke("get-data-path"),
+  getDrawingData: (noteId) => ipcRenderer.invoke("get-drawing-data", noteId),
 
   // backlinks
   getBacklinks: (noteName) => ipcRenderer.invoke("get-backlinks", noteName),
