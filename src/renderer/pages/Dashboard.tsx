@@ -132,17 +132,30 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (currentId && !loadedContents.has(currentId)) {
-      window.api.getNoteContent(currentId).then(content => {
-        setLoadedContents(prev => new Map(prev).set(currentId, content));
-        setNotes(prev => prev.map(n => {
-          if (n.id === currentId && n.content === undefined) {
-            return { ...n, content };
-          }
-          return n;
-        }));
-      });
+      const note = notes.find(n => n.id === currentId);
+      if (note?.noteType === 'drawing') {
+        window.api.getDrawingData(currentId).then(drawingData => {
+          setLoadedContents(prev => new Map(prev).set(currentId, drawingData || ''));
+          setNotes(prev => prev.map(n => {
+            if (n.id === currentId && n.drawingData === undefined) {
+              return { ...n, drawingData };
+            }
+            return n;
+          }))
+        });
+      } else {
+        window.api.getNoteContent(currentId).then(content => {
+          setLoadedContents(prev => new Map(prev).set(currentId, content));
+          setNotes(prev => prev.map(n => {
+            if (n.id === currentId && n.content === undefined) {
+              return { ...n, content };
+            }
+            return n;
+          }));
+        });
+      }
     }
-  }, [currentId, loadedContents]);
+  }, [currentId, loadedContents, notes]);
 
   useEffect(() => {
     if (linkedNoteId && !loadedContents.has(linkedNoteId)) {
@@ -218,7 +231,10 @@ export default function Dashboard() {
       .trim()
       .substring(0, 150);
 
-    const noteWithPreview = { ...note, preview, updatedAt: Date.now() };
+    const hasDrawingData = note.noteType === 'drawing' && note.drawingData
+      ? (() => { try { const d = JSON.parse(note.drawingData); return !!(d.strokes && d.strokes.length > 0); } catch { return false; } })()
+      : note.hasDrawingData;
+    const noteWithPreview = { ...note, preview, updatedAt: Date.now(), hasDrawingData };
 
     setNotes((prev) => prev.map((n) => (n.id === note.id ? noteWithPreview : n)));
 

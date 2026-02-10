@@ -168,7 +168,18 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                   ))}
                 </div>
               )}
-              <div className={(n.preview || n.content) ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{(n.preview || n.content) || 'Empty note'}</div>
+              <div className={
+                n.noteType === 'drawing'
+                  ? 'note-list-item-preview note-list-item-drawing'
+                  : (n.preview || n.content)
+                    ? 'note-list-item-preview'
+                    : 'note-list-item-preview note-list-item-empty'
+              }>
+                {n.noteType === 'drawing'
+                  ? (n.hasDrawingData ? 'Drawing note' : 'Empty canvas')
+                  : (n.preview || n.content) || 'Empty note'
+                }
+              </div>
               {n.updatedAt && (
                 <div className="note-list-item-meta">
                   <span>{formatDate(n.updatedAt)}</span>
