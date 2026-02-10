@@ -26,43 +26,45 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   const widths = [1, 2, 4, 8, 16];
   return (
     <div className="drawing-toolbar">
-      {/* Selector de herramienta */}
+      {/* herramientas */}
       <div className="toolbar-group">
         <button
           className={`toolbar-btn ${!isEraser ? 'active' : ''}`}
           title="Lápiz"
           onClick={() => onEraserToggle()}
         >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M12 19l7-7 3 3-7 7-3-3z" />
-            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-          </svg>
+          PEN
         </button>
         <button
           className={`toolbar-btn ${isEraser ? 'active' : ''}`}
           title="Borrador"
           onClick={() => onEraserToggle()}
         >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M20 20H7L3 16L10 9L18 17L20 15V20Z" />
-          </svg>
+          ERA
         </button>
       </div>
-      {/* Selector de color */}
+
+      <div className="toolbar-separator"></div>
+
+      {/* cambiar color */}
       {!isEraser && (
-        <div className="toolbar-group">
-          {colors.map((color) => (
-            <button
-              key={color}
-              className={`color-btn ${currentColor === color ? 'active' : ''}`}
-              style={{ backgroundColor: color }}
-              onClick={() => onColorChange(color)}
-              title={color}
-            />
-          ))}
-        </div>
+        <>
+          <div className="toolbar-group">
+            {colors.map((color) => (
+              <button
+                key={color}
+                className={`color-btn ${currentColor === color ? 'active' : ''}`}
+                style={{ backgroundColor: color }}
+                onClick={() => onColorChange(color)}
+                title={color}
+              />
+            ))}
+          </div>
+          <div className="toolbar-separator"></div>
+        </>
       )}
-      {/* Selector de grosor */}
+
+      {/* cambiar tamaño */}
       <div className="toolbar-group">
         {widths.map((width) => (
           <button
@@ -73,8 +75,8 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           >
             <div
               style={{
-                width: `${width * 2}px`,
-                height: `${width * 2}px`,
+                width: `${Math.max(width * 1.5, 4)}px`,
+                height: `${Math.max(width * 1.5, 4)}px`,
                 borderRadius: '50%',
                 backgroundColor: 'currentColor',
               }}
@@ -82,40 +84,43 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
           </button>
         ))}
       </div>
-      {/* Selector de fondo */}
+
+      <div className="toolbar-separator"></div>
+
+      {/* select fondo */}
       <div className="toolbar-group">
         <button
           className={`toolbar-btn ${background === 'black' ? 'active' : ''}`}
           onClick={() => onBackgroundChange('black')}
           title="Fondo Negro"
         >
-          ⬛
+          BLK
         </button>
         <button
           className={`toolbar-btn ${background === 'white' ? 'active' : ''}`}
           onClick={() => onBackgroundChange('white')}
           title="Fondo Blanco"
         >
-          ⬜
+          WHT
         </button>
         <button
           className={`toolbar-btn ${background === 'grid' ? 'active' : ''}`}
           onClick={() => onBackgroundChange('grid')}
           title="Fondo Cuadriculado"
         >
-          ▦
+          GRD
         </button>
       </div>
+
+      <div className="toolbar-separator"></div>
+
       {/* Limpiar */}
       <div className="toolbar-group">
         <button className="toolbar-btn" onClick={onClear} title="Limpiar Todo">
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
+          CLR
         </button>
       </div>
     </div>
   );
-};
+}
 export default DrawingToolbar;
