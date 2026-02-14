@@ -27,6 +27,7 @@ import NoteInfoPanel from "./NoteInfoPanel";
 import DrawingCanvas from './DrawingCanvas';
 import DrawingToolbar from './DrawingToolbar';
 
+let cachedDataPath = '';
 
 interface EditorPanelProps {
   note: Note | null;
@@ -45,6 +46,7 @@ interface EditorPanelProps {
   isLinkedNote?: boolean;
   onCloseLinkedNote?: () => void;
   existingTags?: string[];
+  onNoteTypeChange?: (noteType: 'text' | 'drawing') => void;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -64,6 +66,7 @@ const EditorPanel = memo(function EditorPanel({
   isLinkedNote,
   onCloseLinkedNote,
   existingTags = [],
+  onNoteTypeChange,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -73,14 +76,27 @@ const EditorPanel = memo(function EditorPanel({
   const [showPreview, setShowPreview] = useState(false);
   const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
-  const [dataPath, setDataPath] = useState<string>("");
+  const [dataPath, setDataPath] = useState<string>(cachedDataPath);
   const [showToolbar, setShowToolbar] = useState(true);
   const [drawingColor, setDrawingColor] = useState('#FFFFFF');
   const [drawingWidth, setDrawingWidth] = useState(2);
   const [drawingBackground, setDrawingBackground] = useState<'black' | 'white' | 'grid'>('black');
   const [isEraser, setIsEraser] = useState(false);
-
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const isResizingPreview = useRef(false);
+
+  useEffect(() => {
+    if (note?.noteType === 'text') {
+      setIsEraser(false);
+    }
+  }, [note?.noteType])
+
+  const isNoteEmpty = note
+    ? note.noteType === 'drawing'
+      ? !note.drawingData || (() => { try { return JSON.parse(note.drawingData).strokes?.length === 0; } catch { return true; } })()
+      : !note.content && !note.name
+    : true;
+
 
   const handleDrawingChange = useCallback((canvasJSON: string) => {
     if (!note) return;
@@ -90,9 +106,13 @@ const EditorPanel = memo(function EditorPanel({
   const handleBackgroundChange = useCallback((bg: 'black' | 'white' | 'grid') => {
     setDrawingBackground(bg);
   }, []);
+
   const handleClearCanvas = useCallback(() => {
-    if (note && confirm('Clear canvas?')) {
-      // Limpiar el canvas pasando un drawingData vacío
+    setShowClearConfirm(true);
+  }, []);
+
+  const confirmClearCanvas = useCallback(() => {
+    if (note) {
       onChange({
         ...note, drawingData: JSON.stringify({
           version: '1.0',
@@ -101,6 +121,7 @@ const EditorPanel = memo(function EditorPanel({
         })
       });
     }
+    setShowClearConfirm(false);
   }, [note, onChange, drawingBackground]);
 
 
@@ -112,7 +133,12 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    window.api.getDataPath().then(setDataPath);
+    if (!cachedDataPath) {
+      window.api.getDataPath().then(path => {
+        cachedDataPath = path;
+        setDataPath(path);
+      });
+    }
   }, []);
 
 
@@ -172,67 +198,98 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    if (!editorRef.current || !note || !dataPath || note.noteType === 'drawing') return;
+    if (!note || !dataPath || note.noteType === 'drawing') return;
 
-    const startState = EditorState.create({
-      doc: note.content || "",
-      extensions: [
-        ...setupWithoutKeymaps,
-        markdown({ extensions: [Strikethrough], codeLanguages: languages }),
-        oneDark,
-        syntaxHighlighting(classHighlighter),
+    const createEditor = () => {
+      if (!editorRef.current) return;
 
-        EditorView.lineWrapping,
-        markdownKeymap,
-        checkboxPlugin,
-        ...(dataPath ? [imagePreviewPlugin(dataPath)] : []),
-        Prec.highest(
-          keymap.of([
-            {
-              key: "Mod-g",
-              run: gotoLine,
-            },
-            {
-              key: "Mod-p",
-              run: () => {
-                setShowPreview(prev => !prev);
-                return true;
+      // Destruir editor previo si existe
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
+
+      const startState = EditorState.create({
+        doc: note.content || "",
+        extensions: [
+          ...setupWithoutKeymaps,
+          markdown({ extensions: [Strikethrough], codeLanguages: languages }),
+          oneDark,
+          syntaxHighlighting(classHighlighter),
+
+          EditorView.lineWrapping,
+          markdownKeymap,
+          checkboxPlugin,
+          ...(dataPath ? [imagePreviewPlugin(dataPath)] : []),
+          Prec.highest(
+            keymap.of([
+              {
+                key: "Mod-g",
+                run: gotoLine,
               },
-            },
-            {
-              key: "mod-shift-m",
-              run: () => {
-                setShowToolbar(prev => !prev);
-                return true;
+              {
+                key: "Mod-p",
+                run: () => {
+                  setShowPreview(prev => !prev);
+                  return true;
+                },
               },
-            },
-          ]),
-        ),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newContent = update.state.doc.toString();
-            const currentNote = noteRef.current;
-            if (currentNote && newContent !== currentNote.content) {
-              onChange({ ...currentNote, content: newContent });
+              {
+                key: "mod-shift-m",
+                run: () => {
+                  setShowToolbar(prev => !prev);
+                  return true;
+                },
+              },
+            ]),
+          ),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              const newContent = update.state.doc.toString();
+              const currentNote = noteRef.current;
+              if (currentNote && newContent !== currentNote.content) {
+                onChange({ ...currentNote, content: newContent });
+              }
             }
-          }
-        }),
-        ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
-      ],
-    });
+          }),
+          ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
+        ],
+      });
 
-    const view = new EditorView({
-      state: startState,
-      parent: editorRef.current,
-    });
+      const view = new EditorView({
+        state: startState,
+        parent: editorRef.current,
+      });
 
-    viewRef.current = view;
+      viewRef.current = view;
+      setTimeout(() => {
+        if (viewRef.current && !viewRef.current.hasFocus) {
+          viewRef.current.focus();
+        }
+      }, 50);
+    };
+
+    if (editorRef.current) {
+      createEditor();
+    } else {
+      // Fallback: si el ref aún no está listo, esperar al siguiente tick
+      const timerId = setTimeout(createEditor, 0);
+      return () => {
+        clearTimeout(timerId);
+        if (viewRef.current) {
+          viewRef.current.destroy();
+          viewRef.current = null;
+        }
+      };
+    }
 
     return () => {
-      view.destroy();
-      viewRef.current = null;
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
     };
-  }, [note?.id, dataPath]);
+  }, [note?.id, dataPath, note?.noteType]);
 
 
   useEffect(() => {
@@ -524,30 +581,61 @@ const EditorPanel = memo(function EditorPanel({
       </div>
 
       {note.noteType === 'drawing' ? (
-        <DrawingToolbar
-          currentColor={drawingColor}
-          lineWidth={drawingWidth}
-          background={drawingBackground}
-          onColorChange={(newColor) => {
-            setDrawingColor(newColor);
-          }}
-          onWidthChange={(newWidth) => {
-            setDrawingWidth(newWidth);
-          }}
-          onBackgroundChange={handleBackgroundChange}
-          onClear={handleClearCanvas}
-          onEraserToggle={() => {
-            setIsEraser(prev => !prev);
-          }}
-          isEraser={isEraser}
-        />
+        <div className="toolbar-with-toggle">
+          <DrawingToolbar
+            currentColor={drawingColor}
+            lineWidth={drawingWidth}
+            background={drawingBackground}
+            onColorChange={(newColor) => { setDrawingColor(newColor); }}
+            onWidthChange={(newWidth) => { setDrawingWidth(newWidth); }}
+            onBackgroundChange={handleBackgroundChange}
+            onClear={handleClearCanvas}
+            onEraserToggle={() => { setIsEraser(prev => !prev); }}
+            isEraser={isEraser}
+          />
+          {showClearConfirm && (
+            <div className="clear-confirm-bar">
+              <span>Clear canvas?</span>
+              <button className="clear-confirm-yes" onClick={confirmClearCanvas}>Yes</button>
+              <button className="clear-confirm-no" onClick={() => setShowClearConfirm(false)}>No</button>
+            </div>
+          )}
+          {isNoteEmpty && onNoteTypeChange && (
+            <button
+              className="note-type-toggle"
+              title="Switch to Text"
+              onClick={() => onNoteTypeChange('text')}
+            >
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </button>
+          )}
+        </div>
       ) : (
         !hideToolbar && showToolbar && (
-          <MarkdownToolbar
-            onFormat={handleFormat}
-            onToggleLineNumbers={toggleLineNumbers}
-            showLineNumbers={showLineNumbers}
-          />
+          <div className="toolbar-with-toggle">
+            <MarkdownToolbar
+              onFormat={handleFormat}
+              onToggleLineNumbers={toggleLineNumbers}
+              showLineNumbers={showLineNumbers}
+            />
+            {isNoteEmpty && onNoteTypeChange && (
+              <button
+                className="note-type-toggle"
+                title="Switch to Drawing"
+                onClick={() => onNoteTypeChange('drawing')}
+              >
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                </svg>
+              </button>
+            )}
+          </div>
         )
       )}
       <div className="editor-main-container">
@@ -566,6 +654,11 @@ const EditorPanel = memo(function EditorPanel({
             <>
               <div
                 ref={editorRef}
+                onClick={() => {
+                  if (viewRef.current) {
+                    viewRef.current.focus();
+                  }
+                }}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}

@@ -867,3 +867,69 @@ span.tok-heading span.tok-emphasis {
   overflow: hidden;
   min-height: 0;
 }
+
+/* Toggle de tipo de nota en toolbar */
+.toolbar-with-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border-bottom: 1px solid #2d2d2d;
+}
+
+.note-type-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.note-type-toggle:hover {
+  color: var(--text-primary, #fff);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Clear canvas confirmation bar */
+.clear-confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(255, 60, 60, 0.15);
+  border: 1px solid rgba(255, 60, 60, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.clear-confirm-yes,
+.clear-confirm-no {
+  padding: 2px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clear-confirm-yes {
+  background: #ff4444;
+  color: #fff;
+}
+
+.clear-confirm-yes:hover {
+  background: #ff2222;
+}
+
+.clear-confirm-no {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+}
+
+.clear-confirm-no:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
