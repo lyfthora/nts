@@ -50,6 +50,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [resizeKey, setResizeKey] = useState(0);
 
   // Load saved data
   useEffect(() => {
@@ -70,6 +71,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       if (!canvas || !canvas.parentElement) return;
       canvas.width = canvas.parentElement.clientWidth;
       canvas.height = canvas.parentElement.clientHeight;
+      setResizeKey(k => k + 1);
     };
     window.addEventListener('resize', resize);
     resize();
@@ -122,7 +124,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         width: lineWidth,
       });
     }
-  }, [strokes, currentStroke, background, color, lineWidth]);
+  }, [strokes, currentStroke, background, color, lineWidth, resizeKey]);
 
   // Draw realistic ink stroke
   const drawInkStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
