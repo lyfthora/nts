@@ -50,8 +50,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
-  const [resizeKey, setResizeKey] = useState(0);
-
   // Load saved data
   useEffect(() => {
     if (drawingData) {
@@ -64,31 +62,16 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     }
   }, [drawingData]);
 
-  // Resize
-  useEffect(() => {
-    const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !canvas.parentElement) return;
-      canvas.width = canvas.parentElement.clientWidth;
-      canvas.height = canvas.parentElement.clientHeight;
-      setResizeKey(k => k + 1);
-    };
-    window.addEventListener('resize', resize);
-    resize();
-    return () => window.removeEventListener('resize', resize);
-  }, []);
-
-  // Render
-  useEffect(() => {
+  const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Background
+
     if (background === 'black') ctx.fillStyle = '#000';
     else if (background === 'white') ctx.fillStyle = '#fff';
     else ctx.fillStyle = '#1a1a1a';
@@ -113,10 +96,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       }
     }
 
-    // Draw saved strokes
+
     strokes.forEach(s => drawInkStroke(ctx, s));
 
-    // Draw current stroke
+
     if (currentStroke.length > 0) {
       drawInkStroke(ctx, {
         points: currentStroke,
@@ -124,9 +107,30 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         width: lineWidth,
       });
     }
-  }, [strokes, currentStroke, background, color, lineWidth, resizeKey]);
+  }, [strokes, currentStroke, background, color, lineWidth]);
+  const redrawRef = useRef(redraw);
+  redrawRef.current = redraw;
 
-  // Draw realistic ink stroke
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !canvas.parentElement) return;
+    const parent = canvas.parentElement;
+
+    const observer = new ResizeObserver(() => {
+      canvas.width = parent.clientWidth;
+      canvas.height = parent.clientHeight;
+      redrawRef.current();
+    });
+
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    redraw();
+  }, [redraw]);
+
   const drawInkStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
     if (stroke.points.length < 2) return;
 
@@ -137,11 +141,11 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     ]);
 
     const outline = getStroke(pts, {
-      size: stroke.width * 1.8,     // Mayor tamaño base
-      thinning: 0.65,                // Más variación natural
-      smoothing: 0.85,               // Mayor suavizado
-      streamline: 0.82,              // Más estabilización
-      simulatePressure: false,        // Simular basado en velocidad
+      size: stroke.width * 1.8,
+      thinning: 0.65,
+      smoothing: 0.85,
+      streamline: 0.82,
+      simulatePressure: false,
       last: true,
       easing: (t) => t,
       start: { taper: 0, cap: true },
@@ -212,10 +216,8 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
 
       const d = dist(last, pos);
 
-      // Filtrar micro-jitter
       if (d < MIN_DIST) return prev;
 
-      // Si el movimiento es muy rápido, interpolar puntos
       if (d > MAX_DIST) {
         const interpolated: Point[] = [];
         const steps = Math.ceil(d / MAX_DIST);
