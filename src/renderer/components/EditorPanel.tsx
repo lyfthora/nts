@@ -91,6 +91,18 @@ const EditorPanel = memo(function EditorPanel({
     }
   }, [note?.noteType])
 
+  useEffect(() => {
+    if (note?.noteType === 'drawing' && note.drawingData) {
+      try {
+        const data = JSON.parse(note.drawingData);
+        if (data.background) {
+          setDrawingBackground(data.background);
+        }
+      } catch {
+      }
+    }
+  }, [note?.id, note?.drawingData]);
+
   const isNoteEmpty = note
     ? note.noteType === 'drawing'
       ? !note.drawingData || (() => { try { return JSON.parse(note.drawingData).strokes?.length === 0; } catch { return true; } })()
@@ -105,7 +117,22 @@ const EditorPanel = memo(function EditorPanel({
 
   const handleBackgroundChange = useCallback((bg: 'black' | 'white' | 'grid') => {
     setDrawingBackground(bg);
-  }, []);
+    if (note) {
+      let currentData: { version: string; background: string; strokes: unknown[] } = {
+        version: '1.0',
+        background: bg,
+        strokes: [],
+      };
+      if (note.drawingData) {
+        try {
+          const parsed = JSON.parse(note.drawingData);
+          currentData = { ...parsed, background: bg };
+        } catch {
+        }
+      }
+      onChange({ ...note, drawingData: JSON.stringify(currentData) });
+    }
+  }, [note, onChange]);
 
   const handleClearCanvas = useCallback(() => {
     setShowClearConfirm(true);
