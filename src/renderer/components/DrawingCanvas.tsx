@@ -58,6 +58,9 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const offsetRef = useRef({ x: 0, y: 0 });
+  const isPanningRef = useRef(false);
+  const panStartRef = useRef({ x: 0, y: 0 });
+  const [ctrlHeld, setCtrlHeld] = useState(false);
   // Load saved data
   useEffect(() => {
     if (drawingData) {
@@ -210,6 +213,13 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   };
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    // ctrl + click = pan
+    if (e.ctrlKey && e.button === 0) {
+      e.preventDefault();
+      isPanningRef.current = true;
+      panStartRef.current = { x: e.clientX - offsetRef.current.x, y: e.clientY - offsetRef.current.y };
+      return;
+    }
     if (isEraser) return;
     const pos = getPos(e);
     const p = e.pressure || 0.5;
@@ -218,21 +228,25 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   }, [isEraser, getPos]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isPanningRef.current) {
+      offsetRef.current = {
+        x: e.clientX - panStartRef.current.x,
+        y: e.clientY - panStartRef.current.y,
+      };
+      redraw();
+      return;
+    }
     if (!isDrawing || isEraser) return;
     const pos = getPos(e);
     const p = e.pressure || 0.5;
     setCurrentStroke(prev => {
       const last = prev[prev.length - 1];
       if (!last) return [{ x: pos.x, y: pos.y, pressure: p }];
-
       const d = dist(last, pos);
-
       if (d < MIN_DIST) return prev;
-
       if (d > MAX_DIST) {
         const interpolated: Point[] = [];
         const steps = Math.ceil(d / MAX_DIST);
-
         for (let i = 1; i <= steps; i++) {
           const t = i / steps;
           interpolated.push({
@@ -241,28 +255,27 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
             pressure: last.pressure + (p - last.pressure) * t,
           });
         }
-
         return [...prev, ...interpolated];
       }
-
       return [...prev, { x: pos.x, y: pos.y, pressure: p }];
     });
-  }, [isDrawing, isEraser, getPos]);
+  }, [isDrawing, isEraser, getPos, redraw]);
 
   const handlePointerUp = useCallback(() => {
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+      return;
+    }
     if (!isDrawing || currentStroke.length === 0) return;
-
     const newStroke: Stroke = {
       points: currentStroke,
       color,
       width: lineWidth,
     };
-
     const newStrokes = [...strokes, newStroke];
     setStrokes(newStrokes);
     setCurrentStroke([]);
     setIsDrawing(false);
-
     const data: DrawingData = {
       version: '1.0',
       background,
@@ -318,6 +331,17 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   }, [zoomLevel, onZoomChange]);
 
   useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Control') setCtrlHeld(true); };
+    const onKeyUp = (e: KeyboardEvent) => { if (e.key === 'Control') setCtrlHeld(false); };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+    };
+  }, []);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.addEventListener('wheel', handleWheel, { passive: false });
@@ -369,7 +393,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        style={{ touchAction: 'none', cursor: "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"><circle cx=\"4\" cy=\"4\" r=\"3\" fill=\"white\"/></svg>') 4 4, auto" }}
+        style={{
+          touchAction: 'none',
+          cursor: ctrlHeld
+            ? (isPanningRef.current ? 'grabbing' : 'grab')
+            : "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"><circle cx=\"4\" cy=\"4\" r=\"3\" fill=\"white\"/></svg>') 4 4, auto"
+        }}
       />
     </div>
   );
