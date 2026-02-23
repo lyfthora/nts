@@ -83,13 +83,19 @@ const EditorPanel = memo(function EditorPanel({
   const [drawingBackground, setDrawingBackground] = useState<'black' | 'white' | 'grid'>('black');
   const [isEraser, setIsEraser] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const isResizingPreview = useRef(false);
 
   useEffect(() => {
     if (note?.noteType === 'text') {
       setIsEraser(false);
     }
+    setZoomLevel(1);
   }, [note?.noteType])
+
+  useEffect(() => {
+    setZoomLevel(1);
+  }, [note?.id]);
 
   useEffect(() => {
     if (note?.noteType === 'drawing' && note.drawingData) {
@@ -151,7 +157,15 @@ const EditorPanel = memo(function EditorPanel({
     setShowClearConfirm(false);
   }, [note, onChange, drawingBackground]);
 
-
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => Math.min(5.0, prev * 1.1));
+  }, []);
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => Math.max(0.1, prev / 1.1));
+  }, []);
+  const handleZoomReset = useCallback(() => {
+    setZoomLevel(1);
+  }, []);
 
   const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
     isResizingPreview.current = true;
@@ -619,6 +633,10 @@ const EditorPanel = memo(function EditorPanel({
             onClear={handleClearCanvas}
             onEraserToggle={() => { setIsEraser(prev => !prev); }}
             isEraser={isEraser}
+            zoomLevel={zoomLevel}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
           />
           {showClearConfirm && (
             <div className="clear-confirm-bar">
@@ -676,6 +694,8 @@ const EditorPanel = memo(function EditorPanel({
               color={drawingColor}
               lineWidth={drawingWidth}
               isEraser={isEraser}
+              zoomLevel={zoomLevel}
+              onZoomChange={setZoomLevel}
             />
           ) : (
             <>
