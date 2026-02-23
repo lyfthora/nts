@@ -27,10 +27,15 @@ interface DrawingCanvasProps {
   color: string;
   lineWidth: number;
   isEraser: boolean;
+  zoomLevel: number;
+  onZoomChange: (zoom: number) => void;
 }
 
 const MIN_DIST = 0.3; // filtro micro jitter
 const MAX_DIST = 15;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 5.0;
+const ZOOM_FACTOR = 1.1;
 
 const pressureCurve = (p: number) => {
   return Math.pow(p, 0.6); // curva suave tipo lápiz
@@ -45,11 +50,14 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   color,
   lineWidth,
   isEraser,
+  zoomLevel,
+  onZoomChange,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
+  const offsetRef = useRef({ x: 0, y: 0 });
   // Load saved data
   useEffect(() => {
     if (drawingData) {
@@ -67,39 +75,41 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-
+    const off = offsetRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-
     if (background === 'black') ctx.fillStyle = '#000';
     else if (background === 'white') ctx.fillStyle = '#fff';
     else ctx.fillStyle = '#1a1a1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Grid
     if (background === 'grid') {
+      ctx.save();
+      ctx.translate(off.x, off.y);
+      ctx.scale(zoomLevel, zoomLevel);
       ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1 / zoomLevel;
       const g = 24;
-      for (let x = 0; x < canvas.width; x += g) {
+      const startX = Math.floor(-off.x / zoomLevel / g) * g;
+      const startY = Math.floor(-off.y / zoomLevel / g) * g;
+      const endX = startX + canvas.width / zoomLevel + g;
+      const endY = startY + canvas.height / zoomLevel + g;
+      for (let x = startX; x < endX; x += g) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
         ctx.stroke();
       }
-      for (let y = 0; y < canvas.height; y += g) {
+      for (let y = startY; y < endY; y += g) {
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
         ctx.stroke();
       }
+      ctx.restore();
     }
-
-
+    ctx.save();
+    ctx.translate(off.x, off.y);
+    ctx.scale(zoomLevel, zoomLevel);
     strokes.forEach(s => drawInkStroke(ctx, s));
-
-
     if (currentStroke.length > 0) {
       drawInkStroke(ctx, {
         points: currentStroke,
@@ -107,10 +117,10 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         width: lineWidth,
       });
     }
-  }, [strokes, currentStroke, background, color, lineWidth]);
+    ctx.restore();
+  }, [strokes, currentStroke, background, color, lineWidth, zoomLevel]);
   const redrawRef = useRef(redraw);
   redrawRef.current = redraw;
-
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -186,11 +196,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const getPos = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current!;
     const rect = canvas.getBoundingClientRect();
+    const off = offsetRef.current;
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left - off.x) / zoomLevel,
+      y: (e.clientY - rect.top - off.y) / zoomLevel,
     };
-  }, []);
+  }, [zoomLevel]);
 
   const dist = (a: Point, b: { x: number; y: number }) => {
     const dx = a.x - b.x;
@@ -263,8 +274,7 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
   const handleErase = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!isEraser) return;
     const pos = getPos(e);
-    const R = 12;
-
+    const R = 12 / zoomLevel;
     const filtered = strokes.filter(s =>
       !s.points.some(p => {
         const dx = p.x - pos.x;
@@ -272,7 +282,6 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
         return Math.sqrt(dx * dx + dy * dy) < R;
       })
     );
-
     if (filtered.length !== strokes.length) {
       setStrokes(filtered);
       const data: DrawingData = {
@@ -282,7 +291,75 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
       };
       onChange(JSON.stringify(data));
     }
-  }, [isEraser, strokes, background, onChange, getPos]);
+  }, [isEraser, strokes, background, onChange, getPos, zoomLevel]);
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const off = offsetRef.current;
+    const direction = e.deltaY < 0 ? 1 : -1;
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoomLevel * Math.pow(ZOOM_FACTOR, direction)));
+
+    const worldX = (mouseX - off.x) / zoomLevel;
+    const worldY = (mouseY - off.y) / zoomLevel;
+    offsetRef.current = {
+      x: mouseX - worldX * newZoom,
+      y: mouseY - worldY * newZoom,
+    };
+    onZoomChange(newZoom);
+  }, [zoomLevel, onZoomChange]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      let newZoom = zoomLevel;
+      if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        newZoom = Math.min(MAX_ZOOM, zoomLevel * ZOOM_FACTOR);
+      } else if (e.key === '-') {
+        e.preventDefault();
+        newZoom = Math.max(MIN_ZOOM, zoomLevel / ZOOM_FACTOR);
+      } else if (e.key === '0') {
+        e.preventDefault();
+        offsetRef.current = { x: 0, y: 0 };
+        onZoomChange(1);
+        return;
+      } else {
+        return;
+      }
+
+      const off = offsetRef.current;
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const worldX = (cx - off.x) / zoomLevel;
+      const worldY = (cy - off.y) / zoomLevel;
+      offsetRef.current = {
+        x: cx - worldX * newZoom,
+        y: cy - worldY * newZoom,
+      };
+      onZoomChange(newZoom);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [zoomLevel, onZoomChange]);
+
 
   return (
     <div className="drawing-canvas-container">
