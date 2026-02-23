@@ -10,6 +10,10 @@ interface DrawingToolbarProps {
   onClear: () => void;
   onEraserToggle: () => void;
   isEraser: boolean;
+  zoomLevel: number;
+  onZoomIn: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
 }
 const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   currentColor,
@@ -21,6 +25,10 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onClear,
   onEraserToggle,
   isEraser,
+  zoomLevel,
+  onZoomIn,
+  onZoomOut,
+  onZoomReset,
 }) => {
   const colors = ['#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
   const widths = [1, 2, 4, 8, 16];
@@ -113,7 +121,30 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
       </div>
 
       <div className="toolbar-separator"></div>
-
+      {/* Zoom */}
+      <div className="toolbar-group">
+        <button
+          className="toolbar-btn"
+          title="Zoom Out (Ctrl+-)"
+          onClick={onZoomOut}
+        >
+          −
+        </button>
+        <button
+          className="zoom-indicator"
+          title="Reset Zoom (Ctrl+0)"
+          onClick={onZoomReset}
+        >
+          {Math.round(zoomLevel * 100)}%
+        </button>
+        <button
+          className="toolbar-btn"
+          title="Zoom In (Ctrl+=)"
+          onClick={onZoomIn}
+        >
+          +
+        </button>
+      </div>
       {/* Limpiar */}
       <div className="toolbar-group">
         <button className="toolbar-btn" onClick={onClear} title="Limpiar Todo">
