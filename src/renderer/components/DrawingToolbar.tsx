@@ -31,7 +31,7 @@ const DrawingToolbar: React.FC<DrawingToolbarProps> = ({
   onZoomReset,
 }) => {
   const colors = ['#FFFFFF', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-  const widths = [1, 2, 4, 8, 16];
+  const widths = [0.5, 1, 2, 4, 8];
   return (
     <div className="drawing-toolbar">
       {/* herramientas */}
