@@ -397,7 +397,12 @@ const DrawingCanvas: React.FC<DrawingCanvasProps> = ({
           touchAction: 'none',
           cursor: ctrlHeld
             ? (isPanningRef.current ? 'grabbing' : 'grab')
-            : "url('data:image/svg+xml;utf8,<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"8\" height=\"8\"><circle cx=\"4\" cy=\"4\" r=\"3\" fill=\"white\"/></svg>') 4 4, auto"
+            : (() => {
+              const size = Math.max(Math.round(lineWidth * 2), 4);
+              const half = size / 2;
+              const r = half - 0.5;
+              return `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle cx="${half}" cy="${half}" r="${r}" fill="white"/></svg>') ${half} ${half}, auto`;
+            })()
         }}
       />
     </div>
