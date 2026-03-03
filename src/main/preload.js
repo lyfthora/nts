@@ -40,6 +40,29 @@ contextBridge.exposeInMainWorld("api", {
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
   getWindowSize: () => ipcRenderer.invoke("get-window-size"),
 
+  // note window out dashboard
+  openNoteWindow: (noteId, x, y) =>
+    ipcRenderer.invoke("open-note-window", { noteId, x, y }),
+  getNoteWindowData: (noteId) =>
+    ipcRenderer.invoke("get-note-window-data", noteId),
+  sendNoteChange: (note) => ipcRenderer.send("note-window-change", note),
+
+  onExternalNoteChanged: (callback) => {
+    const handler = (event, note) => callback(note);
+    ipcRenderer.on("external-note-changed", handler);
+    return () => ipcRenderer.removeListener("external-note-changed", handler);
+  },
+  onNoteWindowClosed: (callback) => {
+    const handler = (event, noteId) => callback(noteId);
+    ipcRenderer.on("note-window-closed", handler);
+    return () => ipcRenderer.removeListener("note-window-closed", handler);
+  },
+  onNoteWindowInit: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on("note-window-init", handler);
+    return () => ipcRenderer.removeListener("note-window-init", handler);
+  },
+
   // Auto-Update
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
   downloadUpdate: () => ipcRenderer.invoke("download-update"),
