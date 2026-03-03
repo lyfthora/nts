@@ -47,7 +47,17 @@ export interface WindowAPI {
   // Utilidades de ventana
   getWindowPosition: () => Promise<[number, number]>;
   getWindowSize: () => Promise<[number, number]>;
-
+  // Note external window
+  openNoteWindow: (noteId: number, x: number, y: number) => Promise<void>;
+  sendNoteChange: (note: Note) => void;
+  onExternalNoteChanged: (callback: (note: Note) => void) => () => void;
+  onNoteWindowClosed: (callback: (noteId: number) => void) => () => void;
+  onNoteWindowInit: (
+    callback: (data: { note: Note; folders: Folder[] }) => void,
+  ) => () => void;
+  getNoteWindowData: (
+    noteId: number,
+  ) => Promise<{ note: Note; folders: Folder[] }>;
   // Auto-Update
   checkForUpdates: () => Promise<any>;
   downloadUpdate: () => Promise<any>;
