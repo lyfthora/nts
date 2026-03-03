@@ -14,9 +14,10 @@ interface NotesListPanelProps {
   isTrashView?: boolean;
   title?: string;
   onNoteDrag?: (noteId: number, targetFolderId: number) => void;
+  onPopOut?: (noteId: number, screenX: number, screenY: number) => void;
 }
 
-const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title, onNoteDrag }: NotesListPanelProps) {
+const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title, onNoteDrag, onPopOut }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -130,8 +131,16 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                 e.dataTransfer.effectAllowed = 'move';
                 (e.target as HTMLElement).classList.add('dragging');
               }}
-              onDragEnd={(e) => {
+              onDragEnd={async (e) => {
                 (e.target as HTMLElement).classList.remove('dragging');
+                if (!onPopOut) return;
+                const [winX, winY] = await window.api.getWindowPosition();
+                const [winW, winH] = await window.api.getWindowSize();
+                const sx = e.screenX;
+                const sy = e.screenY;
+                if (sx < winX || sx > winX + winW || sy < winY || sy > winY + winH) {
+                  onPopOut(n.id, sx, sy);
+                }
               }}
             >
               <div className="note-list-item-title" title={n.name || 'Untitled'}>
