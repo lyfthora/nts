@@ -1,0 +1,12 @@
+.note-window-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1a1a1a;
+  overflow: hidden;
+}
+
+.note-window-container .note-editor-panel {
+  flex: 1;
+  overflow: hidden;
+}
