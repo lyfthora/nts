@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [externalNoteIds, setExternalNoteIds] = useState<Set<number>>(new Set());
 
 
   const currentNote = useMemo<Note | null>(
@@ -153,6 +154,24 @@ export default function Dashboard() {
       });
     }
   }, [linkedNoteId, loadedContents]);
+
+  useEffect(() => {
+    const cleanupChanged = window.api.onExternalNoteChanged((note: Note) => {
+      setNotes(prev => prev.map(n => n.id === note.id ? note : n));
+    });
+    const cleanupClosed = window.api.onNoteWindowClosed((noteId: number) => {
+      setExternalNoteIds(prev => {
+        const next = new Set(prev);
+        next.delete(noteId);
+        return next;
+      });
+    });
+    return () => {
+      cleanupChanged();
+      cleanupClosed();
+    };
+  }, []);
+
 
   const filteredNotes = useMemo(() => {
     let filtered: Note[] = [];
@@ -451,6 +470,14 @@ export default function Dashboard() {
     saveNote(updatedNote);
   }, [currentNote, saveNote]);
 
+  const handlePopOut = useCallback(async (noteId: number, screenX: number, screenY: number) => {
+    await window.api.openNoteWindow(noteId, screenX, screenY);
+    setExternalNoteIds(prev => new Set(prev).add(noteId));
+    if (currentId === noteId) {
+      setCurrentId(null);
+    }
+  }, [currentId]);
+
   const panelTitle = useMemo(() => {
     const titleMap: Record<string, string> = {
       'trash': 'Trash',
@@ -526,6 +553,7 @@ export default function Dashboard() {
               onSelect={onSelect}
               isTrashView={view === 'trash'}
               title={panelTitle}
+              onPopOut={handlePopOut}
             />
           )}
           <EditorPanel
