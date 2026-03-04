@@ -866,6 +866,7 @@ span.tok-heading span.tok-emphasis {
   flex-direction: row;
   overflow: hidden;
   min-height: 0;
+  border-top: 1px solid #2d2d2d;
 }
 
 /* Toggle de tipo de nota en toolbar */
@@ -873,7 +874,6 @@ span.tok-heading span.tok-emphasis {
   display: flex;
   align-items: center;
   gap: 0;
-  border-bottom: 1px solid #2d2d2d;
 }
 
 .note-type-toggle {
