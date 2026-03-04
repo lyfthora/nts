@@ -58,6 +58,7 @@ export default function NoteWindow() {
         onTagAdd={noopNote}
         onTagRemove={noopNote}
         onPin={noopNote}
+        isExternalWindow
       />
     </div>
   );
