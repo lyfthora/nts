@@ -47,6 +47,7 @@ interface EditorPanelProps {
   onCloseLinkedNote?: () => void;
   existingTags?: string[];
   onNoteTypeChange?: (noteType: 'text' | 'drawing') => void;
+  isExternalWindow?: boolean;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -67,6 +68,7 @@ const EditorPanel = memo(function EditorPanel({
   onCloseLinkedNote,
   existingTags = [],
   onNoteTypeChange,
+  isExternalWindow,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -85,6 +87,12 @@ const EditorPanel = memo(function EditorPanel({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const isResizingPreview = useRef(false);
+  const [hideEditor, setHideEditor] = useState(false);
+  const showPreviewRef = useRef(showPreview);
+
+  useEffect(() => {
+    showPreviewRef.current = showPreview;
+  }, [showPreview]);
 
   useEffect(() => {
     if (note?.noteType === 'text') {
@@ -343,7 +351,6 @@ const EditorPanel = memo(function EditorPanel({
         }
       }
     };
-
     const handleClickOutside = (e: MouseEvent) => {
       if (!viewRef.current) return;
       const gotoLinePanel = document.querySelector(".cm-panel.cm-gotoLine");
@@ -363,8 +370,27 @@ const EditorPanel = memo(function EditorPanel({
   }, []);
 
 
-
-
+  useEffect(() => {
+    if (!isExternalWindow) return;
+    const handleExternalShortcuts = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      // ctrl shift p hide editor
+      if (key === 'p') {
+        e.preventDefault();
+        if (showPreviewRef.current) {
+          setHideEditor(prev => !prev);
+        }
+      }
+      // ctrl shift m hide toolbar
+      if (key === 'm') {
+        e.preventDefault();
+        setShowToolbar(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleExternalShortcuts);
+    return () => document.removeEventListener('keydown', handleExternalShortcuts);
+  }, [isExternalWindow]);
 
   useEffect(() => {
     if (!viewRef.current || !note) return;
@@ -709,30 +735,34 @@ const EditorPanel = memo(function EditorPanel({
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
-                className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}
+                className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''} ${hideEditor ? 'editor-hidden' : ''}`}
               />
               {/* Botón de Preview y panel solo para notas de texto */}
-              <button
-                className="preview-toggle-btn"
-                title="Toggle Preview (Ctrl+P)"
-                onClick={() => {
-                  if (showPreview) {
-                    setPreviewWidth(null);
-                  }
-                  setShowPreview(!showPreview);
-                }}
-              >
-                <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                  <circle cx={12} cy={12} r={3} />
-                </svg>
-              </button>
+              {!hideEditor && (
+                <button
+                  className="preview-toggle-btn"
+                  title="Toggle Preview (Ctrl+P)"
+                  onClick={() => {
+                    if (showPreview) {
+                      setPreviewWidth(null);
+                    }
+                    setShowPreview(!showPreview);
+                  }}
+                >
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx={12} cy={12} r={3} />
+                  </svg>
+                </button>
+              )}
               {showPreview && (
-                <div className="preview-container" style={{ width: previewWidth ?? '50%' }}>
-                  <div
-                    className="preview-resize-handle"
-                    onMouseDown={handlePreviewMouseDown}
-                  />
+                <div className="preview-container" style={{ width: hideEditor ? '100%' : (previewWidth ?? '50%') }}>
+                  {!hideEditor && (
+                    <div
+                      className="preview-resize-handle"
+                      onMouseDown={handlePreviewMouseDown}
+                    />
+                  )}
                   <NoteInfoPanel
                     note={note}
                     folders={folders}

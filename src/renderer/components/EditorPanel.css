@@ -933,3 +933,12 @@ span.tok-heading span.tok-emphasis {
 .clear-confirm-no:hover {
   background: rgba(255, 255, 255, 0.2);
 }
+
+/* hide editor */
+.codemirror-container.editor-hidden {
+  display: none;
+}
+
+.codemirror-container.editor-hidden~.preview-container {
+  max-width: 100%;
+}
