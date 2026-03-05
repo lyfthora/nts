@@ -21,6 +21,13 @@ export default function NoteWindow() {
     });
   }, []);
 
+  useEffect(() => {
+    const cleanup = window.api.onDashboardNoteChanged((updatedNote: Note) => {
+      setNote(updatedNote);
+    });
+    return cleanup;
+  }, []);
+
   const saveNote = useCallback((updatedNote: Note) => {
     const preview = (updatedNote.content || '')
       .replace(/!\[.*?\]\(.*?\)/g, '')
