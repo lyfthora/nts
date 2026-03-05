@@ -52,6 +52,7 @@ export interface WindowAPI {
   sendNoteChange: (note: Note) => void;
   onExternalNoteChanged: (callback: (note: Note) => void) => () => void;
   onNoteWindowClosed: (callback: (noteId: number) => void) => () => void;
+  onDashboardNoteChanged: (callback: (note: Note) => void) => () => void;
   onNoteWindowInit: (
     callback: (data: { note: Note; folders: Folder[] }) => void,
   ) => () => void;
