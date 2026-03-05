@@ -57,6 +57,13 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.on("note-window-closed", handler);
     return () => ipcRenderer.removeListener("note-window-closed", handler);
   },
+
+  onDashboardNoteChanged: (callback) => {
+    const handler = (event, note) => callback(note);
+    ipcRenderer.on("dashboard-note-changed", handler);
+    return () => ipcRenderer.removeListener("dashboard-note-changed", handler);
+  },
+
   onNoteWindowInit: (callback) => {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("note-window-init", handler);
