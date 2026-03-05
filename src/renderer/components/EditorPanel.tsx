@@ -89,10 +89,15 @@ const EditorPanel = memo(function EditorPanel({
   const isResizingPreview = useRef(false);
   const [hideEditor, setHideEditor] = useState(false);
   const showPreviewRef = useRef(showPreview);
+  const hideEditorRef = useRef(hideEditor);
 
   useEffect(() => {
     showPreviewRef.current = showPreview;
   }, [showPreview]);
+
+  useEffect(() => {
+    hideEditorRef.current = hideEditor;
+  }, [hideEditor]);
 
   useEffect(() => {
     if (note?.noteType === 'text') {
@@ -383,7 +388,7 @@ const EditorPanel = memo(function EditorPanel({
         }
       }
       // ctrl shift m hide toolbar
-      if (key === 'm') {
+      if (key === 'm' && hideEditorRef.current) {
         e.preventDefault();
         setShowToolbar(prev => !prev);
       }
