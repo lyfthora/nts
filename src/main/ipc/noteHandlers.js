@@ -1,5 +1,7 @@
-const { ipcMain } = require("electron");
+const { ipcMain, BrowserWindow } = require("electron");
 const storage = require("../storage.js");
+const { getNoteWindow } = require("../windows/windowManager.js");
+
 const {
   isValidNote,
   isValidId,
@@ -42,6 +44,14 @@ function registerNoteHandlers() {
     try {
       const { content, drawingData, ...metadata } = noteData;
       metadata.updatedAt = Date.now();
+
+      const noteWin = getNoteWindow(noteData.id);
+      if (noteWin && !noteWin.isDestroyed()) {
+        const senderWin = BrowserWindow.fromWebContents(event.sender);
+        if (!senderWin || senderWin.id !== noteWin.id) {
+          noteWin.webContents.send("dashboard-note-changed", noteData);
+        }
+      }
 
       // Guardar contenido (texto o dibujo)
       if (noteData.noteType === "drawing" && drawingData !== undefined) {
