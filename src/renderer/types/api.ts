@@ -2,22 +2,12 @@ import { Note, Folder } from "./models";
 
 export interface WindowAPI {
   // Acciones de ventana
-  createNote: () => void;
   createNoteDashboard: () => Promise<Note>;
-  openNoteWindow: (noteId: number, x: number, y: number) => void;
-  showAllNotes: () => void;
-  getAllNotes: () => Promise<Note[]>;
   getAllData: () => Promise<{ notes: Note[]; folders: Folder[] }>;
-  showNoteById: (noteId: number) => void;
-  openNotesList: () => void;
-  openRemindersList: () => void;
-  openDashboard: () => void;
 
   // Control de ventana
   minimizeWindow: () => void;
   closeWindow: () => void;
-  destroyWindow: () => void;
-  toggleMaximize: () => void;
 
   // Operaciones de notas
   updateNote: (note: Note) => void;
@@ -35,31 +25,40 @@ export interface WindowAPI {
     referencedImages: string[];
   }) => Promise<void>;
   getDataPath: () => Promise<string>;
+  getDrawingData: (noteId: number) => Promise<string | undefined>;
+
+  // Backlinks
+  getBacklinks: (noteName: string) => Promise<
+    {
+      id: number;
+      name: string;
+      preview: string;
+    }[]
+  >;
 
   // Operaciones de carpetas
-  getAllFolders: () => Promise<Folder[]>;
   createFolder: (folderData: Partial<Folder>) => Promise<Folder>;
   updateFolder: (folder: Folder) => void;
   deleteFolder: (id: number) => void;
-  moveFolder: (folderId: number, newParentId: number | null) => void;
 
   // Callbacks
   onNoteData: (callback: (data: Note) => void) => () => void;
 
-  // Recordatorios
-  setReminder: (
-    noteId: number,
-    date: string,
-    time: string,
-    repeat?: boolean
-  ) => void;
-  getAllReminders: () => Promise<Note[]>;
-  cancelReminder: (noteId: number) => void;
-
   // Utilidades de ventana
   getWindowPosition: () => Promise<[number, number]>;
   getWindowSize: () => Promise<[number, number]>;
-
+  // Note external window
+  openNoteWindow: (noteId: number, x: number, y: number) => Promise<void>;
+  sendNoteChange: (note: Note) => void;
+  onExternalNoteChanged: (callback: (note: Note) => void) => () => void;
+  onNoteWindowClosed: (callback: (noteId: number) => void) => () => void;
+  onDashboardNoteChanged: (callback: (note: Note) => void) => () => void;
+  onNoteWindowInit: (
+    callback: (data: { note: Note; folders: Folder[] }) => void,
+  ) => () => void;
+  getNoteWindowData: (
+    noteId: number,
+  ) => Promise<{ note: Note; folders: Folder[] }>;
   // Auto-Update
   checkForUpdates: () => Promise<any>;
   downloadUpdate: () => Promise<any>;

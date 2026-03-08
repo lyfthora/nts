@@ -1,7 +1,8 @@
 import React, { memo, useEffect, useRef, useState } from "react";
+import type { Note, Folder, } from "../types/models";
 import { marked } from "marked";
 import { useCallback } from "react";
-import { EditorView, basicSetup } from "codemirror";
+import { EditorView } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { EditorState, Prec } from "@codemirror/state";
 import { oneDark } from "@codemirror/theme-one-dark";
@@ -14,31 +15,39 @@ import { applyFormat, markdownKeymap } from "./EditorKeymaps";
 import { lineNumbers, keymap } from "@codemirror/view";
 import { EditorView as EditorViewWrapping } from "@codemirror/view";
 import { Strikethrough } from "@lezer/markdown";
-import { gotoLine } from "@codemirror/search";
+import { gotoLine, closeSearchPanel } from "@codemirror/search";
 import { checkboxPlugin } from "./CheckboxWidget";
 import MarkdownPreview from "./MarkdownPreview";
 import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
 import { languages } from "@codemirror/language-data";
 import { imagePreviewPlugin } from "./ImagePreviewPlugin";
+import { setupWithoutKeymaps } from "./customSetup";
+import NoteInfoPanel from "./NoteInfoPanel";
+import DrawingCanvas from './DrawingCanvas';
+import DrawingToolbar from './DrawingToolbar';
+
+let cachedDataPath = '';
 
 interface EditorPanelProps {
-  note: any | null;
-  folders: any[];
-  onChange: (n: any) => void;
-  onDelete: (n: any) => void;
-  onRestore?: (n: any) => void;
-  onDeletePermanently?: (n: any) => void;
-  onStatus: (n: any) => void;
-  onTagAdd: (n: any) => void;
-  onTagRemove: (n: any) => void;
-  onPin: (n: any) => void;
+  note: Note | null;
+  folders: Folder[];
+  onChange: (n: Note) => void;
+  onDelete: (n: Note) => void;
+  onRestore?: (n: Note) => void;
+  onDeletePermanently?: (n: Note) => void;
+  onStatus: (n: Note) => void;
+  onTagAdd: (n: Note) => void;
+  onTagRemove: (n: Note) => void;
+  onPin: (n: Note) => void;
   isTrashView?: boolean;
   onNoteLinkClick?: (noteName: string) => void;
   hideToolbar?: boolean;
   isLinkedNote?: boolean;
   onCloseLinkedNote?: () => void;
   existingTags?: string[];
+  onNoteTypeChange?: (noteType: 'text' | 'drawing') => void;
+  isExternalWindow?: boolean;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -58,6 +67,8 @@ const EditorPanel = memo(function EditorPanel({
   isLinkedNote,
   onCloseLinkedNote,
   existingTags = [],
+  onNoteTypeChange,
+  isExternalWindow,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -65,11 +76,109 @@ const EditorPanel = memo(function EditorPanel({
   const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [previewWidth, setPreviewWidth] = useState(600);
+  const [previewWidth, setPreviewWidth] = useState<number | null>(null);
   const editorBodyRef = useRef<HTMLDivElement>(null);
-  const [dataPath, setDataPath] = useState<string>("");
-
+  const [dataPath, setDataPath] = useState<string>(cachedDataPath);
+  const [showToolbar, setShowToolbar] = useState(true);
+  const [drawingColor, setDrawingColor] = useState('#FFFFFF');
+  const [drawingWidth, setDrawingWidth] = useState(2);
+  const [drawingBackground, setDrawingBackground] = useState<'black' | 'white' | 'grid'>('black');
+  const [isEraser, setIsEraser] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const isResizingPreview = useRef(false);
+  const [hideEditor, setHideEditor] = useState(false);
+  const showPreviewRef = useRef(showPreview);
+  const hideEditorRef = useRef(hideEditor);
+
+  useEffect(() => {
+    showPreviewRef.current = showPreview;
+  }, [showPreview]);
+
+  useEffect(() => {
+    hideEditorRef.current = hideEditor;
+  }, [hideEditor]);
+
+  useEffect(() => {
+    if (note?.noteType === 'text') {
+      setIsEraser(false);
+    }
+    setZoomLevel(1);
+  }, [note?.noteType])
+
+  useEffect(() => {
+    setZoomLevel(1);
+  }, [note?.id]);
+
+  useEffect(() => {
+    if (note?.noteType === 'drawing' && note.drawingData) {
+      try {
+        const data = JSON.parse(note.drawingData);
+        if (data.background) {
+          setDrawingBackground(data.background);
+        }
+      } catch {
+      }
+    }
+  }, [note?.id, note?.drawingData]);
+
+  const isNoteEmpty = note
+    ? note.noteType === 'drawing'
+      ? !note.drawingData || (() => { try { return JSON.parse(note.drawingData).strokes?.length === 0; } catch { return true; } })()
+      : !note.content && !note.name
+    : true;
+
+
+  const handleDrawingChange = useCallback((canvasJSON: string) => {
+    if (!note) return;
+    onChange({ ...note, drawingData: canvasJSON });
+  }, [note, onChange]);
+
+  const handleBackgroundChange = useCallback((bg: 'black' | 'white' | 'grid') => {
+    setDrawingBackground(bg);
+    if (note) {
+      let currentData: { version: string; background: string; strokes: unknown[] } = {
+        version: '1.0',
+        background: bg,
+        strokes: [],
+      };
+      if (note.drawingData) {
+        try {
+          const parsed = JSON.parse(note.drawingData);
+          currentData = { ...parsed, background: bg };
+        } catch {
+        }
+      }
+      onChange({ ...note, drawingData: JSON.stringify(currentData) });
+    }
+  }, [note, onChange]);
+
+  const handleClearCanvas = useCallback(() => {
+    setShowClearConfirm(true);
+  }, []);
+
+  const confirmClearCanvas = useCallback(() => {
+    if (note) {
+      onChange({
+        ...note, drawingData: JSON.stringify({
+          version: '1.0',
+          background: drawingBackground,
+          strokes: []
+        })
+      });
+    }
+    setShowClearConfirm(false);
+  }, [note, onChange, drawingBackground]);
+
+  const handleZoomIn = useCallback(() => {
+    setZoomLevel(prev => Math.min(5.0, prev * 1.1));
+  }, []);
+  const handleZoomOut = useCallback(() => {
+    setZoomLevel(prev => Math.max(0.1, prev / 1.1));
+  }, []);
+  const handleZoomReset = useCallback(() => {
+    setZoomLevel(1);
+  }, []);
 
   const handlePreviewMouseDown = useCallback((e: React.MouseEvent) => {
     isResizingPreview.current = true;
@@ -78,7 +187,12 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    window.api.getDataPath().then(setDataPath);
+    if (!cachedDataPath) {
+      window.api.getDataPath().then(path => {
+        cachedDataPath = path;
+        setDataPath(path);
+      });
+    }
   }, []);
 
 
@@ -109,6 +223,13 @@ const EditorPanel = memo(function EditorPanel({
   }, []);
 
   useEffect(() => {
+    if (showPreview && previewWidth === null && editorBodyRef.current) {
+      const containerWidth = editorBodyRef.current.getBoundingClientRect().width;
+      setPreviewWidth(Math.floor(containerWidth * 0.5));
+    }
+  }, [showPreview, previewWidth]);
+
+  useEffect(() => {
     noteRef.current = note;
   }, [note]);
 
@@ -131,72 +252,169 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    if (!editorRef.current || !note || !dataPath) return;
+    if (!note || !dataPath || note.noteType === 'drawing') return;
 
-    const startState = EditorState.create({
-      doc: note.content || "",
-      extensions: [
-        basicSetup,
-        markdown({ extensions: [Strikethrough], codeLanguages: languages }),
-        oneDark,
-        syntaxHighlighting(classHighlighter),
+    const createEditor = () => {
+      if (!editorRef.current) return;
 
-        EditorView.lineWrapping,
-        markdownKeymap,
-        checkboxPlugin,
-        ...(dataPath ? [imagePreviewPlugin(dataPath)] : []),
-        Prec.highest(
-          keymap.of([
-            {
-              key: "Mod-g",
-              run: gotoLine,
-            },
-            {
-              key: "Mod-p",
-              run: () => {
-                setShowPreview(prev => !prev);
-                return true;
+      // Destruir editor previo si existe
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
+
+      const startState = EditorState.create({
+        doc: note.content || "",
+        extensions: [
+          ...setupWithoutKeymaps,
+          markdown({ extensions: [Strikethrough], codeLanguages: languages }),
+          oneDark,
+          syntaxHighlighting(classHighlighter),
+
+          EditorView.lineWrapping,
+          markdownKeymap,
+          checkboxPlugin,
+          ...(dataPath ? [imagePreviewPlugin(dataPath)] : []),
+          Prec.highest(
+            keymap.of([
+              {
+                key: "Mod-g",
+                run: gotoLine,
               },
-            },
-          ]),
-        ),
-        EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newContent = update.state.doc.toString();
-            const currentNote = noteRef.current;
-            if (currentNote) {
-              onChange({ ...currentNote, content: newContent });
+              {
+                key: "Mod-p",
+                run: () => {
+                  setShowPreview(prev => !prev);
+                  return true;
+                },
+              },
+              {
+                key: "mod-shift-m",
+                run: () => {
+                  setShowToolbar(prev => !prev);
+                  return true;
+                },
+              },
+            ]),
+          ),
+          EditorView.updateListener.of((update) => {
+            if (update.docChanged) {
+              const newContent = update.state.doc.toString();
+              const currentNote = noteRef.current;
+              if (currentNote && newContent !== currentNote.content) {
+                onChange({ ...currentNote, content: newContent });
+              }
             }
-          }
-        }),
-        ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
-      ],
-    });
+          }),
+          ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
+        ],
+      });
 
-    const view = new EditorView({
-      state: startState,
-      parent: editorRef.current,
-    });
+      const view = new EditorView({
+        state: startState,
+        parent: editorRef.current,
+      });
 
-    viewRef.current = view;
+      viewRef.current = view;
+      setTimeout(() => {
+        if (viewRef.current && !viewRef.current.hasFocus) {
+          viewRef.current.focus();
+        }
+      }, 50);
+    };
+
+    if (editorRef.current) {
+      createEditor();
+    } else {
+      // Fallback: si el ref aún no está listo, esperar al siguiente tick
+      const timerId = setTimeout(createEditor, 0);
+      return () => {
+        clearTimeout(timerId);
+        if (viewRef.current) {
+          viewRef.current.destroy();
+          viewRef.current = null;
+        }
+      };
+    }
 
     return () => {
-      view.destroy();
-      viewRef.current = null;
+      if (viewRef.current) {
+        viewRef.current.destroy();
+        viewRef.current = null;
+      }
     };
-  }, [note?.id, dataPath]);
+  }, [note?.id, dataPath, note?.noteType]);
+
+
+  useEffect(() => {
+    const handleGotoLineClose = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && viewRef.current) {
+        const gotoLinePanel = document.querySelector(".cm-panel.cm-gotoLine");
+        if (gotoLinePanel) {
+          closeSearchPanel(viewRef.current);
+          viewRef.current.focus();
+        }
+      }
+    };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!viewRef.current) return;
+      const gotoLinePanel = document.querySelector(".cm-panel.cm-gotoLine");
+      if (gotoLinePanel && !gotoLinePanel.contains(e.target as Node)) {
+        closeSearchPanel(viewRef.current);
+        viewRef.current.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleGotoLineClose);
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("keydown", handleGotoLineClose);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    if (!isExternalWindow) return;
+    const handleExternalShortcuts = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || !e.shiftKey) return;
+      const key = e.key.toLowerCase();
+      // ctrl shift p hide editor
+      if (key === 'p') {
+        e.preventDefault();
+        if (showPreviewRef.current) {
+          setHideEditor(prev => !prev);
+        }
+      }
+      // ctrl shift m hide toolbar
+      if (key === 'm' && hideEditorRef.current) {
+        e.preventDefault();
+        setShowToolbar(prev => !prev);
+      }
+    };
+    document.addEventListener('keydown', handleExternalShortcuts);
+    return () => document.removeEventListener('keydown', handleExternalShortcuts);
+  }, [isExternalWindow]);
 
   useEffect(() => {
     if (!viewRef.current || !note) return;
-
     const currentContent = viewRef.current.state.doc.toString();
     if (currentContent !== note.content) {
+      const scrollInfo = viewRef.current.scrollDOM.scrollTop;
+
       viewRef.current.dispatch({
         changes: {
           from: 0,
           to: currentContent.length,
           insert: note.content || "",
         },
+      });
+
+      requestAnimationFrame(() => {
+        if (viewRef.current) {
+          viewRef.current.scrollDOM.scrollTop = scrollInfo;
+        }
       });
     }
   }, [note?.content]);
@@ -434,42 +652,136 @@ const EditorPanel = memo(function EditorPanel({
         />
       </div>
 
-      {!hideToolbar && (
-        <MarkdownToolbar
-          onFormat={handleFormat}
-          onToggleLineNumbers={toggleLineNumbers}
-          showLineNumbers={showLineNumbers}
-        />
-      )}
-
-      <div className="editor-body" ref={editorBodyRef}>
-        <div ref={editorRef}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop} className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''}`}></div>
-
-        {/* Botón de Preview */}
-        <button
-          className="preview-toggle-btn"
-          title="Toggle Preview (Ctrl+P)"
-          onClick={() => setShowPreview(!showPreview)}
-        >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx={12} cy={12} r={3} />
-          </svg>
-        </button>
-
-        {/* Panel de Preview */}
-        {showPreview && (
-          <div className="preview-container" style={{ width: previewWidth }}>
-            <div
-              className="preview-resize-handle"
-              onMouseDown={handlePreviewMouseDown}
+      {note.noteType === 'drawing' ? (
+        <div className="toolbar-with-toggle">
+          <DrawingToolbar
+            currentColor={drawingColor}
+            lineWidth={drawingWidth}
+            background={drawingBackground}
+            onColorChange={(newColor) => { setDrawingColor(newColor); }}
+            onWidthChange={(newWidth) => { setDrawingWidth(newWidth); }}
+            onBackgroundChange={handleBackgroundChange}
+            onClear={handleClearCanvas}
+            onEraserToggle={() => { setIsEraser(prev => !prev); }}
+            isEraser={isEraser}
+            zoomLevel={zoomLevel}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onZoomReset={handleZoomReset}
+          />
+          {showClearConfirm && (
+            <div className="clear-confirm-bar">
+              <span>Clear canvas?</span>
+              <button className="clear-confirm-yes" onClick={confirmClearCanvas}>Yes</button>
+              <button className="clear-confirm-no" onClick={() => setShowClearConfirm(false)}>No</button>
+            </div>
+          )}
+          {isNoteEmpty && onNoteTypeChange && (
+            <button
+              className="note-type-toggle"
+              title="Switch to Text"
+              onClick={() => onNoteTypeChange('text')}
+            >
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ) : (
+        !hideToolbar && showToolbar && (
+          <div className="toolbar-with-toggle">
+            <MarkdownToolbar
+              onFormat={handleFormat}
+              onToggleLineNumbers={toggleLineNumbers}
+              showLineNumbers={showLineNumbers}
             />
-            <MarkdownPreview content={note?.content || ""} />
+            {isNoteEmpty && onNoteTypeChange && (
+              <button
+                className="note-type-toggle"
+                title="Switch to Drawing"
+                onClick={() => onNoteTypeChange('drawing')}
+              >
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                </svg>
+              </button>
+            )}
           </div>
-        )}
+        )
+      )}
+      <div className="editor-main-container">
+        <div className="editor-body" ref={editorBodyRef}>
+          {/* Editor condicional según tipo de nota */}
+          {note.noteType === 'drawing' ? (
+            <DrawingCanvas
+              drawingData={note.drawingData}
+              background={drawingBackground}
+              onChange={handleDrawingChange}
+              color={drawingColor}
+              lineWidth={drawingWidth}
+              isEraser={isEraser}
+              zoomLevel={zoomLevel}
+              onZoomChange={setZoomLevel}
+            />
+          ) : (
+            <>
+              <div
+                ref={editorRef}
+                onClick={() => {
+                  if (viewRef.current) {
+                    viewRef.current.focus();
+                  }
+                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`codemirror-container ${isDragging ? 'dragging' : ''} ${showLineNumbers ? 'show-line-numbers' : ''} ${hideEditor ? 'editor-hidden' : ''}`}
+              />
+              {/* Botón de Preview y panel solo para notas de texto */}
+              {!hideEditor && (
+                <button
+                  className="preview-toggle-btn"
+                  title="Toggle Preview (Ctrl+P)"
+                  onClick={() => {
+                    if (showPreview) {
+                      setPreviewWidth(null);
+                    }
+                    setShowPreview(!showPreview);
+                  }}
+                >
+                  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx={12} cy={12} r={3} />
+                  </svg>
+                </button>
+              )}
+              {showPreview && (
+                <div className="preview-container" style={{ width: hideEditor ? '100%' : (previewWidth ?? '50%') }}>
+                  {!hideEditor && (
+                    <div
+                      className="preview-resize-handle"
+                      onMouseDown={handlePreviewMouseDown}
+                    />
+                  )}
+                  <NoteInfoPanel
+                    note={note}
+                    folders={folders}
+                    onBacklinkClick={onNoteLinkClick}
+                  />
+                  <MarkdownPreview
+                    content={note?.content || ""}
+                    onContentChange={(newContent) => onChange({ ...note, content: newContent })}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

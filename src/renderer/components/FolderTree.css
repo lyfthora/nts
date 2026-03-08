@@ -138,3 +138,10 @@
   width: calc(100% + 16px);
 
 }
+
+.folder-item.drag-over {
+  background: rgba(100, 150, 255, 0.15);
+  outline: 2px dashed rgba(100, 150, 255, 0.6);
+  outline-offset: -2px;
+  border-radius: 4px;
+}

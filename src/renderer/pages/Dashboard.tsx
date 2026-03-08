@@ -12,6 +12,8 @@ import NotesListPanel from "../components/NotesListPanel";
 import EditorPanel from "../components/EditorPanel";
 import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
+import FolderSearchModal from "../components/FolderSearchModal";
+
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -23,6 +25,11 @@ export default function Dashboard() {
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [externalNoteIds, setExternalNoteIds] = useState<Set<number>>(new Set());
+
+
   const currentNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === currentId) || null,
     [notes, currentId]
@@ -50,9 +57,31 @@ export default function Dashboard() {
   );
 
   const folderCounts = useMemo<FolderCounts>(() => {
+    const getAllDescendantIds = (parentId: number): number[] => {
+      const children = folders.filter(f => f.parentId === parentId);
+      const ids: number[] = [];
+      children.forEach(child => {
+        ids.push(child.id);
+        ids.push(...getAllDescendantIds(child.id));
+      })
+      return ids;
+    };
     const counts: FolderCounts = {};
     folders.forEach(folder => {
-      counts[folder.id] = notes.filter(n => !n.deleted && n.folderId === folder.id).length;
+      const directCount = notes.filter(n => {
+        if (n.deleted) return false;
+        if (folder.id === 1) {
+          return n.folderId === null || n.folderId === undefined || n.folderId === 1;
+        }
+        return n.folderId === folder.id;
+      }).length;
+      if (!folder.expanded) {
+        const descendantIds = getAllDescendantIds(folder.id);
+        const descendantCount = notes.filter(n => !n.deleted && descendantIds.includes(n.folderId as number)).length;
+        counts[folder.id] = directCount + descendantCount;
+      } else {
+        counts[folder.id] = directCount;
+      }
     });
     return counts;
   }, [notes, folders]);
@@ -84,19 +113,33 @@ export default function Dashboard() {
     };
   }, []);
 
+
   useEffect(() => {
     if (currentId && !loadedContents.has(currentId)) {
-      window.api.getNoteContent(currentId).then(content => {
-        setLoadedContents(prev => new Map(prev).set(currentId, content));
-        setNotes(prev => prev.map(n => {
-          if (n.id === currentId && n.content === undefined) {
-            return { ...n, content };
-          }
-          return n;
-        }));
-      });
+      const note = notes.find(n => n.id === currentId);
+      if (note?.noteType === 'drawing') {
+        window.api.getDrawingData(currentId).then(drawingData => {
+          setLoadedContents(prev => new Map(prev).set(currentId, drawingData || ''));
+          setNotes(prev => prev.map(n => {
+            if (n.id === currentId && n.drawingData === undefined) {
+              return { ...n, drawingData };
+            }
+            return n;
+          }))
+        });
+      } else {
+        window.api.getNoteContent(currentId).then(content => {
+          setLoadedContents(prev => new Map(prev).set(currentId, content));
+          setNotes(prev => prev.map(n => {
+            if (n.id === currentId && n.content === undefined) {
+              return { ...n, content };
+            }
+            return n;
+          }));
+        });
+      }
     }
-  }, [currentId, loadedContents]);
+  }, [currentId, loadedContents, notes]);
 
   useEffect(() => {
     if (linkedNoteId && !loadedContents.has(linkedNoteId)) {
@@ -111,6 +154,24 @@ export default function Dashboard() {
       });
     }
   }, [linkedNoteId, loadedContents]);
+
+  useEffect(() => {
+    const cleanupChanged = window.api.onExternalNoteChanged((note: Note) => {
+      setNotes(prev => prev.map(n => n.id === note.id ? note : n));
+    });
+    const cleanupClosed = window.api.onNoteWindowClosed((noteId: number) => {
+      setExternalNoteIds(prev => {
+        const next = new Set(prev);
+        next.delete(noteId);
+        return next;
+      });
+    });
+    return () => {
+      cleanupChanged();
+      cleanupClosed();
+    };
+  }, []);
+
 
   const filteredNotes = useMemo(() => {
     let filtered: Note[] = [];
@@ -149,14 +210,16 @@ export default function Dashboard() {
     });
   }, [notes, view, selectedFolderId]);
 
-  const onAddNote = useCallback(async () => {
+  const onAddNote = useCallback(async (noteType: 'text' | 'drawing' = 'text') => {
     const newNote = await window.api.createNoteDashboard();
     if (newNote && selectedFolderId) {
       newNote.folderId = selectedFolderId;
+      newNote.noteType = noteType;
       await window.api.updateNote(newNote);
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     if (newNote) {
+      newNote.noteType = noteType;
       setNotes(prev => [...prev, newNote]);
       setCurrentId(newNote.id);
     }
@@ -169,7 +232,10 @@ export default function Dashboard() {
       .trim()
       .substring(0, 150);
 
-    const noteWithPreview = { ...note, preview };
+    const hasDrawingData = note.noteType === 'drawing' && note.drawingData
+      ? (() => { try { const d = JSON.parse(note.drawingData); return !!(d.strokes && d.strokes.length > 0); } catch { return false; } })()
+      : note.hasDrawingData;
+    const noteWithPreview = { ...note, preview, updatedAt: Date.now(), hasDrawingData };
 
     setNotes((prev) => prev.map((n) => (n.id === note.id ? noteWithPreview : n)));
 
@@ -228,12 +294,16 @@ export default function Dashboard() {
     }
   }, []);
 
-
   const onFolderSelect = useCallback((id: number) => {
     setSelectedFolderId(id);
     setView('folder');
     setCurrentId(null);
   }, []);
+
+  const onFolderSearchSelect = useCallback((folderId: number) => {
+    setIsFolderSearchOpen(false);
+    onFolderSelect(folderId);
+  }, [onFolderSelect]);
 
   const onFolderToggle = useCallback((id: number) => {
     setFolders(prev => {
@@ -245,6 +315,27 @@ export default function Dashboard() {
       return newFolders;
     });
   }, []);
+
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setIsFolderSearchOpen(true);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'N') {
+        e.preventDefault();
+        setIsFocusMode(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+        e.preventDefault();
+        onAddNote('drawing');
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [onAddNote]);
+
   useEffect(() => {
     if (folderToUpdate) {
       const timeout = setTimeout(() => {
@@ -372,46 +463,101 @@ export default function Dashboard() {
     [saveNote]
   );
 
+  const onNoteTypeChange = useCallback((noteType: 'text' | 'drawing') => {
+    if (!currentNote) return;
+    const updatedNote = { ...currentNote, noteType };
+    setNotes(prev => prev.map(n => n.id === updatedNote.id ? updatedNote : n));
+    saveNote(updatedNote);
+  }, [currentNote, saveNote]);
+
+  const handlePopOut = useCallback(async (noteId: number, screenX: number, screenY: number) => {
+    await window.api.openNoteWindow(noteId, screenX, screenY);
+    setExternalNoteIds(prev => new Set(prev).add(noteId));
+    if (currentId === noteId) {
+      setCurrentId(null);
+    }
+  }, [currentId]);
+
+  const panelTitle = useMemo(() => {
+    const titleMap: Record<string, string> = {
+      'trash': 'Trash',
+      'pinned': 'Pinned Notes',
+      'all-notes': 'All Notes',
+    };
+
+    if (titleMap[view]) return titleMap[view];
+
+    if (view.startsWith('status-')) {
+      const status = view.replace('status-', '');
+      return status.charAt(0).toUpperCase() + status.slice(1);
+    }
+
+    if (view.startsWith('tag-')) {
+      return `#${view.replace('tag-', '')}`;
+    }
+
+    return 'Notes';
+  }, [view]);
+
+  const onNoteDrop = useCallback((noteId: number, targetFolderId: number) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      const updatedNote = { ...note, folderId: targetFolderId };
+      setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
+      window.api.updateNote(updatedNote);
+    }
+  }, [notes]);
+
+  const onFolderDrop = useCallback(async (folderId: number, targetFolderId: number | null) => {
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+      const updatedFolder = { ...folder, parentId: targetFolderId };
+      setFolders(prev => prev.map(f => f.id === folderId ? updatedFolder : f));
+      await window.api.updateFolder(updatedFolder);
+    }
+  }, [folders]);
+
   const onSelect = useCallback((n: Note) => setCurrentId(n.id), []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
   const onClose = useCallback(() => window.api.closeWindow(), []);
 
   return (
     <div className="dashboard-container">
-      <Sidebar
-        notes={notes}
-        folders={folders}
-        view={view}
-        selectedFolderId={selectedFolderId}
-        onViewChange={onViewChange}
-        onFolderSelect={onFolderSelect}
-        folderCounts={folderCounts}
-        onFolderToggle={onFolderToggle}
-        onFolderCreate={onFolderCreate}
-        onFolderDelete={onFolderDelete}
-        onFolderRename={onFolderRename}
-        counts={counts}
-        tags={tags}
-      />
+      {!isFocusMode && (
+        <Sidebar
+          notes={notes}
+          folders={folders}
+          view={view}
+          selectedFolderId={selectedFolderId}
+          onViewChange={onViewChange}
+          onFolderSelect={onFolderSelect}
+          folderCounts={folderCounts}
+          onFolderToggle={onFolderToggle}
+          onFolderCreate={onFolderCreate}
+          onFolderDelete={onFolderDelete}
+          onFolderRename={onFolderRename}
+          counts={counts}
+          tags={tags}
+          onNoteDrop={onNoteDrop}
+          onFolderDrop={onFolderDrop}
+        />
+      )}
       <div className="main-content">
         <WindowBar onMinimize={onMinimize} onClose={onClose} />
         <div className="content-container">
-          <NotesListPanel
-            notes={filteredNotes}
-            currentNoteId={currentId}
-            onAddNote={onAddNote}
-            onSelect={onSelect}
-            isTrashView={view === 'trash'}
-            title={
-              view === 'trash' ? 'Trash' :
-                view === 'pinned' ? 'Pinned Notes' :
-                  view === 'all-notes' ? 'All Notes' :
-                    view.startsWith('status-') ? view.replace('status-', '').charAt(0).toUpperCase() + view.replace('status-', '').slice(1) :
-                      view.startsWith('tag-') ? `#${view.replace('tag-', '')}` :
-                        'Notes'
-            }
-          />
+          {!isFocusMode && (
+            <NotesListPanel
+              notes={filteredNotes}
+              currentNoteId={currentId}
+              onAddNote={() => onAddNote('text')}
+              onSelect={onSelect}
+              isTrashView={view === 'trash'}
+              title={panelTitle}
+              onPopOut={handlePopOut}
+            />
+          )}
           <EditorPanel
+            key={`editor-${currentNote?.id}-${currentNote?.noteType}`}
             note={currentNote}
             folders={folders}
             onChange={onChange}
@@ -425,6 +571,7 @@ export default function Dashboard() {
             isTrashView={view === "trash"}
             onNoteLinkClick={handleNoteLinkClick}
             existingTags={tags.map(t => t.name)}
+            onNoteTypeChange={onNoteTypeChange}
           />
           {linkedNote && (
             <LinkedNotePanel
@@ -447,6 +594,13 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      <FolderSearchModal
+        isOpen={isFolderSearchOpen}
+        folders={folders}
+        folderCounts={folderCounts}
+        onSelect={onFolderSearchSelect}
+        onCancel={() => setIsFolderSearchOpen(false)}
+      />
     </div>
   );
 }

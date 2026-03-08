@@ -517,7 +517,7 @@ span.tok-heading span.tok-emphasis {
   height: 100%;
   position: relative;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   min-width: 200px;
   max-width: 90%;
   flex-shrink: 0;
@@ -631,7 +631,26 @@ span.tok-heading span.tok-emphasis {
   padding: 0;
   color: inherit;
   display: block;
-  overflow-x: auto;
+  overflow-x: visible;
+}
+
+/* Scrollbar para code blocks en preview */
+.markdown-preview-content pre::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.markdown-preview-content pre::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
 }
 
 .markdown-preview-content a {
@@ -691,7 +710,6 @@ span.tok-heading span.tok-emphasis {
 
 .markdown-preview-content img {
   max-width: 100%;
-  height: auto;
   border-radius: 8px;
   margin: 0px 0;
   display: block;
@@ -723,12 +741,204 @@ span.tok-heading span.tok-emphasis {
 
 .cm-image-preview {
   max-width: 100%;
-  max-height: 300px;
   border-radius: 4px;
   display: block;
   border: 1px solid var(--border-color, #333);
-  margin: 8px 0 -1.2em 0;
+  margin: 0 0 -1.2em 0;
   position: relative;
   z-index: 1;
   pointer-events: auto;
+}
+
+/* rezize img */
+.cm-image-wrapper {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0;
+
+}
+
+.cm-image-wrapper .cm-image-preview {
+  display: block;
+  max-width: 100%;
+}
+
+.cm-image-wrapper:hover .cm-image-resize-handle {
+  opacity: 1;
+}
+
+/* resize handle */
+.cm-image-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  background: rgba(74, 74, 74, 0.9);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 10;
+}
+
+.cm-image-resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
+}
+
+.cm-image-wrapper:hover .cm-image-resize-handle::before,
+.cm-image-wrapper.resizing .cm-image-resize-handle::before {
+  border-color: #fff;
+}
+
+/* escondel el width!!! quitar talvez ya s vera xd */
+/* .cm-image-width-hidden {
+  display: none;
+} */
+
+/* Preview Image Resize */
+.preview-image-wrapper {
+  position: relative;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 8px 0;
+}
+
+.preview-image-wrapper img {
+  display: block;
+  max-width: 100%;
+
+  border-radius: 8px;
+}
+
+.preview-image-wrapper:hover .preview-image-resize-handle {
+  opacity: 1;
+}
+
+.preview-image-resize-handle {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 14px;
+  height: 14px;
+  background: rgba(74, 74, 74, 0.9);
+  border-radius: 3px;
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 10;
+}
+
+.preview-image-resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 4px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid #999;
+  border-bottom: 2px solid #999;
+}
+
+.preview-image-wrapper:hover .preview-image-resize-handle::before,
+.preview-image-wrapper.resizing .preview-image-resize-handle::before {
+  border-color: #fff;
+}
+
+.preview-image-wrapper.resizing .preview-image-resize-handle {
+  opacity: 1;
+}
+
+/* editor main container */
+.editor-main-container {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  min-height: 0;
+  border-top: 1px solid #2d2d2d;
+}
+
+/* Toggle de tipo de nota en toolbar */
+.toolbar-with-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.note-type-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.note-type-toggle:hover {
+  color: var(--text-primary, #fff);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Clear canvas confirmation bar */
+.clear-confirm-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: rgba(255, 60, 60, 0.15);
+  border: 1px solid rgba(255, 60, 60, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ff6b6b;
+}
+
+.clear-confirm-yes,
+.clear-confirm-no {
+  padding: 2px 10px;
+  border: none;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.clear-confirm-yes {
+  background: #ff4444;
+  color: #fff;
+}
+
+.clear-confirm-yes:hover {
+  background: #ff2222;
+}
+
+.clear-confirm-no {
+  background: rgba(255, 255, 255, 0.1);
+  color: #aaa;
+}
+
+.clear-confirm-no:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* hide editor */
+.codemirror-container.editor-hidden {
+  display: none;
+}
+
+.codemirror-container.editor-hidden~.preview-container {
+  max-width: 100%;
 }

@@ -225,3 +225,16 @@
 .status-icon-dropped {
   filter: brightness(1.1);
 }
+
+.note-list-item[draggable="true"] {
+  cursor: grab;
+}
+
+.note-list-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.note-list-item.dragging {
+  opacity: 0.5;
+  background: rgba(100, 150, 255, 0.1);
+}

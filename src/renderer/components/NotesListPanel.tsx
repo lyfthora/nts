@@ -1,5 +1,5 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import type { Note, NoteStatus } from "../types/models";
 import './NotesListPanel.css';
 import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
@@ -7,15 +7,17 @@ import checkedIcon from '../assets/icons/checked.png';
 import removeIcon from '../assets/icons/remove.png';
 
 interface NotesListPanelProps {
-  notes: any[];
+  notes: Note[];
   currentNoteId: number | null;
   onAddNote: () => void;
-  onSelect: (n: any) => void;
+  onSelect: (n: Note) => void;
   isTrashView?: boolean;
   title?: string;
+  onNoteDrag?: (noteId: number, targetFolderId: number) => void;
+  onPopOut?: (noteId: number, screenX: number, screenY: number) => void;
 }
 
-const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title }: NotesListPanelProps) {
+const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title, onNoteDrag, onPopOut }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -26,12 +28,50 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
   }, []);
 
 
-  const getIconForStatus = (s?: string) => {
+  const getIconForStatus = (s?: NoteStatus) => {
     if (s === 'active') return buttonIcon;
     if (s === 'onhold') return pauseIcon;
     if (s === 'completed') return checkedIcon;
     if (s === 'dropped') return removeIcon;
     return null;
+  };
+
+  const formatDate = (timestamp?: number): string => {
+    if (!timestamp) return '';
+    const date = new Date(timestamp);
+    const now = new Date();
+
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+    if (date.toDateString() === now.toDateString()) {
+      return timeStr;
+    }
+    const startOfWeek = new Date(now);
+    const dayOfWeek = now.getDay();
+    startOfWeek.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    if (date >= startOfWeek) {
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+      return `${dayName} ${timeStr}`;
+    }
+    if (date.getFullYear() === now.getFullYear()) {
+      const dateStr = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
+      return `${dateStr}, ${timeStr}`;
+    }
+
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    return `${dateStr}, ${timeStr}`;
   };
 
 
@@ -76,29 +116,43 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         {notes.length === 0 ? (
           <div className="no-items-message">No notes</div>
         ) : (
-          notes.map(n => (
-            <div key={n.id} className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`} onClick={() => onSelect(n)}>
+          [...notes].sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return (b.updatedAt || 0) - (a.updatedAt || 0);
+          }).map(n => (
+            <div
+              key={n.id}
+              className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`}
+              onClick={() => onSelect(n)}
+              draggable={!isTrashView}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', String(n.id));
+                e.dataTransfer.effectAllowed = 'move';
+                (e.target as HTMLElement).classList.add('dragging');
+              }}
+              onDragEnd={async (e) => {
+                (e.target as HTMLElement).classList.remove('dragging');
+                if (!onPopOut) return;
+                const [winX, winY] = await window.api.getWindowPosition();
+                const [winW, winH] = await window.api.getWindowSize();
+                const sx = e.screenX;
+                const sy = e.screenY;
+                if (sx < winX || sx > winX + winW || sy < winY || sy > winY + winH) {
+                  onPopOut(n.id, sx, sy);
+                }
+              }}
+            >
               <div className="note-list-item-title" title={n.name || 'Untitled'}>
-                <AnimatePresence mode="popLayout">
-                  {n.status && (
-                    <motion.span
-                      key={n.status}
-                      className={`status-icon status-icon-${n.status}`}
-                      style={{
-                        backgroundImage: `url(${getIconForStatus(n.status)})`,
-                        marginRight: '6px'
-                      }}
-                      initial={{ opacity: 0, scale: 0.5, x: -10 }}
-                      animate={{ opacity: 1, scale: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.5, x: -10 }}
-                      transition={{
-                        duration: 0.2,
-                        ease: "easeOut",
-                        scale: { type: "spring", stiffness: 300, damping: 20 }
-                      }}
-                    />
-                  )}
-                </AnimatePresence>
+                {n.status && (
+                  <span
+                    className={`status-icon status-icon-${n.status}`}
+                    style={{
+                      backgroundImage: `url(${getIconForStatus(n.status)})`,
+                      marginRight: '6px'
+                    }}
+                  />
+                )}
                 {n.pinned && (
                   <svg
                     className="pin-icon"
@@ -114,12 +168,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                     <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
                   </svg>
                 )}
-                <motion.span
-                  layout
-                  transition={{ duration: 0.2, ease: "easeOut" }}
-                >
-                  {n.name || 'Untitled'}
-                </motion.span>
+                <span>{n.name || 'Untitled'}</span>
               </div>
               {n.tags && n.tags.length > 0 && (
                 <div className="note-list-item-tags">
@@ -128,7 +177,23 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                   ))}
                 </div>
               )}
-              <div className={(n.preview || n.content) ? 'note-list-item-preview' : 'note-list-item-preview note-list-item-empty'}>{(n.preview || n.content) || 'Empty note'}</div>
+              <div className={
+                n.noteType === 'drawing'
+                  ? 'note-list-item-preview note-list-item-drawing'
+                  : (n.preview || n.content)
+                    ? 'note-list-item-preview'
+                    : 'note-list-item-preview note-list-item-empty'
+              }>
+                {n.noteType === 'drawing'
+                  ? (n.hasDrawingData ? 'Drawing note' : 'Empty canvas')
+                  : (n.preview || n.content) || 'Empty note'
+                }
+              </div>
+              {n.updatedAt && (
+                <div className="note-list-item-meta">
+                  <span>{formatDate(n.updatedAt)}</span>
+                </div>
+              )}
             </div>
           ))
         )}

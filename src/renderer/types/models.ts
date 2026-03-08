@@ -18,6 +18,11 @@ export interface Note {
     time: string;
     repeat?: boolean;
   };
+  createdAt?: number;
+  updatedAt?: number;
+  noteType?: "text" | "drawing";
+  drawingData?: string;
+  hasDrawingData?: boolean;
 }
 export interface Folder {
   id: number;
@@ -42,3 +47,25 @@ export interface Tag {
 export interface FolderCounts {
   [folderId: number]: number;
 }
+
+export type NoteStatus = "" | "active" | "onhold" | "completed" | "dropped";
+
+export interface Point {
+  x: number;
+  y: number;
+  pressure: number;
+}
+
+export interface Stroke {
+  points: Point[];
+  color: string;
+  width: number;
+}
+
+export interface DrawingData {
+  version: string;
+  background: "black" | "white" | "grid";
+  strokes: Stroke[];
+}
+
+export type NoteType = "text" | "drawing";

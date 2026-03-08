@@ -1,9 +1,10 @@
 const { ipcMain, BrowserWindow } = require("electron");
 const {
-  createDashboardWindow,
-  createListWindow,
-  createRemindersListWindow,
+  createNoteWindow,
+  getDashboardWindow,
+  getNoteWindow,
 } = require("../windows/windowManager.js");
+const storage = require("../storage.js");
 
 function registerWindowHandlers() {
   // Window minimize
@@ -16,21 +17,6 @@ function registerWindowHandlers() {
   ipcMain.on("window-close", (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
     if (win && !win.isDestroyed()) win.close();
-  });
-
-  // Window destroy
-  ipcMain.on("window-destroy", (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) win.destroy();
-  });
-
-  // Window maximize/unmaximize toggle
-  ipcMain.on("window-maximize", (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender);
-    if (win && !win.isDestroyed()) {
-      if (win.isMaximized()) win.unmaximize();
-      else win.maximize();
-    }
   });
 
   // Get window position
@@ -51,20 +37,50 @@ function registerWindowHandlers() {
     return [355, 355];
   });
 
-  // Open dashboard
-  ipcMain.on("open-dashboard", () => {
-    createDashboardWindow();
+  //open note in otehr window
+  ipcMain.handle("open-note-window", async (event, { noteId, x, y }) => {
+    await createNoteWindow(noteId, x, y);
   });
+  // note window request its data when redy
+  ipcMain.handle("get-note-window-data", async (event, noteId) => {
+    const allData = await storage.getAllData();
+    const note = allData.notes.find((n) => n.id === noteId);
 
-  // Open notes list
-  ipcMain.on("open-notes-list", () => {
-    createListWindow();
+    if (note) {
+      if (note.noteType === "drawing") {
+        note.drawingData = await storage.getDrawingData(noteId);
+      } else {
+        note.content = await storage.getNoteContent(noteId);
+      }
+    }
+    return { note, folders: allData.folders };
   });
-
-  // Open reminders list
-  ipcMain.on("open-reminders-list", () => {
-    createRemindersListWindow();
+  // note window sends changes back
+  ipcMain.on("note-window-change", async (event, noteData) => {
+    const dashboard = getDashboardWindow();
+    if (dashboard && !dashboard.isDestroyed()) {
+      dashboard.webContents.send("external-note-changed", noteData);
+    }
+    try {
+      const { content, drawingData, ...metadata } = noteData;
+      metadata.updatedAt = Date.now();
+      if (noteData.noteType === "drawing" && drawingData !== undefined) {
+        try {
+          const parsed = JSON.parse(drawingData);
+          metadata.hasDrawingData = !!(
+            parsed.strokes && parsed.strokes.length > 0
+          );
+        } catch {
+          metadata.hasDrawingData = false;
+        }
+        await storage.saveNoteContent(noteData.id, "", drawingData);
+      } else {
+        await storage.saveNoteContent(noteData.id, content || "");
+      }
+      await storage.updateMetadata(noteData.id, metadata);
+    } catch (err) {
+      console.error("Error updating note from external window:", err);
+    }
   });
 }
-
 module.exports = { registerWindowHandlers };

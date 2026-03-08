@@ -103,6 +103,23 @@
   overflow-y: auto;
 }
 
+.tag-suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tag-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tag-suggestions::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.tag-suggestions::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
 .tag-suggestion-item {
   padding: 8px 12px;
   font-size: 12px;

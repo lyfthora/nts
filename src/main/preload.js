@@ -2,23 +2,12 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
   // acciones de la ventana main
-  createNote: () => ipcRenderer.send("create-note"),
   createNoteDashboard: () => ipcRenderer.invoke("create-note-dashboard"),
-  openNoteWindow: (noteId, x, y) =>
-    ipcRenderer.send("open-note-window", noteId, x, y),
-  showAllNotes: () => ipcRenderer.send("show-all-notes"),
-  getAllNotes: () => ipcRenderer.invoke("get-all-notes"),
   getAllData: () => ipcRenderer.invoke("get-all-data"),
-  showNoteById: (noteId) => ipcRenderer.send("show-note-by-id", noteId),
-  openNotesList: () => ipcRenderer.send("open-notes-list"),
-  openRemindersList: () => ipcRenderer.send("open-reminders-list"),
-  openDashboard: () => ipcRenderer.send("open-dashboard"),
 
   // acciones (nota o main)
   minimizeWindow: () => ipcRenderer.send("window-minimize"),
   closeWindow: () => ipcRenderer.send("window-close"),
-  destroyWindow: () => ipcRenderer.send("window-destroy"),
-  toggleMaximize: () => ipcRenderer.send("window-maximize"),
 
   // Notas: enviar/recibir
   updateNote: (note) => ipcRenderer.send("update-note", note),
@@ -30,14 +19,15 @@ contextBridge.exposeInMainWorld("api", {
   saveAsset: (data) => ipcRenderer.invoke("save-asset", data),
   cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
   getDataPath: () => ipcRenderer.invoke("get-data-path"),
+  getDrawingData: (noteId) => ipcRenderer.invoke("get-drawing-data", noteId),
+
+  // backlinks
+  getBacklinks: (noteName) => ipcRenderer.invoke("get-backlinks", noteName),
 
   // carpetas
-  getAllFolders: () => ipcRenderer.invoke("get-all-folders"),
   createFolder: (folderData) => ipcRenderer.invoke("create-folder", folderData),
   updateFolder: (folder) => ipcRenderer.send("update-folder", folder),
   deleteFolder: (id) => ipcRenderer.invoke("delete-folder", id),
-  moveFolder: (folderId, newParentId) =>
-    ipcRenderer.send("move-folder", { folderId, newParentId }),
 
   // recibir datos de la nota
   onNoteData: (callback) => {
@@ -46,17 +36,39 @@ contextBridge.exposeInMainWorld("api", {
     return () => ipcRenderer.removeListener("note-data", handler);
   },
 
-  // Recordatorios
-  setReminder: (noteId, date, time, repeat) =>
-    ipcRenderer.send("set-reminder", { noteId, date, time, repeat }),
-
   // obtener posición y tamaño
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
   getWindowSize: () => ipcRenderer.invoke("get-window-size"),
 
-  // Recordatorios - lista
-  getAllReminders: () => ipcRenderer.invoke("get-all-reminders"),
-  cancelReminder: (noteId) => ipcRenderer.send("cancel-reminder", noteId),
+  // note window out dashboard
+  openNoteWindow: (noteId, x, y) =>
+    ipcRenderer.invoke("open-note-window", { noteId, x, y }),
+  getNoteWindowData: (noteId) =>
+    ipcRenderer.invoke("get-note-window-data", noteId),
+  sendNoteChange: (note) => ipcRenderer.send("note-window-change", note),
+
+  onExternalNoteChanged: (callback) => {
+    const handler = (event, note) => callback(note);
+    ipcRenderer.on("external-note-changed", handler);
+    return () => ipcRenderer.removeListener("external-note-changed", handler);
+  },
+  onNoteWindowClosed: (callback) => {
+    const handler = (event, noteId) => callback(noteId);
+    ipcRenderer.on("note-window-closed", handler);
+    return () => ipcRenderer.removeListener("note-window-closed", handler);
+  },
+
+  onDashboardNoteChanged: (callback) => {
+    const handler = (event, note) => callback(note);
+    ipcRenderer.on("dashboard-note-changed", handler);
+    return () => ipcRenderer.removeListener("dashboard-note-changed", handler);
+  },
+
+  onNoteWindowInit: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on("note-window-init", handler);
+    return () => ipcRenderer.removeListener("note-window-init", handler);
+  },
 
   // Auto-Update
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),

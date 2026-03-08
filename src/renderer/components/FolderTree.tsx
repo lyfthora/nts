@@ -1,15 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import "./FolderTree.css";
 import InputModal from "./InputModal";
+import type { Folder } from "../types/models";
 
-interface Folder {
-  id: number;
-  name: string;
-  parentId: number | null;
-  isSystem: boolean;
-  expanded: boolean;
-}
 
 interface FolderTreeProps {
   folders: Folder[];
@@ -20,6 +14,8 @@ interface FolderTreeProps {
   onCreateFolder: (parentId: number | null, name: string) => void;
   onDeleteFolder: (id: number) => void;
   onRenameFolder: (id: number, newName: string) => void;
+  onNoteDrop?: (noteId: number, targetFolderId: number) => void;
+  onFolderDrop?: (folderId: number, targetFolderId: number | null) => void;
 }
 
 export default function FolderTree({
@@ -31,14 +27,18 @@ export default function FolderTree({
   onCreateFolder,
   onDeleteFolder,
   onRenameFolder,
+  onNoteDrop,
+  onFolderDrop,
 }: FolderTreeProps) {
-  const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number; folderId: number } | null>(null);
-  const [activeFolderId, setActiveFolderId] = React.useState<number | null>(null);
-  const [editingFolderId, setEditingFolderId] = React.useState<number | null>(null);
-  const [editingName, setEditingName] = React.useState("");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; folderId: number } | null>(null);
+  const [activeFolderId, setActiveFolderId] = useState<number | null>(null);
+  const [editingFolderId, setEditingFolderId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState("");
   const [modalType, setModalType] = useState<'create' | 'rename' | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<number | null>(null);
+  const [draggingFolderId, setDraggingFolderId] = useState<number | null>(null);
 
-  const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem: boolean) => {
+  const handleContextMenu = (e: React.MouseEvent, folderId: number, isSystem?: boolean) => {
     if (isSystem) return;
     e.preventDefault();
     e.stopPropagation();
@@ -47,7 +47,7 @@ export default function FolderTree({
 
   const closeContextMenu = () => setContextMenu(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (contextMenu) {
       document.addEventListener('click', closeContextMenu);
       return () => document.removeEventListener('click', closeContextMenu);
@@ -77,12 +77,72 @@ export default function FolderTree({
       .map(folder => (
         <div key={folder.id}>
           <div
-            className={`folder-item ${selectedFolderId === folder.id ? "active" : ""}`}
+            draggable={!folder.isSystem}
+            className={`folder-item ${selectedFolderId === folder.id ? "active" : ""} ${dragOverFolderId === folder.id ? "drag-over" : ""}`}
             style={{
               paddingLeft: `${level * 12 + (folder.isSystem ? 22 : 2)}px`
             }}
             onClick={() => onSelectFolder(folder.id)}
+            onDragStart={(e) => {
+              if (folder.isSystem) {
+                e.preventDefault();
+                return;
+              }
+              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.setData('folder/id', folder.id.toString());
+              setDraggingFolderId(folder.id);
+            }}
+            onDragEnd={() => {
+              setDraggingFolderId(null);
+            }}
             onContextMenu={(e) => handleContextMenu(e, folder.id, folder.isSystem)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              const draggingFolderData = e.dataTransfer.types.includes('folder/id');
+              if (draggingFolderData && draggingFolderId === folder.id) {
+                e.dataTransfer.dropEffect = 'none';
+                return;
+              }
+
+              e.dataTransfer.dropEffect = 'move';
+              setDragOverFolderId(folder.id);
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOverFolderId(null);
+              }
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+
+              const noteIdData = e.dataTransfer.getData('text/plain');
+              if (noteIdData) {
+                const noteId = parseInt(noteIdData, 10);
+                if (!isNaN(noteId) && onNoteDrop) {
+                  onNoteDrop(noteId, folder.id);
+                }
+              }
+
+              const folderIdData = e.dataTransfer.getData('folder/id');
+              if (folderIdData) {
+                const folderId = parseInt(folderIdData, 10);
+                if (!isNaN(folderId) && folderId !== folder.id && onFolderDrop) {
+                  const isDescendant = (parentId: number, childId: number): boolean => {
+                    const children = folders.filter(f => f.parentId === parentId);
+                    if (children.some(f => f.id === childId)) return true;
+                    return children.some(child => isDescendant(child.id, childId));
+                  };
+
+                  if (!isDescendant(folderId, folder.id)) {
+                    onFolderDrop(folderId, folder.id);
+                  }
+                }
+              }
+
+              setDragOverFolderId(null);
+              setDraggingFolderId(null);
+            }}
           >
             {!folder.isSystem && (
               <button
@@ -166,6 +226,16 @@ export default function FolderTree({
           <div className="context-menu-item" onClick={handleRename}>
             Rename Folder
           </div>
+          {contextMenu && folders.find(f => f.id === contextMenu.folderId)?.parentId !== null && (
+            <div className="context-menu-item" onClick={() => {
+              if (contextMenu && onFolderDrop) {
+                onFolderDrop(contextMenu.folderId, null);
+                closeContextMenu();
+              }
+            }}>
+              Move to Root
+            </div>
+          )}
           <div className="context-menu-item" onClick={() => {
             if (contextMenu) {
               onDeleteFolder(contextMenu.folderId);

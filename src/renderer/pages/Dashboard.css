@@ -58,3 +58,85 @@
     transform: translateX(0);
   }
 }
+
+.note-type-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.note-type-modal {
+  background: #1e1e1e;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  max-width: 500px;
+  width: 90%;
+}
+
+.note-type-modal h3 {
+  margin: 0 0 20px 0;
+  color: #fff;
+  font-size: 20px;
+  text-align: center;
+}
+
+.note-type-options {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.note-type-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #aaa;
+}
+
+.note-type-btn:hover {
+  background: rgba(74, 144, 226, 0.1);
+  border-color: rgb(74, 144, 226);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.note-type-btn svg {
+  color: currentColor;
+}
+
+.note-type-btn span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.modal-cancel {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #aaa;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}

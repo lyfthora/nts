@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { StatusCounts, Tag } from "../types/models";
+import type { Note, Folder, StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
 import FolderTree from "./FolderTree";
 import InputModal from "./InputModal";
@@ -9,9 +9,35 @@ import pauseIcon from "../assets/icons/pause.png";
 import checkedIcon from "../assets/icons/checked.png";
 import removeIcon from "../assets/icons/remove.png";
 
+interface NavItemProps {
+  itemView: string;
+  currentView: string;
+  onViewChange: (v: string) => void;
+  children: React.ReactNode;
+}
+
+const NavItem = memo(function NavItem({ itemView, currentView, onViewChange, children }: NavItemProps) {
+  return (
+    <a
+      href="#"
+      className={`nav-item${currentView === itemView ? " active" : ""}`}
+      onClick={(e) => {
+        e.preventDefault();
+        onViewChange(itemView);
+      }}
+    >
+      {children}
+    </a>
+  );
+});
+
+
+
+
+
 interface SidebarProps {
-  notes: any[];
-  folders: any[];
+  notes: Note[];
+  folders: Folder[];
   view: string;
   selectedFolderId: number | null;
   onViewChange: (v: string) => void;
@@ -23,6 +49,8 @@ interface SidebarProps {
   folderCounts: Record<number, number>;
   counts: StatusCounts;
   tags: Tag[];
+  onNoteDrop?: (noteId: number, targetFolderId: number) => void;
+  onFolderDrop?: (folderId: number, targetFolderId: number | null) => void;
 }
 
 const Sidebar = memo(function Sidebar({
@@ -39,6 +67,8 @@ const Sidebar = memo(function Sidebar({
   onFolderRename,
   counts,
   tags,
+  onNoteDrop,
+  onFolderDrop,
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -80,20 +110,6 @@ const Sidebar = memo(function Sidebar({
 
   }, []);
 
-
-  const Item = memo(({ view: v, children }: any) => (
-    <a
-      href="#"
-      className={`nav-item${view === v ? " active" : ""}`}
-      onClick={(e) => {
-        e.preventDefault();
-        onViewChange(v);
-      }}
-    >
-      {children}
-    </a>
-  ));
-
   return (
     <div className="sidebar" ref={sidebarRef} style={{ width: `${sidebarWidth}px` }}>
       <div className="sidebar-header">
@@ -102,7 +118,7 @@ const Sidebar = memo(function Sidebar({
       </div>
       <nav className="sidebar-nav">
         <div className="nav-section" id="mainLinksSection">
-          <Item view="all-notes">
+          <NavItem itemView="all-notes" currentView={view} onViewChange={onViewChange}>
             <svg
               width={16}
               height={16}
@@ -116,10 +132,10 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>All Notes</span>
             <span className="nav-count" id="allNotesCount">
-              {String(notes.filter((n: any) => !n.deleted).length)}
+              {String(notes.filter((n) => !n.deleted).length)}
             </span>
-          </Item>
-          <Item view="pinned">
+          </NavItem>
+          <NavItem itemView="pinned" currentView={view} onViewChange={onViewChange}>
             <svg
               width={16}
               height={16}
@@ -133,10 +149,10 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Pinned Notes</span>
             <span className="nav-count" id="pinnedCount">
-              {String(notes.filter((n: any) => !n.deleted && n.pinned).length)}
+              {String(notes.filter((n) => !n.deleted && n.pinned).length)}
             </span>
-          </Item>
-          <Item view="trash">
+          </NavItem>
+          <NavItem itemView="trash" currentView={view} onViewChange={onViewChange}>
             <svg
               width={16}
               height={16}
@@ -150,9 +166,9 @@ const Sidebar = memo(function Sidebar({
             </svg>
             <span>Trash</span>
             <span className="nav-count" id="trashCount">
-              {String(notes.filter((n: any) => n.deleted).length)}
+              {String(notes.filter((n) => n.deleted).length)}
             </span>
-          </Item>
+          </NavItem>
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
@@ -209,6 +225,8 @@ const Sidebar = memo(function Sidebar({
                   onCreateFolder={onFolderCreate}
                   onDeleteFolder={onFolderDelete}
                   onRenameFolder={onFolderRename}
+                  onNoteDrop={onNoteDrop}
+                  onFolderDrop={onFolderDrop}
                 />
               </motion.div>
             )}
@@ -243,7 +261,7 @@ const Sidebar = memo(function Sidebar({
                 transition={{ duration: 0.2, ease: "easeInOut" }}
                 style={{ overflow: "hidden" }}
               >
-                <Item view="status-active">
+                <NavItem itemView="status-active" currentView={view} onViewChange={onViewChange}>
                   <span
                     className="status-dot status-active"
                     style={{ backgroundImage: `url(${buttonIcon})` }}
@@ -252,10 +270,10 @@ const Sidebar = memo(function Sidebar({
                   <span className="nav-count" id="count-active">
                     {String(counts.active)}
                   </span>
-                </Item>
+                </NavItem>
 
 
-                <Item view="status-onhold">
+                <NavItem itemView="status-onhold" currentView={view} onViewChange={onViewChange}>
                   <span
                     className="status-dot status-onhold"
                     style={{ backgroundImage: `url(${pauseIcon})` }}
@@ -264,8 +282,8 @@ const Sidebar = memo(function Sidebar({
                   <span className="nav-count" id="count-onhold">
                     {String(counts.onhold)}
                   </span>
-                </Item>
-                <Item view="status-completed">
+                </NavItem>
+                <NavItem itemView="status-completed" currentView={view} onViewChange={onViewChange}>
                   <span
                     className="status-dot status-completed"
                     style={{ backgroundImage: `url(${checkedIcon})` }}
@@ -274,8 +292,8 @@ const Sidebar = memo(function Sidebar({
                   <span className="nav-count" id="count-completed">
                     {String(counts.completed)}
                   </span>
-                </Item>
-                <Item view="status-dropped">
+                </NavItem>
+                <NavItem itemView="status-dropped" currentView={view} onViewChange={onViewChange}>
                   <span
                     className="status-dot status-dropped"
                     style={{ backgroundImage: `url(${removeIcon})` }}
@@ -284,7 +302,7 @@ const Sidebar = memo(function Sidebar({
                   <span className="nav-count" id="count-dropped">
                     {String(counts.dropped)}
                   </span>
-                </Item>
+                </NavItem>
               </motion.div>
             )}
           </AnimatePresence>

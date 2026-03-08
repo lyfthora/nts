@@ -1,14 +1,18 @@
 const { ipcMain } = require("electron");
 const storage = require("../storage.js");
+const { isValidFolder, isValidId } = require("../utils/validation.js");
 
 function registerFolderHandlers() {
-  // Get all folders
-  ipcMain.handle("get-all-folders", async () => {
-    return await storage.getAllFolders();
-  });
-
   // Create folder
   ipcMain.handle("create-folder", async (event, folderData) => {
+    if (!isValidFolder(folderData)) {
+      console.error(
+        "[IPC] Invalid folder data received in create-folder:",
+        folderData
+      );
+      throw new Error("Invalid folder data");
+    }
+
     const folders = await storage.getAllFolders();
     const newFolder = {
       id: Date.now(),
@@ -26,6 +30,14 @@ function registerFolderHandlers() {
 
   // Update folder
   ipcMain.on("update-folder", async (event, folderData) => {
+    if (!isValidFolder(folderData) || !folderData.id) {
+      console.error(
+        "[IPC] Invalid folder data received in update-folder:",
+        folderData
+      );
+      return;
+    }
+
     const folders = await storage.getAllFolders();
     const index = folders.findIndex((f) => f.id === folderData.id);
     if (index !== -1) {
@@ -36,6 +48,14 @@ function registerFolderHandlers() {
 
   // Delete folder
   ipcMain.handle("delete-folder", async (event, folderId) => {
+    if (!isValidId(folderId)) {
+      console.error(
+        "[IPC] Invalid folderId received in delete-folder:",
+        folderId
+      );
+      return;
+    }
+
     const folders = await storage.getAllFolders();
     const folder = folders.find((f) => f.id === folderId);
 
@@ -64,17 +84,6 @@ function registerFolderHandlers() {
       return n;
     });
     await storage.saveNotesMetadata(updateNotes);
-  });
-
-  // Move folder
-  ipcMain.on("move-folder", async (event, { folderId, newParentId }) => {
-    const folders = await storage.getAllFolders();
-    const index = folders.findIndex((f) => f.id === folderId);
-    if (index !== -1) {
-      if (folderId === newParentId) return;
-      folders[index].parentId = newParentId;
-      await storage.saveFolders(folders);
-    }
   });
 }
 

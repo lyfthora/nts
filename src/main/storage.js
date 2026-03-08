@@ -27,6 +27,7 @@ class Storage {
     this.oldStorePath = path.join(app.getPath("userData"), "notes-data.json");
 
     this._ensureDirectories();
+    this.addMissingFields();
   }
 
   _ensureDirectories() {
@@ -68,14 +69,14 @@ class Storage {
       });
       await fs.writeFile(
         this.metadataPath,
-        JSON.stringify({ notes: metadata, folders }, null, 2)
+        JSON.stringify({ notes: metadata, folders }, null, 2),
       );
 
       for (const note of notes) {
         const notePath = path.join(this.notesDir, `note-${note.id}.json`);
         await fs.writeFile(
           notePath,
-          JSON.stringify({ content: note.content || "" }, null, 2)
+          JSON.stringify({ content: note.content || "" }, null, 2),
         );
       }
 
@@ -102,6 +103,28 @@ class Storage {
     await fs.writeFile(this.metadataPath, JSON.stringify(emptyData, null, 2));
   }
 
+  async addMissingFields() {
+    try {
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      let modified = false;
+
+      parsed.notes = parsed.notes.map((note) => {
+        if (!note.noteType) {
+          modified = true;
+          return { ...note, noteType: "text" };
+        }
+        return note;
+      });
+      if (modified) {
+        await fs.writeFile(this.metadataPath, JSON.stringify(parsed, null, 2));
+        console.log("Migration completed: added noteType field to notes");
+      }
+    } catch (err) {
+      console.error("Error during migration:", err);
+    }
+  }
+
   async getMetadata() {
     try {
       const data = await fs.readFile(this.metadataPath, "utf-8");
@@ -112,25 +135,41 @@ class Storage {
     }
   }
 
-  async getNoteContent(noteId) {
+  async getNoteData(noteId) {
     try {
       const notePath = path.join(this.notesDir, `note-${noteId}.json`);
       const data = await fs.readFile(notePath, "utf-8");
       const parsed = JSON.parse(data);
-      return parsed.content || "";
+      return {
+        content: parsed.content || "",
+        drawingData: parsed.drawingData,
+      };
     } catch (err) {
-      console.error(`Error leyendo contenido de nota ${noteId}:`, err);
-      return "";
+      console.error(`Error leyendo datos de nota ${noteId}:`, err);
+      return { content: "", drawingData: undefined };
     }
   }
 
-  async saveNoteContent(noteId, content) {
+  async saveNoteContent(noteId, content, drawingData) {
     try {
       const notePath = path.join(this.notesDir, `note-${noteId}.json`);
-      await fs.writeFile(notePath, JSON.stringify({ content }, null, 2));
+      const data = { content };
+      if (drawingData !== undefined) {
+        data.drawingData = drawingData;
+      }
+      await fs.writeFile(notePath, JSON.stringify(data, null, 2));
     } catch (err) {
       console.error(`Error guardando contenido de nota ${noteId}:`, err);
     }
+  }
+  async getNoteContent(noteId) {
+    const data = await this.getNoteData(noteId);
+    return data.content;
+  }
+
+  async getDrawingData(noteId) {
+    const data = await this.getNoteData(noteId);
+    return data.drawingData;
   }
 
   async updateMetadata(noteId, updates) {
@@ -227,7 +266,7 @@ class Storage {
       if (!note || !note.images || note.images.length === 0) return;
 
       const unusedImages = note.images.filter(
-        (img) => !referencedImages.includes(img)
+        (img) => !referencedImages.includes(img),
       );
       for (const imgPath of unusedImages) {
         const fullPath = path.join(this.dataPath, imgPath);
@@ -271,6 +310,33 @@ class Storage {
       console.error("Error guardando metadata de notas:", err);
     }
   }
+
+  async getBacklinks(targetNoteName) {
+    try {
+      const metadata = await this.getMetadata();
+      const backlinks = [];
+
+      for (const noteMeta of metadata) {
+        if (noteMeta.deleted) continue;
+
+        const content = await this.getNoteContent(noteMeta.id);
+        const links = extractNoteLinks(content);
+
+        if (links.includes(targetNoteName)) {
+          backlinks.push({
+            id: noteMeta.id,
+            name: noteMeta.name,
+            preview: noteMeta.preview || "",
+          });
+        }
+      }
+      return backlinks;
+    } catch (err) {
+      console.error("Error obteniendo backlinks:", err);
+      return [];
+    }
+  }
+
   async getAllData() {
     try {
       const data = await fs.readFile(this.metadataPath, "utf-8");
@@ -284,6 +350,20 @@ class Storage {
       return { notes: [], folders: [] };
     }
   }
+}
+
+function extractNoteLinks(content) {
+  if (!content) return [];
+  const regex = /@"([^"]+)"|@([^\s]+)/g;
+  const links = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    const noteName = match[1] || match[2];
+    if (noteName && !links.includes(noteName)) {
+      links.push(noteName);
+    }
+  }
+  return links;
 }
 
 const storage = new Storage();

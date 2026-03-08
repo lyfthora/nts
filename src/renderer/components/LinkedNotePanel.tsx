@@ -1,17 +1,18 @@
 import React, { memo } from "react";
+import type { Note, Folder } from "../types/models";
 import EditorPanel from "./EditorPanel";
 import "./LinkedNotePanel.css";
 
 interface LinkedNotePanelProps {
-  note: any | null;
-  folders: any[];
+  note: Note | null;
+  folders: Folder[];
   onClose: () => void;
-  onChange: (n: any) => void;
-  onDelete: (n: any) => void;
-  onStatus: (n: any) => void;
-  onTagAdd: (n: any) => void;
-  onTagRemove: (n: any) => void;
-  onPin: (n: any) => void;
+  onChange: (n: Note) => void;
+  onDelete: (n: Note) => void;
+  onStatus: (n: Note) => void;
+  onTagAdd: (n: Note) => void;
+  onTagRemove: (n: Note) => void;
+  onPin: (n: Note) => void;
 }
 
 const LinkedNotePanel = memo(function LinkedNotePanel({

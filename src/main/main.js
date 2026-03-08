@@ -1,6 +1,9 @@
 const { app } = require("electron");
 const storage = require("./storage.js");
-const { createDashboardWindow } = require("./windows/windowManager.js");
+const {
+  createDashboardWindow,
+  closeAllNoteWindows,
+} = require("./windows/windowManager.js");
 const { registerAllHandlers } = require("./ipc/index.js");
 const { checkForUpdatesOnStartup } = require("./ipc/updateHandlers.js");
 
@@ -32,5 +35,6 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
+  closeAllNoteWindows();
   app.quit();
 });

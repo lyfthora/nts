@@ -1,106 +1,8 @@
 const { BrowserWindow } = require("electron");
 const path = require("path");
 
-let mainWindow = null;
-let listWindow = null;
-let remindersListWindow = null;
 let dashboardWindow = null;
-let noteWindows = [];
-
-function createNoteWindow(note) {
-  const noteWin = new BrowserWindow({
-    width: note.width || 355,
-    height: note.height || 355,
-    resizable: true,
-    minWidth: 280,
-    minHeight: 280,
-    frame: false,
-    transparent: false,
-    alwaysOnTop: true,
-    x: note.x,
-    y: note.y,
-    webPreferences: {
-      preload: path.join(__dirname, "../preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  noteWin.loadFile(path.join(__dirname, "../windows/note/index.html"));
-  noteWin.webContents.on("did-finish-load", () => {
-    noteWin.webContents.send("note-data", note);
-  });
-
-  noteWin.on("closed", () => {
-    noteWindows = noteWindows.filter((w) => w !== noteWin);
-  });
-
-  noteWindows.push(noteWin);
-  return noteWin;
-}
-
-function createListWindow() {
-  if (listWindow && !listWindow.isDestroyed()) {
-    listWindow.show();
-    listWindow.focus();
-    return;
-  }
-  listWindow = new BrowserWindow({
-    width: 500,
-    height: 660,
-    resizable: true,
-    minWidth: 400,
-    minHeight: 400,
-    frame: false,
-    transparent: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, "../preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  listWindow.loadFile(
-    path.join(__dirname, "../../windows/notes-list/index.html")
-  );
-
-  listWindow.on("closed", () => {
-    listWindow = null;
-  });
-}
-
-function createRemindersListWindow() {
-  if (remindersListWindow && !remindersListWindow.isDestroyed()) {
-    remindersListWindow.show();
-    remindersListWindow.focus();
-    return;
-  }
-
-  remindersListWindow = new BrowserWindow({
-    width: 500,
-    height: 660,
-    resizable: true,
-    minWidth: 400,
-    minHeight: 400,
-    frame: false,
-    transparent: false,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: path.join(__dirname, "../preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-
-  remindersListWindow.loadFile(
-    path.join(__dirname, "../../windows/reminders-list/index.html")
-  );
-
-  remindersListWindow.on("closed", () => {
-    remindersListWindow = null;
-  });
-}
+const noteWindows = new Map();
 
 async function createDashboardWindow() {
   if (dashboardWindow && !dashboardWindow.isDestroyed()) {
@@ -142,19 +44,71 @@ async function createDashboardWindow() {
   });
 }
 
+async function createNoteWindow(noteId, x, y) {
+  if (noteWindows.has(noteId)) {
+    const existing = noteWindows.get(noteId);
+    if (existing && !existing.isDestroyed()) {
+      existing.show();
+      existing.focus();
+      return;
+    }
+  }
+  const noteWin = new BrowserWindow({
+    width: 800,
+    height: 600,
+    x: Math.round(x - 400),
+    y: Math.round(y - 50),
+    resizable: true,
+    minWidth: 500,
+    minHeight: 400,
+    frame: false,
+    transparent: false,
+    show: false,
+    backgroundColor: "#1a1a1a",
+    webPreferences: {
+      preload: path.join(__dirname, "../preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  noteWindows.set(noteId, noteWin);
+  noteWin.loadFile(path.join(__dirname, "../../../dist/index.html"), {
+    query: { mode: "note-window", noteId: String(noteId) },
+  });
+  noteWin.webContents.once("did-finish-load", () => {
+    if (noteWin && !noteWin.isDestroyed()) {
+      noteWin.show();
+    }
+  });
+  noteWin.on("closed", () => {
+    noteWindows.delete(noteId);
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send("note-window-closed", noteId);
+    }
+  });
+}
+
 function getDashboardWindow() {
   return dashboardWindow;
 }
 
-function getNoteWindows() {
-  return noteWindows;
+function getNoteWindow(noteId) {
+  return noteWindows.get(noteId) || null;
+}
+
+function closeAllNoteWindows() {
+  for (const [, win] of noteWindows) {
+    if (win && !win.isDestroyed()) {
+      win.close();
+    }
+  }
+  noteWindows.clear();
 }
 
 module.exports = {
-  createNoteWindow,
-  createListWindow,
-  createRemindersListWindow,
   createDashboardWindow,
   getDashboardWindow,
-  getNoteWindows,
+  createNoteWindow,
+  getNoteWindow,
+  closeAllNoteWindows,
 };
