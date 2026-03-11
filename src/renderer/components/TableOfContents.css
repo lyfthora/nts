@@ -1,0 +1,86 @@
+.toc-panel {
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+}
+
+.toc-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.toc-header:hover {
+  color: #fff;
+}
+
+.toc-header:hover .toc-label,
+.toc-header:hover .toc-count {
+  color: #bbb;
+}
+
+.toc-arrow {
+  color: #666;
+  margin-right: 6px;
+  font-size: 9px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.toc-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.toc-label {
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toc-count {
+  color: #8a8a8a;
+  margin-left: 4px;
+}
+
+.toc-list {
+  padding: 4px 12px 8px 12px;
+  border-top: 1px dashed #2a2a2a;
+}
+
+.toc-item {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-item:hover {
+  color: #61afef;
+}
+
+.toc-item-prefix {
+  color: #444;
+  margin-right: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  flex-shrink: 0;
+}
+
+.toc-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toc-empty {
+  padding: 4px 12px 8px 24px;
+  border-top: 1px dashed #2a2a2a;
+  color: #555;
+  font-style: italic;
+}
