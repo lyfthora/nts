@@ -26,6 +26,7 @@ import { setupWithoutKeymaps } from "./customSetup";
 import NoteInfoPanel from "./NoteInfoPanel";
 import DrawingCanvas from './DrawingCanvas';
 import DrawingToolbar from './DrawingToolbar';
+import TableOfContents from './TableOfContents';
 
 let cachedDataPath = '';
 
@@ -418,23 +419,39 @@ const EditorPanel = memo(function EditorPanel({
       });
     }
   }, [note?.content]);
+
   const handleFormat = (type: string) => {
     if (!viewRef.current) return;
     applyFormat(viewRef.current, type);
     viewRef.current.focus();
   };
+
+  const handleTocClick = useCallback((line: number) => {
+    if (!viewRef.current) return;
+    const lineInfo = viewRef.current.state.doc.line(line);
+    viewRef.current.dispatch({
+      effects: EditorView.scrollIntoView(lineInfo.from, {
+        y: 'start'
+      })
+    });
+    viewRef.current.focus();
+  }, []);
+
   const toggleLineNumbers = () => {
     setShowLineNumbers(!showLineNumbers);
   };
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
+
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   }, []);
+
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -772,6 +789,10 @@ const EditorPanel = memo(function EditorPanel({
                     note={note}
                     folders={folders}
                     onBacklinkClick={onNoteLinkClick}
+                  />
+                  <TableOfContents
+                    content={note?.content || ''}
+                    onHeadingClick={handleTocClick}
                   />
                   <MarkdownPreview
                     content={note?.content || ""}
