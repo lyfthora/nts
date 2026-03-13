@@ -1,0 +1,77 @@
+.backlinks-panel {
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+}
+
+.backlinks-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.backlinks-header:hover {
+  color: #fff;
+}
+
+.backlinks-header:hover .backlinks-label,
+.backlinks-header:hover .backlinks-count {
+  color: #bbb;
+}
+
+.backlinks-arrow {
+  color: #666;
+  margin-right: 6px;
+  font-size: 9px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.backlinks-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.backlinks-label {
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.backlinks-count {
+  color: #8a8a8a;
+  margin-left: 4px;
+}
+
+.backlinks-list {
+  padding: 4px 12px 8px 12px;
+  border-top: 1px dashed #2a2a2a;
+}
+
+.backlinks-item {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  color: #888;
+}
+
+.backlinks-item:hover {
+  color: #61afef;
+}
+
+.backlinks-item-prefix {
+  color: #444;
+  margin-right: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  flex-shrink: 0;
+}
+
+.backlinks-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
