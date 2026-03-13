@@ -27,6 +27,7 @@ import NoteInfoPanel from "./NoteInfoPanel";
 import DrawingCanvas from './DrawingCanvas';
 import DrawingToolbar from './DrawingToolbar';
 import TableOfContents from './TableOfContents';
+import BacklinksPanel from './BacklinksPanel';
 
 let cachedDataPath = '';
 
@@ -788,6 +789,9 @@ const EditorPanel = memo(function EditorPanel({
                   <NoteInfoPanel
                     note={note}
                     folders={folders}
+                  />
+                  <BacklinksPanel
+                    noteName={note?.name}
                     onBacklinkClick={onNoteLinkClick}
                   />
                   <TableOfContents
