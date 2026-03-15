@@ -584,6 +584,7 @@ export default function Dashboard() {
               onTagAdd={onTagAdd}
               onTagRemove={onTagRemove}
               onPin={onPin}
+              originNoteName={currentNote?.name}
             />
           )}
         </div>
