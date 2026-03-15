@@ -50,6 +50,7 @@ interface EditorPanelProps {
   existingTags?: string[];
   onNoteTypeChange?: (noteType: 'text' | 'drawing') => void;
   isExternalWindow?: boolean;
+  originNoteName?: string;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -71,6 +72,7 @@ const EditorPanel = memo(function EditorPanel({
   existingTags = [],
   onNoteTypeChange,
   isExternalWindow,
+  originNoteName,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -792,6 +794,7 @@ const EditorPanel = memo(function EditorPanel({
                   />
                   <BacklinksPanel
                     noteName={note?.name}
+                    excludeName={originNoteName}
                     onBacklinkClick={onNoteLinkClick}
                   />
                   <TableOfContents
