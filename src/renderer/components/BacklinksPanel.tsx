@@ -9,10 +9,12 @@ interface BacklinkItem {
 
 interface BacklinksPanelProps {
   noteName: string | undefined;
+  excludeName?: string;
   onBacklinkClick?: (noteName: string) => void;
 }
 const BacklinksPanel = memo(function BacklinksPanel({
   noteName,
+  excludeName,
   onBacklinkClick,
 }: BacklinksPanelProps) {
   const [backlinks, setBacklinks] = useState<BacklinkItem[]>([]);
@@ -29,26 +31,30 @@ const BacklinksPanel = memo(function BacklinksPanel({
       .catch(() => setBacklinks([]));
   }, [noteName]);
 
+  const filteredBacklinks = excludeName
+    ? backlinks.filter(link => link.name.toLowerCase() !==
+      excludeName.toLowerCase())
+    : backlinks;
 
-  if (backlinks.length === 0) return null;
+  if (filteredBacklinks.length === 0) return null;
 
   return (
     <div className="backlinks-panel">
       <div className="backlinks-header" onClick={() => setIsExpanded(!isExpanded)}>
         <span className={`backlinks-arrow ${isExpanded ? "expanded" : ""}`}>▶</span>
         <span className="backlinks-label">Backlinks</span>
-        <span className="backlinks-count">({backlinks.length})</span>
+        <span className="backlinks-count">({filteredBacklinks.length})</span>
       </div>
       {isExpanded && (
         <div className="backlinks-list">
-          {backlinks.map((link, index) => (
+          {filteredBacklinks.map((link, index) => (
             <div
               key={link.id}
               className="backlinks-item"
               onClick={() => onBacklinkClick?.(link.name)}
             >
               <span className="backlinks-item-prefix">
-                {index === backlinks.length - 1 ? "└─" : "├─"}
+                {index === filteredBacklinks.length - 1 ? "└─" : "├─"}
               </span>
               <span className="backlinks-item-text">{link.name}</span>
             </div>
