@@ -14,6 +14,7 @@ interface LinkedNotePanelProps {
   onTagRemove: (n: Note) => void;
   onPin: (n: Note) => void;
   originNoteName?: string;
+  onPopOutLinkedNote?: () => void;
 }
 
 const LinkedNotePanel = memo(function LinkedNotePanel({
@@ -27,6 +28,7 @@ const LinkedNotePanel = memo(function LinkedNotePanel({
   onTagRemove,
   onPin,
   originNoteName,
+  onPopOutLinkedNote,
 }: LinkedNotePanelProps) {
   const [panelWidth, setPanelWidth] = React.useState(400);
   const panelRef = React.useRef<HTMLDivElement>(null);
@@ -84,6 +86,7 @@ const LinkedNotePanel = memo(function LinkedNotePanel({
         isLinkedNote={true}
         onCloseLinkedNote={onClose}
         originNoteName={originNoteName}
+        onPopOutLinkedNote={onPopOutLinkedNote}
       />
     </div>
   );
