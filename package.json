@@ -75,6 +75,14 @@
       "target": "nsis",
       "icon": "src/renderer/assets/icons/logoo.png"
     },
+    "linux": {
+      "target": [
+        "AppImage",
+        "pacman"
+      ],
+      "icon": "src/renderer/assets/icons/logoo.png",
+      "category": "Utility"
+    },
     "files": [
       "dist/**/*",
       "src/main/**/*",
