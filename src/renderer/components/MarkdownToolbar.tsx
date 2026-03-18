@@ -12,7 +12,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
     <div className="markdown-toolbar">
       <button
         className="toolbar-btn"
-        title="Bold (Ctrl+B)"
+        title="Bold (Alt+B)"
         onClick={() => onFormat("bold")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
@@ -22,7 +22,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Italic (Ctrl+I)"
+        title="Italic (Alt+I)"
         onClick={() => onFormat("italic")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
@@ -32,7 +32,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Strikethrough (Ctrl+U)"
+        title="Strikethrough (Alt+U)"
         onClick={() => onFormat("strikethrough")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -44,7 +44,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Heading"
+        title="Heading  (Alt+H)"
         onClick={() => onFormat("h1")}
       >
         <span className="toolbar-text">H</span>
@@ -54,7 +54,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Bullet List"
+        title="Bullet List (Alt+8)"
         onClick={() => onFormat("ul")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -69,7 +69,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Numbered List"
+        title="Numbered List (Alt+9)"
         onClick={() => onFormat("ol")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -83,7 +83,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Task List"
+        title="Task List (Alt+7)"
         onClick={() => onFormat("task")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -96,7 +96,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Quote"
+        title="Quote (Alt+.)"
         onClick={() => onFormat("quote")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
@@ -106,7 +106,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Code Block (Ctrl+T)"
+        title="Code Block (Alt+T)"
         onClick={() => onFormat("code")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -117,7 +117,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Inline Code (Ctrl+E)"
+        title="Inline Code (Alt+E)"
         onClick={() => onFormat("inlineCode")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -130,7 +130,7 @@ const MarkdownToolbar: React.FC<MarkdownToolbarProps> = ({ onFormat, onToggleLin
 
       <button
         className="toolbar-btn"
-        title="Link (Ctrl+K)"
+        title="Link (Alt+K)"
         onClick={() => onFormat("link")}
       >
         <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

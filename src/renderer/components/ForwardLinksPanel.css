@@ -1,0 +1,77 @@
+.forward-links-panel {
+  background: #0a0a0a;
+  border-left: 1px solid #333;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+}
+
+.forward-links-header {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.forward-links-header:hover {
+  color: #fff;
+}
+
+.forward-links-header:hover .forward-links-label,
+.forward-links-header:hover .forward-links-count {
+  color: #bbb;
+}
+
+.forward-links-arrow {
+  color: #666;
+  margin-right: 6px;
+  font-size: 9px;
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+
+.forward-links-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.forward-links-label {
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.forward-links-count {
+  color: #8a8a8a;
+  margin-left: 4px;
+}
+
+.forward-links-list {
+  padding: 4px 12px 8px 12px;
+  border-top: 1px dashed #2a2a2a;
+}
+
+.forward-links-item {
+  display: flex;
+  align-items: center;
+  padding: 3px 0;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  color: #888;
+}
+
+.forward-links-item:hover {
+  color: #61afef;
+}
+
+.forward-links-item-prefix {
+  color: #444;
+  margin-right: 6px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  flex-shrink: 0;
+}
+
+.forward-links-item-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

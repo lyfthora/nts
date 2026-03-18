@@ -26,6 +26,9 @@ import { setupWithoutKeymaps } from "./customSetup";
 import NoteInfoPanel from "./NoteInfoPanel";
 import DrawingCanvas from './DrawingCanvas';
 import DrawingToolbar from './DrawingToolbar';
+import TableOfContents from './TableOfContents';
+import BacklinksPanel from './BacklinksPanel';
+import ForwardLinksPanel from './ForwardLinksPanel';
 
 let cachedDataPath = '';
 
@@ -48,6 +51,8 @@ interface EditorPanelProps {
   existingTags?: string[];
   onNoteTypeChange?: (noteType: 'text' | 'drawing') => void;
   isExternalWindow?: boolean;
+  originNoteName?: string;
+  onPopOutLinkedNote?: () => void;
 }
 
 const EditorPanel = memo(function EditorPanel({
@@ -69,6 +74,8 @@ const EditorPanel = memo(function EditorPanel({
   existingTags = [],
   onNoteTypeChange,
   isExternalWindow,
+  originNoteName,
+  onPopOutLinkedNote,
 }: EditorPanelProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
@@ -418,23 +425,39 @@ const EditorPanel = memo(function EditorPanel({
       });
     }
   }, [note?.content]);
+
   const handleFormat = (type: string) => {
     if (!viewRef.current) return;
     applyFormat(viewRef.current, type);
     viewRef.current.focus();
   };
+
+  const handleTocClick = useCallback((line: number) => {
+    if (!viewRef.current) return;
+    const lineInfo = viewRef.current.state.doc.line(line);
+    viewRef.current.dispatch({
+      effects: EditorView.scrollIntoView(lineInfo.from, {
+        y: 'start'
+      })
+    });
+    viewRef.current.focus();
+  }, []);
+
   const toggleLineNumbers = () => {
     setShowLineNumbers(!showLineNumbers);
   };
+
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
   }, []);
+
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
   }, []);
+
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -555,23 +578,45 @@ const EditorPanel = memo(function EditorPanel({
               </button>
             </>
           ) : isLinkedNote ? (
-            <button
-              className="editor-action-btn"
-              title="Close Linked Note"
-              onClick={() => onCloseLinkedNote && onCloseLinkedNote()}
-            >
-              <svg
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
+            <>
+              {onPopOutLinkedNote && (
+                <button
+                  className="editor-action-btn"
+                  title="Open in new window"
+                  onClick={onPopOutLinkedNote}
+                >
+                  <svg
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1={10} y1={14} x2={21} y2={3} />
+                    <path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5" />
+                  </svg>
+                </button>
+              )}
+              <button
+                className="editor-action-btn"
+                title="Close Linked Note"
+                onClick={() => onCloseLinkedNote && onCloseLinkedNote()}
               >
-                <line x1={18} y1={6} x2={6} y2={18} />
-                <line x1={6} y1={6} x2={18} y2={18} />
-              </svg>
-            </button>
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <line x1={18} y1={6} x2={6} y2={18} />
+                  <line x1={6} y1={6} x2={18} y2={18} />
+                </svg>
+              </button>
+            </>
           ) : (
             <>
               <button
@@ -771,7 +816,18 @@ const EditorPanel = memo(function EditorPanel({
                   <NoteInfoPanel
                     note={note}
                     folders={folders}
+                  />
+                  <ForwardLinksPanel
+                    content={note?.content}
+                    onLinkClick={onNoteLinkClick}
+                  />
+                  <BacklinksPanel
+                    noteName={note?.name}
                     onBacklinkClick={onNoteLinkClick}
+                  />
+                  <TableOfContents
+                    content={note?.content || ''}
+                    onHeadingClick={handleTocClick}
                   />
                   <MarkdownPreview
                     content={note?.content || ""}

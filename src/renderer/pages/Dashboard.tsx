@@ -455,6 +455,16 @@ export default function Dashboard() {
     setLinkedNoteId(null);
   }, []);
 
+  const handleLinkedNotePopOut = useCallback(async () => {
+    if (!linkedNote) return;
+    const [winX, winY] = await window.api.getWindowPosition();
+    const [winW] = await window.api.getWindowSize();
+    await window.api.openNoteWindow(linkedNote.id, winX + winW, winY + 50);
+    setExternalNoteIds(prev => new Set(prev).add(linkedNote.id));
+    setLinkedNoteId(null);
+
+  }, [linkedNote])
+
   const onPin = useCallback(
     (note: Note) => {
       setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
@@ -584,6 +594,8 @@ export default function Dashboard() {
               onTagAdd={onTagAdd}
               onTagRemove={onTagRemove}
               onPin={onPin}
+              originNoteName={currentNote?.name}
+              onPopOutLinkedNote={handleLinkedNotePopOut}
             />
           )}
         </div>
