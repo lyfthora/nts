@@ -29,6 +29,7 @@ registerAllHandlers();
 
 app.whenReady().then(async () => {
   await storage.migrateFromElectronStore();
+  await storage.addMissingFields();
   await initializeDefaultStructure();
   createDashboardWindow();
   checkForUpdatesOnStartup();

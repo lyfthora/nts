@@ -27,7 +27,6 @@ class Storage {
     this.oldStorePath = path.join(app.getPath("userData"), "notes-data.json");
 
     this._ensureDirectories();
-    this.addMissingFields();
   }
 
   _ensureDirectories() {
@@ -105,6 +104,9 @@ class Storage {
 
   async addMissingFields() {
     try {
+      if (!fsSync.existsSync(this.metadataPath)) {
+        return;
+      }
       const data = await fs.readFile(this.metadataPath, "utf-8");
       const parsed = JSON.parse(data);
       let modified = false;
