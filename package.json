@@ -80,6 +80,7 @@
         "AppImage",
         "pacman"
       ],
+      "maintainer": "lyfthora <lyfthora@gmail.com>",
       "icon": "src/renderer/assets/icons/logoo.png",
       "category": "Utility"
     },
