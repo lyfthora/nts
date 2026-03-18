@@ -28,13 +28,18 @@ jobs:
         run: npm run build
 
       - name: Build Windows installer
-        run: npx electron-builder --win --publish never
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/*.yml
+            release/*.blockmap
 
   build-linux:
     runs-on: ubuntu-latest
@@ -55,7 +60,9 @@ jobs:
         run: npm run build
 
       - name: Build Linux packages
-        run: npx electron-builder --linux --publish never
+        run: npx electron-builder --linux
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -63,7 +70,8 @@ jobs:
           name: linux-build
           path: |
             release/*.AppImage
-            release/*.pacman
+            release/*.yml
+            release/*.blockmap
 
   create-release:
     needs: [build-windows, build-linux]
