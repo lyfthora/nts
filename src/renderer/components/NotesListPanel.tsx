@@ -1,10 +1,11 @@
 import React, { memo, useState, useRef, useEffect, useCallback } from "react";
-import type { Note, NoteStatus } from "../types/models";
+import type { Note, NoteStatus, Folder } from "../types/models";
 import './NotesListPanel.css';
 import buttonIcon from '../assets/icons/button.png';
 import pauseIcon from '../assets/icons/pause.png';
 import checkedIcon from '../assets/icons/checked.png';
 import removeIcon from '../assets/icons/remove.png';
+import NoteContextMenu from "./NoteContextMenu";
 
 interface NotesListPanelProps {
   notes: Note[];
@@ -15,13 +16,21 @@ interface NotesListPanelProps {
   title?: string;
   onNoteDrag?: (noteId: number, targetFolderId: number) => void;
   onPopOut?: (noteId: number, screenX: number, screenY: number) => void;
+  folders: Folder[];
+  onPin: (note: Note) => void;
+  onSetStatus: (note: Note) => void;
+  onMoveToFolder: (noteId: number, folderId: number | null) => void;
+  onDuplicate: (note: Note) => void;
+  onDelete: (note: Note) => void;
 }
 
-const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title, onNoteDrag, onPopOut }: NotesListPanelProps) {
+const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title,
+  onNoteDrag, onPopOut, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [contextMenu, setContextMenu] = useState<{ note: Note; x: number; y: number } | null>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     isResizing.current = true;
@@ -145,6 +154,11 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
                 className={`note-list-item${currentNoteId === n.id ? ' active' : ''}`}
                 onClick={() => onSelect(n)}
                 draggable={!isTrashView}
+                onContextMenu={(e) => {
+                  if (isTrashView) return;
+                  e.preventDefault();
+                  setContextMenu({ note: n, x: e.clientX, y: e.clientY });
+                }}
                 onDragStart={(e) => {
                   e.dataTransfer.setData('text/plain', String(n.id));
                   e.dataTransfer.effectAllowed = 'move';
@@ -217,6 +231,20 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
             ));
         })()}
       </div>
+      {contextMenu && (
+        <NoteContextMenu
+          note={contextMenu.note}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          folders={folders}
+          onPin={onPin}
+          onSetStatus={onSetStatus}
+          onMoveToFolder={onMoveToFolder}
+          onDuplicate={onDuplicate}
+          onDelete={onDelete}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       <div
         className="notes-list-resize-handle"
         onMouseDown={handleMouseDown}
