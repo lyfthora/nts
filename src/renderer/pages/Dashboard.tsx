@@ -473,6 +473,33 @@ export default function Dashboard() {
     [saveNote]
   );
 
+  const onDuplicate = useCallback(async (note: Note) => {
+    const newNote = await window.api.createNoteDashboard();
+    if (!newNote) return;
+    const duplicated: Note = {
+      ...newNote,
+      name: `${note.name || 'Untitled'} (copy)`,
+      content: note.content,
+      preview: note.preview,
+      status: note.status,
+      tags: note.tags ? [...note.tags] : [],
+      folderId: note.folderId,
+      color: note.color,
+      noteType: note.noteType,
+    };
+    await window.api.updateNote(duplicated);
+    setNotes(prev => [...prev, duplicated]);
+    setCurrentId(duplicated.id);
+  }, []);
+
+  const onMoveToFolder = useCallback((noteId: number, folderId: number | null) => {
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+    const updatedNote = { ...note, folderId };
+    setNotes(prev => prev.map(n => n.id === noteId ? updatedNote : n));
+    window.api.updateNote(updatedNote);
+  }, [notes]);
+
   const onNoteTypeChange = useCallback((noteType: 'text' | 'drawing') => {
     if (!currentNote) return;
     const updatedNote = { ...currentNote, noteType };
@@ -564,6 +591,12 @@ export default function Dashboard() {
               isTrashView={view === 'trash'}
               title={panelTitle}
               onPopOut={handlePopOut}
+              folders={folders}
+              onPin={onPin}
+              onSetStatus={onStatus}
+              onMoveToFolder={onMoveToFolder}
+              onDuplicate={onDuplicate}
+              onDelete={onDelete}
             />
           )}
           <EditorPanel
