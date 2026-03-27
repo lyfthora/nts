@@ -47,6 +47,14 @@
   color: #ff6b6b;
 }
 
+.toast-notification.toast-success {
+  border-left-color: rgb(74, 144, 226);
+}
+
+.toast-notification.toast-success::before {
+  content: none;
+}
+
 @keyframes toastSlideIn {
   from {
     opacity: 0;
