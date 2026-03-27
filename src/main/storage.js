@@ -352,6 +352,116 @@ class Storage {
       return { notes: [], folders: [] };
     }
   }
+
+  async exportNote(noteId) {
+    try {
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      const noteMeta = parsed.notes.find((n) => n.id === noteId);
+      if (!noteMeta) throw new Error(`Nota ${noteId} not found`);
+
+      const noteData = await this.getNoteData(noteId);
+
+      const assets = [];
+      if (noteMeta.images && noteMeta.images.length > 0) {
+        for (const imgPath of noteMeta.images) {
+          const fullPath = path.join(this.dataPath, imgPath);
+          if (fsSync.existsSync(fullPath)) {
+            const buffer = await fs.readFile(fullPath);
+            const ext = path.extname(imgPath).toLowerCase();
+            const mimeTypes = {
+              ".png": "image/png",
+              ".jpg": "image/jpeg",
+              ".jpeg": "image/jpeg",
+              ".gif": "image/gif",
+              ".webp": "image/webp",
+              ".svg": "image/svg+xml",
+            };
+            assets.push({
+              originalPath: imgPath,
+              filename: path.basename(imgPath),
+              mimeType: mimeTypes[ext] || "application/octet-stream",
+              data: buffer.toString("base64"),
+            });
+          }
+        }
+      }
+      return {
+        note: {
+          name: noteMeta.name || "",
+          content: noteData.content || "",
+          color: noteMeta.color || "#ffffff",
+          pinned: noteMeta.pinned || false,
+          status: noteMeta.status || "",
+          tags: noteMeta.tags || [],
+          noteType: noteMeta.noteType || "text",
+          drawingData: noteData.drawingData,
+          createdAt: noteMeta.createdAt,
+          updatedAt: noteMeta.updatedAt,
+        },
+        assets,
+      };
+    } catch (err) {
+      console.error(`Error exporting note ${noteId}:`, err);
+      throw err;
+    }
+  }
+
+  async importNote(importData) {
+    try {
+      const { note, assets } = importData;
+      const newId = Date.now();
+      const assetMapping = {};
+      if (assets && assets.length > 0) {
+        for (const asset of assets) {
+          const buffer = Buffer.from(asset.data, "base64");
+          const hash = crypto.createHash("md5").update(buffer).digest("hex");
+          const ext = path.extname(asset.filename);
+          const uniqueName = `img-${newId}-${hash.substring(0, 8)}${ext}`;
+          const assetPath = path.join(this.assetsDir, uniqueName);
+          await fs.writeFile(assetPath, buffer);
+          assetMapping[asset.originalPath] = `assets/${uniqueName}`;
+        }
+      }
+
+      let content = note.content || "";
+      for (const [oldPath, newPath] of Object.entries(assetMapping)) {
+        content = content.split(oldPath).join(newPath);
+      }
+      const imageRegex = /!\[.*?\]\((assets\/.*?)\)/g;
+      const images = [];
+      let match;
+      while ((match = imageRegex.exec(content)) !== null) {
+        images.push(match[1]);
+      }
+      const newNote = {
+        id: newId,
+        name: note.name || "",
+        color: note.color || "#ffffff",
+        pinned: note.pinned || false,
+        status: note.status || "",
+        tags: note.tags || [],
+        noteType: note.noteType || "text",
+        images,
+        createdAt: note.createdAt || Date.now(),
+        updatedAt: Date.now(),
+      };
+      newNote.preview = content
+        .replace(/!\[.*?\]\(.*?\)/g, "")
+        .replace(/[#*_`~\[\]]/g, "")
+        .trim()
+        .substring(0, 150);
+      const data = await fs.readFile(this.metadataPath, "utf-8");
+      const parsed = JSON.parse(data);
+      parsed.notes.push(newNote);
+      await fs.writeFile(this.metadataPath, JSON.stringify(parsed, null, 2));
+      await this.saveNoteContent(newId, content, note.drawingData);
+      return { ...newNote, content };
+    } catch (err) {
+      console.error("error importing note:", err);
+      throw err;
+    }
+  }
 }
 
 function extractNoteLinks(content) {
