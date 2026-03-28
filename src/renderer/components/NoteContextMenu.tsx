@@ -17,6 +17,7 @@ interface NoteContextMenuProps {
   onDuplicate: (note: Note) => void;
   onDelete: (note: Note) => void;
   onClose: () => void;
+  onExport: (note: Note, format: 'json' | 'md') => void;
 }
 
 const statusOptions: { value: NoteStatus; label: string; icon: string | null }[] = [
@@ -27,7 +28,7 @@ const statusOptions: { value: NoteStatus; label: string; icon: string | null }[]
   { value: 'dropped', label: 'Dropped', icon: removeIcon },
 ];
 const NoteContextMenu = memo(function NoteContextMenu({
-  note, x, y, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onClose
+  note, x, y, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onClose, onExport
 }: NoteContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -93,6 +94,12 @@ const NoteContextMenu = memo(function NoteContextMenu({
     onDelete(note);
     onClose();
   }, [note, onDelete, onClose]);
+
+  const handleExport = useCallback((format: 'json' | 'md') => {
+    onExport(note, format);
+    onClose();
+  }, [note, onExport, onClose]);
+
   const availableFolders = folders.filter(f => !f.isSystem);
   return (
     <>
@@ -216,6 +223,52 @@ const NoteContextMenu = memo(function NoteContextMenu({
             </svg>
           </span>
           <span className="context-menu-item-label">Duplicate</span>
+        </div>
+        {/* Export as... */}
+        <div
+          className="context-menu-item has-submenu"
+          onMouseEnter={() => {
+            clearTimeout(closeTimerRef.current);
+            setActiveSubmenu('export');
+          }}
+          onMouseLeave={() => {
+            closeTimerRef.current = window.setTimeout(() => setActiveSubmenu(null), 150);
+          }}
+        >
+          <span className="context-menu-item-icon">
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+          </span>
+          <span className="context-menu-item-label">Export as...</span>
+          <span className="context-menu-item-chevron">▸</span>
+          {activeSubmenu === 'export' && (
+            <div
+              ref={submenuRef}
+              className={`context-submenu${submenuOpenLeft ? ' open-left' : ''}`}
+              onMouseEnter={() => clearTimeout(closeTimerRef.current)}
+              onMouseLeave={() => {
+                closeTimerRef.current = window.setTimeout(() => setActiveSubmenu(null), 150);
+              }}
+            >
+              <div
+                className="context-submenu-item"
+                onClick={() => handleExport('json')}
+              >
+                <span className="context-submenu-check"></span>
+                <span>JSON</span>
+              </div>
+              <div
+                className="context-submenu-item"
+                onClick={() => handleExport('md')}
+              >
+                <span className="context-submenu-check"></span>
+                <span>Markdown</span>
+              </div>
+            </div>
+          )}
         </div>
         <div className="context-menu-separator" />
         {/* Delete */}

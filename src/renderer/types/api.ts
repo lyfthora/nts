@@ -27,6 +27,13 @@ export interface WindowAPI {
   getDataPath: () => Promise<string>;
   getDrawingData: (noteId: number) => Promise<string | undefined>;
 
+  // Import/Export
+  exportNote: (
+    noteId: number,
+    format: string,
+  ) => Promise<{ success: boolean; path?: string; error?: string }>;
+  importNote: () => Promise<{ success: boolean; note?: Note; error?: string }>;
+
   // Backlinks
   getBacklinks: (noteName: string) => Promise<
     {

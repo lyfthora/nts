@@ -932,35 +932,51 @@ span.tok-heading span.tok-emphasis {
   background-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Clear canvas confirmation bar */
-.clear-confirm-bar {
+/* Clear canvas confirmation overlay */
+.clear-confirm-overlay {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  background: rgba(255, 60, 60, 0.15);
-  border: 1px solid rgba(255, 60, 60, 0.3);
-  border-radius: 6px;
-  font-size: 12px;
-  color: #ff6b6b;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+}
+
+.clear-confirm-card {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  background: #1e1e1e;
+  border: 1px solid #3a3a3a;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  color: #e5e5e5;
+  font-size: 13px;
+}
+
+.clear-confirm-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: 4px;
 }
 
 .clear-confirm-yes,
 .clear-confirm-no {
-  padding: 2px 10px;
+  padding: 4px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 11px;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
 }
 
 .clear-confirm-yes {
   background: #ff4444;
   color: #fff;
-}
-
-.clear-confirm-yes:hover {
-  background: #ff2222;
 }
 
 .clear-confirm-no {
@@ -970,6 +986,7 @@ span.tok-heading span.tok-emphasis {
 
 .clear-confirm-no:hover {
   background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
 }
 
 /* hide editor */

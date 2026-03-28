@@ -22,10 +22,12 @@ interface NotesListPanelProps {
   onMoveToFolder: (noteId: number, folderId: number | null) => void;
   onDuplicate: (note: Note) => void;
   onDelete: (note: Note) => void;
+  onExport: (note: Note, format: 'json' | 'md') => void;
+  onImport: () => void;
 }
 
 const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title,
-  onNoteDrag, onPopOut, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete }: NotesListPanelProps) {
+  onNoteDrag, onPopOut, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onExport, onImport }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -123,9 +125,18 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         />
         <div className="panel-actions">
           {!isTrashView && (
-            <button className="action-btn" id="addNoteBtn" title="Add Note" onClick={onAddNote}>
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
-            </button>
+            <>
+              <button className="action-btn" id="importNoteBtn" title="Import Note" onClick={onImport}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+              </button>
+              <button className="action-btn" id="addNoteBtn" title="Add Note" onClick={onAddNote}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8z" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -243,6 +254,8 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
           onDuplicate={onDuplicate}
           onDelete={onDelete}
           onClose={() => setContextMenu(null)}
+          onExport={onExport}
+
         />
       )}
       <div

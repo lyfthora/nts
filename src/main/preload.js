@@ -1,15 +1,15 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("api", {
-  // acciones de la ventana main
+  // actions main window
   createNoteDashboard: () => ipcRenderer.invoke("create-note-dashboard"),
   getAllData: () => ipcRenderer.invoke("get-all-data"),
 
-  // acciones (nota o main)
+  // actions (note or main)
   minimizeWindow: () => ipcRenderer.send("window-minimize"),
   closeWindow: () => ipcRenderer.send("window-close"),
 
-  // Notas: enviar/recibir
+  // notes: send/receive
   updateNote: (note) => ipcRenderer.send("update-note", note),
   deleteNote: (id) => ipcRenderer.send("delete-note", id),
   deleteNotePermanently: (id) =>
@@ -20,23 +20,27 @@ contextBridge.exposeInMainWorld("api", {
   cleanUnusedAssets: (data) => ipcRenderer.invoke("clean-unused-assets", data),
   getDataPath: () => ipcRenderer.invoke("get-data-path"),
   getDrawingData: (noteId) => ipcRenderer.invoke("get-drawing-data", noteId),
+  // import/export
+  exportNote: (noteId, format) =>
+    ipcRenderer.invoke(`export-note-${format}`, noteId),
+  importNote: () => ipcRenderer.invoke("import-note"),
 
   // backlinks
   getBacklinks: (noteName) => ipcRenderer.invoke("get-backlinks", noteName),
 
-  // carpetas
+  // folders
   createFolder: (folderData) => ipcRenderer.invoke("create-folder", folderData),
   updateFolder: (folder) => ipcRenderer.send("update-folder", folder),
   deleteFolder: (id) => ipcRenderer.invoke("delete-folder", id),
 
-  // recibir datos de la nota
+  // get ntoe data
   onNoteData: (callback) => {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("note-data", handler);
     return () => ipcRenderer.removeListener("note-data", handler);
   },
 
-  // obtener posición y tamaño
+  // get pos and size
   getWindowPosition: () => ipcRenderer.invoke("get-window-position"),
   getWindowSize: () => ipcRenderer.invoke("get-window-size"),
 

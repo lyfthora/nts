@@ -492,6 +492,24 @@ export default function Dashboard() {
     setCurrentId(duplicated.id);
   }, []);
 
+  const onExport = useCallback(async (note: Note, format: 'json' | 'md') => {
+    const result = await window.api.exportNote(note.id, format);
+    if (result?.success) {
+      setToastMessage(`Note exported successfully`);
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, []);
+  const onImport = useCallback(async () => {
+    const result = await window.api.importNote();
+    if (result?.success && result.note) {
+      const imported = result.note;
+      setNotes(prev => [...prev, imported]);
+      setCurrentId(imported.id);
+      setToastMessage('Note imported successfully');
+      setTimeout(() => setToastMessage(null), 3000);
+    }
+  }, []);
+
   const onMoveToFolder = useCallback((noteId: number, folderId: number | null) => {
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
@@ -597,6 +615,8 @@ export default function Dashboard() {
               onMoveToFolder={onMoveToFolder}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
+              onExport={onExport}
+              onImport={onImport}
             />
           )}
           <EditorPanel
@@ -634,7 +654,7 @@ export default function Dashboard() {
         </div>
 
         {toastMessage && (
-          <div className="toast-notification">
+          <div className={`toast-notification${toastMessage.startsWith('Note exported') || toastMessage.startsWith('Note imported') ? ' toast-success' : ''}`}>
             {toastMessage}
           </div>
         )}

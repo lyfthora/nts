@@ -713,28 +713,9 @@ const EditorPanel = memo(function EditorPanel({
             onZoomIn={handleZoomIn}
             onZoomOut={handleZoomOut}
             onZoomReset={handleZoomReset}
+            isNoteEmpty={isNoteEmpty}
+            onNoteTypeChange={onNoteTypeChange}
           />
-          {showClearConfirm && (
-            <div className="clear-confirm-bar">
-              <span>Clear canvas?</span>
-              <button className="clear-confirm-yes" onClick={confirmClearCanvas}>Yes</button>
-              <button className="clear-confirm-no" onClick={() => setShowClearConfirm(false)}>No</button>
-            </div>
-          )}
-          {isNoteEmpty && onNoteTypeChange && (
-            <button
-              className="note-type-toggle"
-              title="Switch to Text"
-              onClick={() => onNoteTypeChange('text')}
-            >
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-            </button>
-          )}
         </div>
       ) : (
         !hideToolbar && showToolbar && (
@@ -743,19 +724,9 @@ const EditorPanel = memo(function EditorPanel({
               onFormat={handleFormat}
               onToggleLineNumbers={toggleLineNumbers}
               showLineNumbers={showLineNumbers}
+              isNoteEmpty={isNoteEmpty}
+              onNoteTypeChange={onNoteTypeChange}
             />
-            {isNoteEmpty && onNoteTypeChange && (
-              <button
-                className="note-type-toggle"
-                title="Switch to Drawing"
-                onClick={() => onNoteTypeChange('drawing')}
-              >
-                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                </svg>
-              </button>
-            )}
           </div>
         )
       )}
@@ -763,16 +734,29 @@ const EditorPanel = memo(function EditorPanel({
         <div className="editor-body" ref={editorBodyRef}>
           {/* Editor condicional según tipo de nota */}
           {note.noteType === 'drawing' ? (
-            <DrawingCanvas
-              drawingData={note.drawingData}
-              background={drawingBackground}
-              onChange={handleDrawingChange}
-              color={drawingColor}
-              lineWidth={drawingWidth}
-              isEraser={isEraser}
-              zoomLevel={zoomLevel}
-              onZoomChange={setZoomLevel}
-            />
+            <>
+              <DrawingCanvas
+                drawingData={note.drawingData}
+                background={drawingBackground}
+                onChange={handleDrawingChange}
+                color={drawingColor}
+                lineWidth={drawingWidth}
+                isEraser={isEraser}
+                zoomLevel={zoomLevel}
+                onZoomChange={setZoomLevel}
+              />
+              {showClearConfirm && (
+                <div className="clear-confirm-overlay">
+                  <div className="clear-confirm-card">
+                    <span>Clear canvas?</span>
+                    <div className="clear-confirm-actions">
+                      <button className="clear-confirm-yes" onClick={confirmClearCanvas}>Yes</button>
+                      <button className="clear-confirm-no" onClick={() => setShowClearConfirm(false)}>No</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div
