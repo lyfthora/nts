@@ -13,7 +13,7 @@ import EditorPanel from "../components/EditorPanel";
 import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
 import FolderSearchModal from "../components/FolderSearchModal";
-
+import ConfirmModal from "../components/ConfirmModal";
 
 export default function Dashboard() {
   const [notes, setNotes] = useState<Note[]>([]);
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [externalNoteIds, setExternalNoteIds] = useState<Set<number>>(new Set());
+  const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
+  const [noteToDeletePermanently, setNoteToDeletePermanently] = useState<Note | null>(null);
 
 
   const currentNote = useMemo<Note | null>(
@@ -285,14 +287,15 @@ export default function Dashboard() {
   }, []);
 
   const onDeletePermanently = useCallback(async (note: Note) => {
-    if (
-      confirm(`Are you sure you want to delete note ${note.name} permanently?`)
-    ) {
-      await window.api.deleteNotePermanently(note.id);
-      setNotes(prev => prev.filter(n => n.id !== note.id));
-      setCurrentId(null);
-    }
+   setNoteToDeletePermanently(note);
   }, []);
+  const handleConfirmDeletePermanently = useCallback(async () => {
+    if (!noteToDeletePermanently) return;
+    await window.api.deleteNotePermanently(noteToDeletePermanently.id);
+    setNotes(prev => prev.filter(n => n.id !== noteToDeletePermanently.id));
+    setCurrentId(null);
+    setNoteToDeletePermanently(null);
+  }, [noteToDeletePermanently]);
 
   const onFolderSelect = useCallback((id: number) => {
     setSelectedFolderId(id);
@@ -381,9 +384,13 @@ export default function Dashboard() {
     });
   }, []);
 
-  const onFolderDelete = useCallback(async (id: number) => {
-    if (!confirm("¿Eliminar carpeta y todo su contenido?")) return;
-
+const onFolderDelete = useCallback((id: number) => {
+    setFolderToDelete(id);
+  }, []);
+  const handleConfirmFolderDelete = useCallback(async () => {
+    if (folderToDelete === null) return;
+    const id = folderToDelete;
+    setFolderToDelete(null);
     await window.api.deleteFolder(id);
     const data = await window.api.getAllData();
     setFolders(data.folders || []);
@@ -396,12 +403,11 @@ export default function Dashboard() {
         return n;
       });
     });
-
     if (selectedFolderId === id) {
       setSelectedFolderId(null);
       setView('all-notes');
     }
-  }, [selectedFolderId]);
+  }, [folderToDelete, selectedFolderId]);
 
 
   const onViewChange = useCallback((v: string) => {
@@ -665,6 +671,26 @@ export default function Dashboard() {
         folderCounts={folderCounts}
         onSelect={onFolderSearchSelect}
         onCancel={() => setIsFolderSearchOpen(false)}
+      />
+      <ConfirmModal
+        isOpen={folderToDelete !== null}
+        title="Delete folder"
+        message="Delete this folder and all its contents? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmFolderDelete}
+        onCancel={() => setFolderToDelete(null)}
+      />
+      <ConfirmModal
+        isOpen={noteToDeletePermanently !== null}
+        title="Delete permanently"
+        message={`Are you sure you want to delete "${noteToDeletePermanently?.name || 'Untitled'}" permanently? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDeletePermanently}
+        onCancel={() => setNoteToDeletePermanently(null)}
       />
     </div>
   );
