@@ -485,11 +485,13 @@ const EditorPanel = memo(function EditorPanel({
 
 
       const view = viewRef.current;
-      const cursor = view.state.selection.main.head;
+      const coords = { x: e.clientX, y: e.clientY };
+      const dropPos = view.posAtCoords(coords);
+      const insertAt = dropPos ?? view.state.doc.length;
       const markdown = `![](${relativePath})`;
 
       view.dispatch({
-        changes: { from: cursor, insert: markdown + '\n' }
+        changes: { from: insertAt, insert: markdown + '\n' }
       });
     }
   }, [note]);
