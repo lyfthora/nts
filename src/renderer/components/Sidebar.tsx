@@ -172,22 +172,24 @@ const Sidebar = memo(function Sidebar({
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button
-              className={`nav-collapse-btn ${collapsedSections['folders'] ? 'collapsed' : ''}`}
-              onClick={() => toggleSection('folders')}
-            >
-              <svg
-                className="chevron"
-                width={12}
-                height={12}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
+            {folders.length > 0 && (
+              <button
+                className={`nav-collapse-btn ${collapsedSections['folders'] ? 'collapsed' : ''}`}
+                onClick={() => toggleSection('folders')}
               >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
+                <svg
+                  className="chevron"
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
             <span>Notebooks</span>
             <button
               className="section-action-btn"
@@ -309,22 +311,24 @@ const Sidebar = memo(function Sidebar({
         </div>
         <div className="nav-section">
           <div className="nav-section-header">
-            <button
-              className={`nav-collapse-btn ${collapsedSections['tags'] ? 'collapsed' : ''}`}
-              onClick={() => toggleSection('tags')}
-            >
-              <svg
-                className="chevron"
-                width={12}
-                height={12}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
+            {tags.length > 0 && (
+              <button
+                className={`nav-collapse-btn ${collapsedSections['tags'] ? 'collapsed' : ''}`}
+                onClick={() => toggleSection('tags')}
               >
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </button>
+                <svg
+                  className="chevron"
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </button>
+            )}
             <span>Tags</span>
           </div>
           <AnimatePresence initial={false}>
