@@ -1,16 +1,24 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const API_URL = "https://nts-api-production.up.railway.app/api";
-
+let authToken = null;
 async function apiRequest(path, options = {}) {
+  const headers = { "Content-Type": "application/json" };
+  if (authToken) {
+    headers["Authorization"] = `Bearer ${authToken}`;
+  }
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
+    headers,
     ...options,
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
 
+
 contextBridge.exposeInMainWorld("api", {
+  // Auth
+setAuthToken: (token) => { authToken = token; },
+getAuthToken: () => authToken,
   // =============================================
   // data → http to api
   // =============================================
@@ -20,7 +28,7 @@ createNoteDashboard: async () => {
       body: JSON.stringify({ noteType: "text" }),
     });
   },
-  getAllData: () => apiRequest("/notes/all"),
+ getAllData: () => apiRequest("/notes/all"),
   updateNote: (note) => {
     const { id, ...data } = note;
     apiRequest(`/notes/${id}`, {
