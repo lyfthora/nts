@@ -259,7 +259,7 @@ const EditorPanel = memo(function EditorPanel({
 
 
   useEffect(() => {
-    if (!note || !dataPath || note.noteType === 'drawing') return;
+     if (!note ||  note.noteType === 'drawing') return;
 
     const createEditor = () => {
       if (!editorRef.current) return;
