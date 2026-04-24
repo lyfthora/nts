@@ -4,6 +4,9 @@ export interface WindowAPI {
 // Auth
   setAuthToken: (token: string) => void;
   getAuthToken: () => string | null;
+  openOAuth: (url: string) => Promise<void>;
+  getOAuthToken: () => Promise<string | null>;
+  clearAuthToken: () => string | null;
 
   // Acciones de ventana
   createNoteDashboard: () => Promise<Note>;

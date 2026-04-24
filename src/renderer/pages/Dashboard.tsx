@@ -15,7 +15,11 @@ import "./Dashboard.css";
 import FolderSearchModal from "../components/FolderSearchModal";
 import ConfirmModal from "../components/ConfirmModal";
 
-export default function Dashboard() {
+interface DashboardProps {
+  userName: string;
+  onLogout: () => void;
+}
+export default function Dashboard({ userName, onLogout }: DashboardProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadedContents, setLoadedContents] = useState<Map<number, string>>(new Map());
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -601,6 +605,8 @@ const onFolderDelete = useCallback((id: number) => {
           tags={tags}
           onNoteDrop={onNoteDrop}
           onFolderDrop={onFolderDrop}
+          userName={userName}
+  onLogout={onLogout}
         />
       )}
       <div className="main-content">
