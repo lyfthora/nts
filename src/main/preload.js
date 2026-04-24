@@ -1,10 +1,11 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const API_URL = "https://nts-api-production.up.railway.app/api";
-let authToken = null;
+const TOKEN_KEY = 'nts_auth_token';
 async function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
   }
   const res = await fetch(`${API_URL}${path}`, {
     headers,
@@ -17,8 +18,12 @@ async function apiRequest(path, options = {}) {
 
 contextBridge.exposeInMainWorld("api", {
   // Auth
-setAuthToken: (token) => { authToken = token; },
-getAuthToken: () => authToken,
+  setAuthToken: (token) => { localStorage.setItem(TOKEN_KEY, token); },
+  getAuthToken: () => localStorage.getItem(TOKEN_KEY),
+  openOAuth: (url) => ipcRenderer.invoke("open-oauth", url),
+  getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
+  clearAuthToken: () => { localStorage.removeItem(TOKEN_KEY); },
+
   // =============================================
   // data → http to api
   // =============================================
