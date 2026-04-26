@@ -34,6 +34,8 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
   const [externalNoteIds, setExternalNoteIds] = useState<Set<number>>(new Set());
   const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
   const [noteToDeletePermanently, setNoteToDeletePermanently] = useState<Note | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
 
 
   const currentNote = useMemo<Note | null>(
@@ -108,15 +110,23 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
 
   useEffect(() => {
     let mounted = true;
+    const cached = window.api.getCachedData();
+    if (cached) {
+      setNotes(cached.notes || []);
+      setFolders(cached.folders || []);
+      setIsLoading(false);
+    }
     window.api.getAllData().then(data => {
       if (mounted) {
         setNotes(data.notes || []);
         setFolders(data.folders || []);
+        window.api.setCachedData(data);
+        setIsLoading(false);
       }
+    }).catch(() => {
+      if (mounted) setIsLoading(false);
     });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
 
@@ -698,6 +708,11 @@ const onFolderDelete = useCallback((id: number) => {
         onConfirm={handleConfirmDeletePermanently}
         onCancel={() => setNoteToDeletePermanently(null)}
       />
+      {isLoading && notes.length === 0 && (
+        <div className="dashboard-loading">
+          <div className="loader"></div>
+        </div>
+      )}
     </div>
   );
 }
