@@ -44,6 +44,7 @@ export default function App() {
   }, []);
 
   const handleLogout = useCallback(() => {
+    window.api.clearCachedData();
     window.api.clearAuthToken();
     setIsAuthenticated(false);
     setUserName('');

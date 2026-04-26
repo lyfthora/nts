@@ -1,12 +1,17 @@
 import { Note, Folder } from "./models";
 
 export interface WindowAPI {
-// Auth
+  // Auth
   setAuthToken: (token: string) => void;
   getAuthToken: () => string | null;
   openOAuth: (url: string) => Promise<void>;
   getOAuthToken: () => Promise<string | null>;
   clearAuthToken: () => string | null;
+
+  //cache
+  getCachedData: () => { notes: Note[]; folders: Folder[]} | null;
+  setCachedData: (data: { notes: Note[]; folders: Folder[]}) => void;
+  clearCachedData: () => void;
 
   // Acciones de ventana
   createNoteDashboard: () => Promise<Note>;
