@@ -24,6 +24,36 @@ contextBridge.exposeInMainWorld("api", {
   getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
   clearAuthToken: () => { localStorage.removeItem(TOKEN_KEY); },
 
+ //cache
+ getCachedData: () => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return null;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+  },
+  setCachedData: (data) => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch { /* silenciar */ }
+  },
+  clearCachedData: () => {
+    try {
+      const token = localStorage.getItem(TOKEN_KEY);
+      if (!token) return;
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      localStorage.removeItem(key);
+    } catch { /* silenciar */ }
+  },
+
   // =============================================
   // data → http to api
   // =============================================

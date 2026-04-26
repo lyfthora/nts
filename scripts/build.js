@@ -44,6 +44,7 @@ async function buildAll(watch = false) {
         ".woff": "file",
         ".ttf": "file",
         ".eot": "file",
+        ".gif": "file",
       },
       sourcemap: false,
     };
