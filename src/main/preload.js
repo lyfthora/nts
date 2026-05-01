@@ -14,11 +14,18 @@ async function apiRequest(path, options = {}) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
+const existingToken = localStorage.getItem(TOKEN_KEY);
+if (existingToken) {
+  ipcRenderer.send("set-auth-token", existingToken);
+}
 
 
 contextBridge.exposeInMainWorld("api", {
   // Auth
-  setAuthToken: (token) => { localStorage.setItem(TOKEN_KEY, token); },
+  setAuthToken: (token) => {
+    localStorage.setItem(TOKEN_KEY, token);
+    ipcRenderer.send("set-auth-token", token);
+   },
   getAuthToken: () => localStorage.getItem(TOKEN_KEY),
   openOAuth: (url) => ipcRenderer.invoke("open-oauth", url),
   getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
@@ -42,7 +49,7 @@ contextBridge.exposeInMainWorld("api", {
       const payload = JSON.parse(atob(token.split('.')[1]));
       const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
       localStorage.setItem(key, JSON.stringify(data));
-    } catch { /* silenciar */ }
+    } catch {  }
   },
   clearCachedData: () => {
     try {
