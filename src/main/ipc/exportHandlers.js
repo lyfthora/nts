@@ -3,13 +3,18 @@ const fs = require("fs").promises;
 const path = require("path");
 const fsSync = require("fs");
 const archiver = require("archiver");
-const storage = require("../storage.js");
 const AdmZip = require("adm-zip");
+const { apiRequest } = require("../apiProxy.js");
 
 function registerExportHandlers() {
   ipcMain.handle("export-note-json", async (event, noteId) => {
     try {
-      const exportData = await storage.exportNote(noteId);
+const allData = await apiRequest("/notes/all");
+      const note = allData.notes.find(n => n.id === noteId);
+      const contentData = await apiRequest(`/notes/${noteId}/content`);
+      note.content = contentData.content;
+      note.drawingData = contentData.drawingData;
+      const exportData = { note, assets: [] };
       const noteName = exportData.note.name || "untitled";
       const safeName = noteName.replace(/[<>:"/\\|?*]/g, "_");
       const result = await dialog.showSaveDialog({
@@ -37,8 +42,12 @@ function registerExportHandlers() {
 
   ipcMain.handle("export-note-md", async (event, noteId) => {
     try {
-      const exportData = await storage.exportNote(noteId);
-      const note = exportData.note;
+      const allData = await apiRequest("/notes/all");
+      const note = allData.notes.find(n => n.id === noteId);
+      const contentData = await apiRequest(`/notes/${noteId}/content`);
+      note.content = contentData.content;
+      note.drawingData = contentData.drawingData;
+      const exportData = { note, assets: [] };
       const assets = exportData.assets || [];
       const noteName = note.name || "untitled";
       const safeName = noteName.replace(/[<>:"/\\|?*]/g, "_");
@@ -226,12 +235,15 @@ function registerExportHandlers() {
               : undefined,
             updatedAt: metadata.updatedAt
               ? new Date(metadata.updatedAt).getTime()
-              : undefined,
+               : undefined,
           },
           assets: [],
         };
       }
-      const newNote = await storage.importNote(importData);
+      const newNote = await apiRequest("/notes", {
+  method: "POST",
+  body: JSON.stringify(importData.note),
+});
       return { success: true, note: newNote };
     } catch (err) {
       console.error("Error importing note:", err);
