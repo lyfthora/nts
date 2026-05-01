@@ -1,6 +1,5 @@
 const { app, ipcMain } = require("electron");
 const path = require("path");
-const storage = require("./storage.js");
 const {
   createDashboardWindow,
   getDashboardWindow,
@@ -8,6 +7,7 @@ const {
 } = require("./windows/windowManager.js");
 const { registerAllHandlers } = require("./ipc/index.js");
 const { checkForUpdatesOnStartup } = require("./ipc/updateHandlers.js");
+const { setToken } = require("./apiProxy.js");
 
 // oath: registrar protocol handler nts://
 if (process.defaultApp) {
@@ -65,28 +65,12 @@ ipcMain.handle("get-oauth-token", () => {
   return token;
 });
 
-async function initializeDefaultStructure() {
-  const folders = await storage.getAllFolders();
-  const indexExists = folders.find((f) => f.id === 1);
+ipcMain.on("set-auth-token",(_event, token) =>{
+  setToken(token);
+});
 
-  if (!indexExists) {
-    const indexFolder = {
-      id: 1,
-      name: "Index",
-      parentId: null,
-      isSystem: true,
-      expanded: true,
-    };
-    folders.push(indexFolder);
-    await storage.saveFolders(folders);
-    console.log("System folder 'Index' created");
-  }
-}
 
 app.whenReady().then(async () => {
-  await storage.migrateFromElectronStore();
-  await storage.addMissingFields();
-  await initializeDefaultStructure();
   createDashboardWindow();
   checkForUpdatesOnStartup();
 });
