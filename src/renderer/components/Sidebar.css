@@ -80,7 +80,7 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
   padding: 8px 12px;
   border-radius: 6px;
   color: #b0b0b0;
@@ -210,9 +210,9 @@
   background-position: center center;
   background-repeat: no-repeat;
   border-radius: 0;
-  width: 18px;
-  height: 18px;
-  margin: -3px;
+  width: 15px;
+  height: 15px;
+  /* margin: -3px; */
   transform: none;
 }
 
