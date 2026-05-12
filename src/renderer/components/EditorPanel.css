@@ -176,15 +176,16 @@
   color: #999;
   line-height: 1.5;
   flex-shrink: 0;
+    border: 1px solid transparent;
   white-space: nowrap;
 }
 
 .metadata-folder {
   color: #999;
   border-radius: 6px;
-  border: 1px solid transparent;
+  /* border: 1px solid transparent; */
   transition: all 0.2s ease;
-  margin: 0 0 -3px 0;
+  /* margin: 0 0 -3px 0; */
 }
 
 .metadata-folder:hover {
@@ -194,8 +195,8 @@
 .metadata-folder svg {
   color: white;
   flex-shrink: 0;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 
 .metadata-folder-name {
