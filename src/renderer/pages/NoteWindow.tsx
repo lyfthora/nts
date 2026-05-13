@@ -52,6 +52,30 @@ export default function NoteWindow() {
   const onClose = useCallback(() => window.api.closeWindow(), []);
   const noop = useCallback(() => { }, []);
   const noopNote = useCallback((_n: Note) => { }, []);
+
+  const onStatusChange = useCallback((updatedNote: Note) => {
+    setNote(updatedNote);
+    saveNote(updatedNote);
+  }, [saveNote]);
+  const onTagAddChange = useCallback((updatedNote: Note) => {
+    setNote(updatedNote);
+    saveNote(updatedNote)
+  }, [saveNote])
+  const onTagRemoveChange = useCallback((updatedNote: Note) => {
+    setNote(updatedNote);
+    saveNote(updatedNote);
+  }, [saveNote]);
+  const onPinChange = useCallback((updatedNote: Note) => {
+    setNote(updatedNote);
+    saveNote(updatedNote);
+  }, [saveNote]);
+  const onDeleteNote = useCallback(async (noteToDelete: Note) => {
+    await window.api.deleteNote(noteToDelete.id);
+    window.api.sendNoteChange({ ...noteToDelete, deleted: true});
+    window.api.closeWindow();
+  }, []);
+
+
   return (
     <div className="note-window-container">
       <WindowBar onMinimize={onMinimize} onClose={onClose} />
@@ -60,11 +84,11 @@ export default function NoteWindow() {
         note={note}
         folders={folders}
         onChange={onChange}
-        onDelete={noopNote}
-        onStatus={noopNote}
-        onTagAdd={noopNote}
-        onTagRemove={noopNote}
-        onPin={noopNote}
+        onDelete={onDeleteNote}
+        onStatus={onStatusChange}
+        onTagAdd={onTagAddChange}
+        onTagRemove={onTagRemoveChange}
+        onPin={onPinChange}
         isExternalWindow
       />
     </div>
