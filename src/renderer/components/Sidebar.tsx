@@ -80,6 +80,37 @@ const Sidebar = memo(function Sidebar({
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
 
+
+  const lastSyncTime = React.useMemo(() => {
+  const timestamps = notes
+    .filter(n => !n.deleted && n.updatedAt)
+    .map(n => {
+      const t = n.updatedAt;
+      return typeof t === 'number' ? t : new Date(t as unknown as string).getTime();
+    });
+  return timestamps.length > 0 ? Math.max(...timestamps) : 0;
+}, [notes]);
+  const formatSyncDate = (timestamp: number): string => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const now = new Date();
+  const timeStr = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+  if (date.toDateString() === now.toDateString()) {
+    return timeStr;
+  }
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
+  return `${dateStr}, ${timeStr}`;
+};
+
+
+
   const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections(prev => ({
       ...prev,
@@ -367,26 +398,45 @@ const Sidebar = memo(function Sidebar({
         </div>
       </nav>
       <div className="sidebar-footer">
-        <span className="sidebar-user-name">{userName}</span>
-        <button
-          className="logout-btn"
-          onClick={onLogout}
-          title="Log out"
+  <div className="sidebar-user-info">
+    <span className="sidebar-user-name">{userName}</span>
+    {lastSyncTime > 0 && (
+      <span className="sidebar-sync-time">
+        <svg
+          width={10}
+          height={10}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
         >
-          <svg
-            width={16}
-            height={16}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-        </button>
-      </div>
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
+        {formatSyncDate(lastSyncTime)}
+      </span>
+    )}
+  </div>
+  <button
+    className="logout-btn"
+    onClick={onLogout}
+    title="Log out"
+  >
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  </button>
+</div>
 
       <InputModal
         isOpen={showCreateModal}
