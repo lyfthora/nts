@@ -346,3 +346,24 @@
   color: #ff6b6b;
   background: rgba(255, 107, 107, 0.1);
 }
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.sidebar-sync-time {
+  font-size: 10px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-sync-time svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
