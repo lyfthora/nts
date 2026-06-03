@@ -1,5 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const API_URL = "https://nts-api-production.up.railway.app/api";
+const API_URL = "https://nts-api-production-5769.up.railway.app/api";
+
 const TOKEN_KEY = 'nts_auth_token';
 async function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
