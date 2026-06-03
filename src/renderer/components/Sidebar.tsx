@@ -408,7 +408,7 @@ const Sidebar = memo(function Sidebar({
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
-          strokeWidth={2}
+          strokeWidth={2.5}
         >
           <polyline points="23 4 23 10 17 10" />
           <polyline points="1 20 1 14 7 14" />
