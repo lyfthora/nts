@@ -399,7 +399,6 @@ const Sidebar = memo(function Sidebar({
       </nav>
       <div className="sidebar-footer">
   <div className="sidebar-user-info">
-    <span className="sidebar-user-name">{userName}</span>
     {lastSyncTime > 0 && (
       <span className="sidebar-sync-time">
         <svg
