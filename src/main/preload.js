@@ -138,6 +138,11 @@ createNoteDashboard: async () => {
     ipcRenderer.invoke(`export-note-${format}`, noteId),
   importNote: () => ipcRenderer.invoke("import-note"),
   exportAllNotes: () => ipcRenderer.invoke("export-all-notes"),
+  onExportImportProgress: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on("export-import-progress", handler);
+    return () => ipcRenderer.removeListener("export-import-progress", handler);
+  },
   // =============================================
   // WINDOW → IPC local
   // =============================================
