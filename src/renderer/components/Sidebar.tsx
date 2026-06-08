@@ -79,6 +79,7 @@ const Sidebar = memo(function Sidebar({
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
+  const [isExporting, setIsExporting] = useState(false);
 
 
   const lastSyncTime = React.useMemo(() => {
@@ -110,6 +111,21 @@ const Sidebar = memo(function Sidebar({
 };
 
 
+
+const handleExportAllNotes = async () => {
+  if (isExporting) return;
+  setIsExporting(true);
+  try {
+    const result = await window.api.exportAllNotes();
+    if (result.success) {
+      console.log('Exported all notes to:', result.path);
+    }
+  } catch (error) {
+    console.error('Failed to export all notes:', error);
+  } finally {
+    setIsExporting(false);
+  }
+}
 
   const toggleSection = useCallback((sectionId: string) => {
     setCollapsedSections(prev => ({
@@ -226,21 +242,34 @@ const Sidebar = memo(function Sidebar({
               </button>
             )}
             <span>Notebooks</span>
-            <button
-              className="section-action-btn"
-              onClick={() => setShowCreateModal(true)}
-              title="New Folder"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#999',
-                cursor: 'pointer',
-                marginLeft: 'auto',
-                fontSize: '16px'
-              }}
-            >
-              +
-            </button>
+            <div className="section-actions">
+              <button
+                className={`section-action-btn export-btn ${isExporting ? 'loading' : ''}`}
+                onClick={handleExportAllNotes}
+                title="Export all as Markdown (ZIP)"
+                disabled={isExporting}
+              >
+                <svg
+                  width={14}
+                  height={14}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+              <button
+                className="section-action-btn new-folder-btn"
+                onClick={() => setShowCreateModal(true)}
+                title="New Folder"
+              >
+                +
+              </button>
+            </div>
           </div>
           <AnimatePresence initial={false}>
             {!collapsedSections['folders'] && (
