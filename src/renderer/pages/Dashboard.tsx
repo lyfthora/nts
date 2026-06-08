@@ -520,15 +520,29 @@ const onFolderDelete = useCallback((id: number) => {
     }
   }, []);
   const onImport = useCallback(async () => {
-    const result = await window.api.importNote();
-    if (result?.success && result.note) {
-      const imported = result.note;
-      setNotes(prev => [...prev, imported]);
-      setCurrentId(imported.id);
+  const result = await window.api.importNote();
+  if (result?.success) {
+    const data = await window.api.getAllData();
+    setFolders(data.folders || []);
+    setNotes(prevNotes => {
+      return (data.notes || []).map((n: Note) => {
+        const existing = prevNotes.find(p => p.id === n.id);
+        if (existing && existing.content !== undefined) {
+          return { ...n, content: existing.content };
+        }
+        return n;
+      });
+    });
+    if (result.notes && result.notes.length > 0) {
+      setCurrentId(result.notes[0].id);
+      setToastMessage(`${result.notes.length} notes imported successfully`);
+    } else if (result.note) {
+      setCurrentId(result.note.id);
       setToastMessage('Note imported successfully');
-      setTimeout(() => setToastMessage(null), 3000);
     }
-  }, []);
+    setTimeout(() => setToastMessage(null), 3000);
+  }
+}, []);
 
   const onMoveToFolder = useCallback((noteId: number, folderId: number | null) => {
     const note = notes.find(n => n.id === noteId);
