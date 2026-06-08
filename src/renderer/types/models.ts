@@ -24,6 +24,11 @@ export interface Note {
   drawingData?: string;
   hasDrawingData?: boolean;
 }
+export interface ProgressData {
+  status: 'idle' | 'loading' | 'success' | 'error';
+  percent: number;
+  message: string;
+}
 export interface Folder {
   id: number;
   name: string;
