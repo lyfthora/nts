@@ -9,8 +9,8 @@ const { apiRequest } = require("../apiProxy.js");
 function registerExportHandlers() {
   ipcMain.handle("export-note-json", async (event, noteId) => {
     try {
-const allData = await apiRequest("/notes/all");
-      const note = allData.notes.find(n => n.id === noteId);
+      const allData = await apiRequest("/notes/all");
+      const note = allData.notes.find((n) => n.id === noteId);
       const contentData = await apiRequest(`/notes/${noteId}/content`);
       note.content = contentData.content;
       note.drawingData = contentData.drawingData;
@@ -43,7 +43,7 @@ const allData = await apiRequest("/notes/all");
   ipcMain.handle("export-note-md", async (event, noteId) => {
     try {
       const allData = await apiRequest("/notes/all");
-      const note = allData.notes.find(n => n.id === noteId);
+      const note = allData.notes.find((n) => n.id === noteId);
       const contentData = await apiRequest(`/notes/${noteId}/content`);
       note.content = contentData.content;
       note.drawingData = contentData.drawingData;
@@ -123,7 +123,7 @@ const allData = await apiRequest("/notes/all");
   ipcMain.handle("import-note", async () => {
     try {
       const result = await dialog.showOpenDialog({
-        title: "Import Note",
+        title: "Import Note(s)",
         filters: [
           {
             name: "Supported Files",
@@ -137,80 +137,93 @@ const allData = await apiRequest("/notes/all");
       }
       const filePath = result.filePaths[0];
       const ext = path.extname(filePath).toLowerCase();
-      const fileContent = await fs.readFile(filePath, "utf-8");
-      const fileBaseName = path.basename(filePath, ext);
-      let importData;
       if (ext === ".zip") {
         const zip = new AdmZip(filePath);
         const entries = zip.getEntries();
-        const mdEntry = entries.find(
+        const mdEntries = entries.filter(
           (e) => !e.isDirectory && e.entryName.endsWith(".md"),
         );
-        if (!mdEntry) {
-          return { success: false, error: "No .md file found in ZIP" };
+        if (mdEntries.length === 0) {
+          return { success: false, error: "No .md files found in ZIP" };
         }
-        const mdContent = mdEntry.getData().toString("utf-8");
-        let content = mdContent;
-        let metadata = {};
-        if (mdContent.startsWith("---")) {
-          const endIndex = mdContent.indexOf("\n---", 3);
-          if (endIndex !== -1) {
-            const frontmatterStr = mdContent.substring(3, endIndex).trim();
-            metadata = parseFrontmatter(frontmatterStr);
-            content = mdContent.substring(endIndex + 4).trim();
+        const allData = await apiRequest("/notes/all");
+        const existingFolders = allData.folders || [];
+        const folderPathToId = { "": null };
+        const importedNotes = [];
+        for (const entry of mdEntries) {
+          const entryName = entry.entryName;
+          const entryDir = entryName.includes("/")
+            ? entryName.substring(0, entryName.lastIndexOf("/"))
+            : "";
+
+          const parts = entryDir.split("/").filter((p) => p && p !== ".");
+          let lastFolderId = null;
+          let currentPathBuilder = "";
+          for (const part of parts) {
+            currentPathBuilder = currentPathBuilder
+              ? `${currentPathBuilder}/${part}`
+              : part;
+
+            if (!folderPathToId[currentPathBuilder]) {
+              let folder = existingFolders.find(
+                (f) => f.name === part && f.parentId === lastFolderId,
+              );
+              if (!folder) {
+                folder = await apiRequest("/folders", {
+                  method: "POST",
+                  body: JSON.stringify({ name: part, parentId: lastFolderId }),
+                });
+                existingFolders.push(folder);
+              }
+              folderPathToId[currentPathBuilder] = folder.id;
+            }
+            lastFolderId = folderPathToId[currentPathBuilder];
           }
-        }
-        const assets = [];
-        for (const entry of entries) {
-          if (!entry.isDirectory && entry.entryName.startsWith("assets/")) {
-            const buffer = entry.getData();
-            const filename = path.basename(entry.entryName);
-            const ext = path.extname(filename).toLowerCase();
-            const mimeTypes = {
-              ".png": "image/png",
-              ".jpg": "image/jpeg",
-              ".jpeg": "image/jpeg",
-              ".gif": "image/gif",
-              ".webp": "image/webp",
-              ".svg": "image/svg+xml",
-            };
-            assets.push({
-              originalPath: `assets/${filename}`,
-              filename,
-              mimeType: mimeTypes[ext] || "application/octet-stream",
-              data: buffer.toString("base64"),
-            });
+          const mdContent = entry.getData().toString("utf-8");
+          let content = mdContent;
+          let metadata = {};
+          if (mdContent.startsWith("---")) {
+            const endIndex = mdContent.indexOf("\n---", 3);
+            if (endIndex !== -1) {
+              const frontmatterStr = mdContent.substring(3, endIndex).trim();
+              metadata = parseFrontmatter(frontmatterStr);
+              content = mdContent.substring(endIndex + 4).trim();
+            }
           }
-        }
-        importData = {
-          note: {
-            name: metadata.name || path.basename(mdEntry.entryName, ".md"),
+
+          const noteData = {
+            name: metadata.name || path.basename(entryName, ".md"),
             content,
+            preview: content
+              .replace(/!\[.*?\]\(.*?\)/g, "")
+              .replace(/[#*_`~\[\]]/g, "")
+              .trim()
+              .substring(0, 150),
             color: metadata.color || "#ffffff",
-            pinned: metadata.pinned === true || metadata.pinned === "true",
+            pinned:
+              metadata.pinned === true || String(metadata.pinned) === "true",
             status: metadata.status || "",
             tags: metadata.tags || [],
             noteType: "text",
-            createdAt: metadata.createdAt
-              ? new Date(metadata.createdAt).getTime()
-              : undefined,
-            updatedAt: metadata.updatedAt
-              ? new Date(metadata.updatedAt).getTime()
-              : undefined,
-          },
-          assets,
-        };
-      } else if (ext === ".json") {
-        const parsed = JSON.parse(fileContent);
-        if (!parsed.note || typeof parsed.note !== "object") {
-          return { success: false, error: "Invalid JSON format" };
+            folderId: lastFolderId,
+          };
+
+          const newNote = await apiRequest("/notes", {
+            method: "POST",
+            body: JSON.stringify(noteData),
+          });
+          importedNotes.push(newNote);
         }
-        importData = {
-          note: parsed.note,
-          assets: parsed.assets || [],
-        };
+        return { success: true, notes: importedNotes };
+      }
+
+      const fileContent = await fs.readFile(filePath, "utf-8");
+      const fileBaseName = path.basename(filePath, ext);
+      let importData;
+      if (ext === ".json") {
+        const parsed = JSON.parse(fileContent);
+        importData = { note: parsed.note, assets: parsed.assets || [] };
       } else {
-        // .md o .txt
         let content = fileContent;
         let metadata = {};
         if (ext === ".md" && fileContent.startsWith("---")) {
@@ -225,28 +238,88 @@ const allData = await apiRequest("/notes/all");
           note: {
             name: metadata.name || fileBaseName,
             content,
+            preview: content
+              .replace(/!\[.*?\]\(.*?\)/g, "")
+              .replace(/[#*_`~\[\]]/g, "")
+              .trim()
+              .substring(0, 150),
             color: metadata.color || "#ffffff",
-            pinned: metadata.pinned === true || metadata.pinned === "true",
+            pinned:
+              metadata.pinned === true || String(metadata.pinned) === "true",
             status: metadata.status || "",
             tags: metadata.tags || [],
             noteType: "text",
-            createdAt: metadata.createdAt
-              ? new Date(metadata.createdAt).getTime()
-              : undefined,
-            updatedAt: metadata.updatedAt
-              ? new Date(metadata.updatedAt).getTime()
-               : undefined,
           },
           assets: [],
         };
       }
       const newNote = await apiRequest("/notes", {
-  method: "POST",
-  body: JSON.stringify(importData.note),
-});
+        method: "POST",
+        body: JSON.stringify(importData.note),
+      });
       return { success: true, note: newNote };
     } catch (err) {
-      console.error("Error importing note:", err);
+      console.error("Error importing:", err);
+      return { success: false, error: err.message };
+    }
+  });
+  ipcMain.handle("export-all-notes", async () => {
+    try {
+      const result = await dialog.showSaveDialog({
+        title: "Export All Notes",
+        defaultPath: `nts_export_${new Date().toISOString().split("T")[0]}.zip`,
+        filters: [{ name: "ZIP Files", extensions: ["zip"] }],
+      });
+      if (result.canceled || !result.filePath) return { success: false };
+      const allData = await apiRequest("/notes/all");
+      const { notes, folders } = allData;
+      const getFolderPath = (folderId, foldersList) => {
+        if (!folderId) return "";
+        const folder = foldersList.find((f) => f.id === folderId);
+        if (!folder) return "";
+        const parentPath = getFolderPath(folder.parentId, foldersList);
+        return path.join(
+          parentPath,
+          (folder.name || "untitled").replace(/[<>:"/\\|?*]/g, "_"),
+        );
+      };
+      const activeNotes = notes.filter((n) => !n.deleted);
+      for (const note of activeNotes) {
+        const contentData = await apiRequest(`/notes/${note.id}/content`);
+        note.content = contentData.content;
+        note.drawingData = contentData.drawingData;
+      }
+      await new Promise((resolve, reject) => {
+        const output = require("fs").createWriteStream(result.filePath);
+        const archive = archiver("zip", { zlib: { level: 9 } });
+        output.on("close", resolve);
+        archive.on("error", reject);
+        archive.pipe(output);
+        for (const note of activeNotes) {
+          const folderPath = getFolderPath(note.folderId, folders);
+          const fileName = `${(note.name || "untitled").replace(/[<>:"/\\|?*]/g, "_")}.md`;
+          const fullPathInZip = path.join(folderPath, fileName);
+          const frontmatter = [
+            "---",
+            `name: "${(note.name || "").replace(/"/g, '\\"')}"`,
+            `color: "${note.color || "#ffffff"}"`,
+            note.pinned ? "pinned: true" : "pinned: false",
+            `status: "${note.status || ""}"`,
+            "tags:",
+            ...(note.tags || []).map((t) => `  - ${t}`),
+            `createdAt: ${new Date(note.createdAt).toISOString()}`,
+            `updatedAt: ${new Date(note.updatedAt).toISOString()}`,
+            "---",
+            "",
+            note.content || "",
+          ].join("\n");
+          archive.append(frontmatter, { name: fullPathInZip });
+        }
+        archive.finalize();
+      });
+      return { success: true, path: result.filePath };
+    } catch (err) {
+      console.error("Error exporting all notes:", err);
       return { success: false, error: err.message };
     }
   });
