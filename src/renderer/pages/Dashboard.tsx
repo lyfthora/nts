@@ -14,6 +14,8 @@ import LinkedNotePanel from "../components/LinkedNotePanel";
 import "./Dashboard.css";
 import FolderSearchModal from "../components/FolderSearchModal";
 import ConfirmModal from "../components/ConfirmModal";
+import ProgressToast from "../components/ProgressToast";
+import type { ProgressData } from "../types/models";
 
 interface DashboardProps {
   userName: string;
@@ -35,6 +37,7 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
   const [folderToDelete, setFolderToDelete] = useState<number | null>(null);
   const [noteToDeletePermanently, setNoteToDeletePermanently] = useState<Note | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [progressData, setProgressData] = useState<ProgressData | null>(null);
 
 
 
@@ -186,6 +189,13 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
       cleanupChanged();
       cleanupClosed();
     };
+  }, []);
+
+  useEffect(() => {
+    const cleanup = window.api.onExportImportProgress((data: ProgressData) => {
+      setProgressData(data);
+    });
+    return cleanup;
   }, []);
 
 
@@ -513,36 +523,30 @@ const onFolderDelete = useCallback((id: number) => {
   }, []);
 
   const onExport = useCallback(async (note: Note, format: 'json' | 'md') => {
-    const result = await window.api.exportNote(note.id, format);
+    await window.api.exportNote(note.id, format);
+  }, []);
+
+  const onImport = useCallback(async () => {
+    const result = await window.api.importNote();
     if (result?.success) {
-      setToastMessage(`Note exported successfully`);
-      setTimeout(() => setToastMessage(null), 3000);
+      const data = await window.api.getAllData();
+      setFolders(data.folders || []);
+      setNotes(prevNotes => {
+        return (data.notes || []).map((n: Note) => {
+          const existing = prevNotes.find(p => p.id === n.id);
+          if (existing && existing.content !== undefined) {
+            return { ...n, content: existing.content };
+          }
+          return n;
+        });
+      });
+      if (result.notes && result.notes.length > 0) {
+        setCurrentId(result.notes[0].id);
+      } else if (result.note) {
+        setCurrentId(result.note.id);
+      }
     }
   }, []);
-  const onImport = useCallback(async () => {
-  const result = await window.api.importNote();
-  if (result?.success) {
-    const data = await window.api.getAllData();
-    setFolders(data.folders || []);
-    setNotes(prevNotes => {
-      return (data.notes || []).map((n: Note) => {
-        const existing = prevNotes.find(p => p.id === n.id);
-        if (existing && existing.content !== undefined) {
-          return { ...n, content: existing.content };
-        }
-        return n;
-      });
-    });
-    if (result.notes && result.notes.length > 0) {
-      setCurrentId(result.notes[0].id);
-      setToastMessage(`${result.notes.length} notes imported successfully`);
-    } else if (result.note) {
-      setCurrentId(result.note.id);
-      setToastMessage('Note imported successfully');
-    }
-    setTimeout(() => setToastMessage(null), 3000);
-  }
-}, []);
 
   const onMoveToFolder = useCallback((noteId: number, folderId: number | null) => {
     const note = notes.find(n => n.id === noteId);
@@ -690,10 +694,14 @@ const onFolderDelete = useCallback((id: number) => {
         </div>
 
         {toastMessage && (
-          <div className={`toast-notification${toastMessage.startsWith('Note exported') || toastMessage.startsWith('Note imported') ? ' toast-success' : ''}`}>
+          <div className="toast-notification">
             {toastMessage}
           </div>
         )}
+        <ProgressToast
+          progress={progressData}
+          onClose={() => setProgressData(null)}
+        />
       </div>
       <FolderSearchModal
         isOpen={isFolderSearchOpen}
