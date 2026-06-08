@@ -1,4 +1,4 @@
-import { Note, Folder } from "./models";
+import { Note, Folder, ProgressData } from "./models";
 
 export interface WindowAPI {
   // Auth
@@ -46,6 +46,7 @@ export interface WindowAPI {
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
   importNote: () => Promise<{ success: boolean; note?: Note; notes?: Note[]; error?: string }>;
   exportAllNotes: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  onExportImportProgress: (callback: (data: ProgressData) => void) => () => void;
 
   // Backlinks
   getBacklinks: (noteName: string) => Promise<
