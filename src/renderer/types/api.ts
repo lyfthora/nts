@@ -44,7 +44,8 @@ export interface WindowAPI {
     noteId: number,
     format: string,
   ) => Promise<{ success: boolean; path?: string; error?: string }>;
-  importNote: () => Promise<{ success: boolean; note?: Note; error?: string }>;
+  importNote: () => Promise<{ success: boolean; note?: Note; notes?: Note[]; error?: string }>;
+  exportAllNotes: () => Promise<{ success: boolean; path?: string; error?: string }>;
 
   // Backlinks
   getBacklinks: (noteName: string) => Promise<
