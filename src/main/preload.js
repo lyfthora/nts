@@ -137,6 +137,7 @@ createNoteDashboard: async () => {
   exportNote: (noteId, format) =>
     ipcRenderer.invoke(`export-note-${format}`, noteId),
   importNote: () => ipcRenderer.invoke("import-note"),
+  exportAllNotes: () => ipcRenderer.invoke("export-all-notes"),
   // =============================================
   // WINDOW → IPC local
   // =============================================
