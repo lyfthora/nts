@@ -74,6 +74,7 @@ export default function FolderTree({
   const buildTree = (parentId: number | null = null, level: number = 0): JSX.Element[] => {
     return folders
       .filter(f => f.parentId === parentId)
+      .sort((a, b) => a.id - b.id)
       .map(folder => (
         <div key={folder.id}>
           <div
