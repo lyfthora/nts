@@ -1,0 +1,238 @@
+.sub-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 32px;
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(74, 158, 255, 0.12),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at bottom left,
+            rgba(255, 255, 255, 0.04),
+            transparent 28%
+        ),
+        #1a1a1a;
+    color: #f5f5f5;
+}
+
+.sub-card {
+    width: 100%;
+    max-width: 520px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+}
+
+.sub-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    margin-bottom: 16px;
+    border-radius: 999px;
+    background: rgba(74, 158, 255, 0.14);
+    color: #8ec5ff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.sub-title {
+    font-size: 32px;
+    line-height: 1.1;
+    margin-bottom: 12px;
+    color: #ffffff;
+}
+
+.sub-description {
+    color: #b8b8b8;
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.sub-status-panel {
+    margin-bottom: 20px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sub-status-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.sub-status-label {
+    font-size: 14px;
+    font-weight: 700;
+    color: #f5f5f5;
+}
+
+.sub-status-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: capitalize;
+}
+
+.sub-status-active,
+.sub-status-trial,
+.sub-status-trialing {
+    background: rgba(88, 200, 138, 0.16);
+    color: #7ee2a3;
+}
+
+.sub-status-expired {
+    background: rgba(255, 159, 67, 0.16);
+    color: #ffb866;
+}
+
+.sub-status-past_due,
+.sub-status-canceled,
+.sub-status-unpaid,
+.sub-status-incomplete {
+    background: rgba(255, 107, 107, 0.14);
+    color: #ff8f8f;
+}
+
+.sub-status-summary {
+    color: #c7c7c7;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.sub-price-tag {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(74, 158, 255, 0.08);
+    border: 1px solid rgba(74, 158, 255, 0.18);
+}
+
+.sub-price-tag .price {
+    font-size: 36px;
+    font-weight: 800;
+    color: #4a9eff;
+}
+
+.sub-price-tag .period {
+    font-size: 16px;
+    color: #b8b8b8;
+}
+
+.sub-features {
+    list-style: none;
+    margin: 0 0 24px;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.sub-features li {
+    position: relative;
+    padding-left: 20px;
+    color: #d7d7d7;
+}
+
+.sub-features li::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #4a9eff;
+}
+
+.sub-error {
+    margin-bottom: 16px;
+    color: #ff8f8f;
+    font-size: 14px;
+}
+
+.sub-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sub-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.15s ease,
+        background 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.sub-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.sub-btn-primary {
+    background: #4a9eff;
+    color: #ffffff;
+}
+
+.sub-btn-primary:hover:not(:disabled) {
+    background: #3b8ef0;
+}
+
+.sub-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f5f5f5;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sub-btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sub-btn-link {
+    background: transparent;
+    color: #9a9a9a;
+}
+
+.sub-btn-link:hover:not(:disabled) {
+    color: #ffffff;
+}
+
+.sub-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+    .sub-container {
+        padding: 20px;
+    }
+
+    .sub-card {
+        padding: 22px;
+    }
+
+    .sub-title {
+        font-size: 28px;
+    }
+
+    .sub-status-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
