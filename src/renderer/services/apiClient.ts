@@ -1,8 +1,18 @@
+import { SubscriptionStatus } from "../types/models";
+
 const API_URL = "https://nts-api-production-5769.up.railway.app/api";
 async function request<T>(path: string, options?: RequestInit): Promise<T>{
+  const token = window.api.getAuthToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+  };
   const res = await fetch(`${API_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: {
+      ...headers,
+      ...options?.headers,
+    },
   });
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`);
@@ -10,7 +20,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T>{
   return res.json() as Promise<T>;
 }
 
-export const apliClient = {
+export const apiClient = {
 
    // notes
 
@@ -79,4 +89,12 @@ deleteFolder: (id: number) =>
       method: "POST",
       body: JSON.stringify({ currentImages, referencedImages }),
     }),
+
+    // subscription
+  getSubscriptionStatus: () =>
+    request<SubscriptionStatus>("/subscription/status"),
+  createCheckoutSession: () =>
+    request<{ url: string }>("/subscription/checkout", { method: "POST" }),
+  createPortalSession: () =>
+    request<{ url: string }>("/subscription/portal", { method: "POST" }),
 };
