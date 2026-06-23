@@ -25,7 +25,7 @@ export interface Note {
   hasDrawingData?: boolean;
 }
 export interface ProgressData {
-  status: 'idle' | 'loading' | 'success' | 'error';
+  status: "idle" | "loading" | "success" | "error";
   percent: number;
   message: string;
 }
@@ -74,3 +74,18 @@ export interface DrawingData {
 }
 
 export type NoteType = "text" | "drawing";
+
+export interface SubscriptionStatus {
+  status:
+    | "trial"
+    | "trialing"
+    | "active"
+    | "past_due"
+    | "canceled"
+    | "unpaid"
+    | "incomplete"
+    | "expired";
+  trialEndsAt: string | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+}
