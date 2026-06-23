@@ -89,6 +89,9 @@ export interface WindowAPI {
   // onInitialData: (
   //   callback: (data: { notes: Note[]; folders: Folder[] }) => void
   // ) => () => void;
+
+  // utils
+  openExternal: (url: string) => Promise<void>;
 }
 
 declare global {
