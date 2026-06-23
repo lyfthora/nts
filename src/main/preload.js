@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const API_URL = "https://nts-api-production-5769.up.railway.app/api";
 
-const TOKEN_KEY = 'nts_auth_token';
+const TOKEN_KEY = "nts_auth_token";
 async function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
   const token = localStorage.getItem(TOKEN_KEY);
@@ -20,58 +20,64 @@ if (existingToken) {
   ipcRenderer.send("set-auth-token", existingToken);
 }
 
-
 contextBridge.exposeInMainWorld("api", {
   // Auth
   setAuthToken: (token) => {
     localStorage.setItem(TOKEN_KEY, token);
     ipcRenderer.send("set-auth-token", token);
-   },
+  },
   getAuthToken: () => localStorage.getItem(TOKEN_KEY),
   openOAuth: (url) => ipcRenderer.invoke("open-oauth", url),
   getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
-  clearAuthToken: () => { localStorage.removeItem(TOKEN_KEY); },
+  clearAuthToken: () => {
+    localStorage.removeItem(TOKEN_KEY);
+    ipcRenderer.send("set-auth-token", null);
+  },
 
- //cache
- getCachedData: () => {
+  //cache
+  getCachedData: () => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) return null;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   },
   setCachedData: (data) => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) return;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       localStorage.setItem(key, JSON.stringify(data));
-    } catch {  }
+    } catch {}
   },
   clearCachedData: () => {
     try {
       const token = localStorage.getItem(TOKEN_KEY);
       if (!token) return;
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      const key = `nts_cache_${payload.id || payload.sub || 'default'}`;
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       localStorage.removeItem(key);
-    } catch { /* silenciar */ }
+    } catch {
+      /* silenciar */
+    }
   },
 
   // =============================================
   // data → http to api
   // =============================================
-createNoteDashboard: async () => {
+  createNoteDashboard: async () => {
     return apiRequest("/notes", {
       method: "POST",
       body: JSON.stringify({ noteType: "text" }),
     });
   },
- getAllData: () => apiRequest("/notes/all"),
+  getAllData: () => apiRequest("/notes/all"),
   updateNote: (note) => {
     const { id, ...data } = note;
     apiRequest(`/notes/${id}`, {
@@ -80,12 +86,10 @@ createNoteDashboard: async () => {
     });
     ipcRenderer.send("sync-note-change", note);
   },
-  deleteNote: (id) =>
-    apiRequest(`/notes/${id}`, { method: "DELETE" }),
+  deleteNote: (id) => apiRequest(`/notes/${id}`, { method: "DELETE" }),
   deleteNotePermanently: (id) =>
     apiRequest(`/notes/${id}/permanent`, { method: "DELETE" }),
-  restoreNote: (id) =>
-    apiRequest(`/notes/${id}/restore`, { method: "POST" }),
+  restoreNote: (id) => apiRequest(`/notes/${id}/restore`, { method: "POST" }),
   getNoteContent: async (noteId) => {
     const data = await apiRequest(`/notes/${noteId}/content`);
     return data.content;
@@ -131,8 +135,7 @@ createNoteDashboard: async () => {
       body: JSON.stringify(data),
     });
   },
-  deleteFolder: (id) =>
-    apiRequest(`/folders/${id}`, { method: "DELETE" }),
+  deleteFolder: (id) => apiRequest(`/folders/${id}`, { method: "DELETE" }),
   // import/export
   exportNote: (noteId, format) =>
     ipcRenderer.invoke(`export-note-${format}`, noteId),
@@ -173,8 +176,7 @@ createNoteDashboard: async () => {
   onDashboardNoteChanged: (callback) => {
     const handler = (event, note) => callback(note);
     ipcRenderer.on("dashboard-note-changed", handler);
-    return () =>
-      ipcRenderer.removeListener("dashboard-note-changed", handler);
+    return () => ipcRenderer.removeListener("dashboard-note-changed", handler);
   },
   onNoteWindowInit: (callback) => {
     const handler = (event, data) => callback(data);
