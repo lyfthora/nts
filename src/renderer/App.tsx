@@ -24,11 +24,13 @@ export default function App() {
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [userName, setUserName] = useState("");
+const [userEmail, setUserEmail] = useState("");
 
   const applyTokenSession = useCallback((token: string | null) => {
     if (!token) {
       setIsAuthenticated(false);
       setUserName("");
+      setUserEmail("");
       setHasAccess(null);
       return false;
     }
@@ -42,9 +44,9 @@ export default function App() {
       return false;
     }
 
-    setUserName(
-      (payload.name as string) || (payload.email as string) || "User",
-    );
+    const email = (payload.email as string) || "";
+    setUserName((payload.name as string) || email || "User");
+    setUserEmail(email);
     setIsAuthenticated(true);
     return true;
   }, []);
@@ -99,6 +101,7 @@ export default function App() {
     setIsAuthenticated(false);
     setHasAccess(null);
     setUserName("");
+     setUserEmail("");
   }, []);
   // what show
   if (mode === "note-window") {
@@ -125,5 +128,5 @@ export default function App() {
     );
   }
 
-  return <Dashboard userName={userName} onLogout={handleLogout} />;
+  return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} />;
 }
