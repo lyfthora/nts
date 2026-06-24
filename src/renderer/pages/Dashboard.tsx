@@ -25,12 +25,14 @@ import SubscriptionModal from "../components/SubscriptionModal";
 import ProgressToast from "../components/ProgressToast";
 import type { ProgressData } from "../types/models";
 import { apiClient } from "../services/apiClient";
+import { getSubscriptionSummary, getSubscriptionAction, } from "../utils/subscription";
 
 interface DashboardProps {
   userName: string;
+  userEmail: string;
   onLogout: () => void;
 }
-export default function Dashboard({ userName, onLogout }: DashboardProps) {
+export default function Dashboard({ userName, userEmail, onLogout }: DashboardProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadedContents, setLoadedContents] = useState<Map<number, string>>(
     new Map(),
@@ -59,18 +61,16 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
   const [subscriptionError, setSubscriptionError] = useState("");
   const [isSettingsView, setIsSettingsView] = useState(false);
   const [settingsSection, setSettingsSection] =
-    useState<"subscription">("subscription");
+    useState<"account">("account");
 
   const handleOpenSettings = useCallback(() => {
     setIsSettingsView(true);
-    setSettingsSection("subscription");
+    setSettingsSection("account");
   }, []);
-
   const handleCloseSettings = useCallback(() => {
     setIsSettingsView(false);
   }, []);
-
-  const handleSettingsSectionChange = useCallback((section: "subscription") => {
+  const handleSettingsSectionChange = useCallback((section: "account") => {
     setSettingsSection(section);
   }, []);
   const currentNote = useMemo<Note | null>(
@@ -710,6 +710,17 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
     return status;
   }, []);
 
+  useEffect(() => {
+    if (isSettingsView && !subscriptionStatus && !isSubscriptionLoading) {
+      setIsSubscriptionLoading(true);
+      loadSubscriptionStatus()
+        .catch(() =>
+          setSubscriptionError("Could not load subscription details.")
+        )
+        .finally(() => setIsSubscriptionLoading(false));
+    }
+  }, [isSettingsView, subscriptionStatus, isSubscriptionLoading, loadSubscriptionStatus]);
+
   const handleSubscriptionPrimaryAction = useCallback(async () => {
     setIsSubscriptionLoading(true);
     setSubscriptionError("");
@@ -854,19 +865,77 @@ export default function Dashboard({ userName, onLogout }: DashboardProps) {
             </>
           ) : (
             <div className="settings-content">
-              {settingsSection === "subscription" && (
+              {settingsSection === "account" && (
                 <div className="settings-panel">
                   <div className="settings-panel-header">
-                    <h2>Subscription</h2>
-                    <p>Manage your plan, trial status and billing access.</p>
+                    <h2>Account</h2>
                   </div>
-
-                  <button
-                    className="settings-primary-btn"
-                    onClick={handleManageSubscription}
-                  >
-                    Open subscription details
-                  </button>
+                  {/* Account info rows */}
+                  <div className="account-info-section">
+                    <div className="account-row">
+                      <span className="account-row-label">Name</span>
+                      <span className="account-row-value">{userName}</span>
+                    </div>
+                    <div className="account-row">
+                      <span className="account-row-label">Email</span>
+                      <span className="account-row-value">{userEmail}</span>
+                    </div>
+                  </div>
+                  {/* Subscription section */}
+                  <div className="account-section-title">Subscription</div>
+                  {isSubscriptionLoading && !subscriptionStatus ? (
+                    <p style={{ color: "#999", fontSize: 13 }}>Loading…</p>
+                  ) : subscriptionStatus ? (
+                    <>
+                      <div className="settings-sub-status">
+                        <div className="settings-sub-status-row">
+                          <span className="settings-sub-status-label">Plan</span>
+                          <span
+                            className={`settings-sub-pill settings-sub-pill-${subscriptionStatus.status}`}
+                          >
+                            {subscriptionStatus.status === "trialing"
+                              ? "trial"
+                              : subscriptionStatus.status.replace("_", " ")}
+                          </span>
+                        </div>
+                        {getSubscriptionSummary(subscriptionStatus) && (
+                          <p className="settings-sub-summary">
+                            {getSubscriptionSummary(subscriptionStatus)}
+                          </p>
+                        )}
+                      </div>
+                      {subscriptionError && (
+                        <p className="settings-sub-error">{subscriptionError}</p>
+                      )}
+                      <div className="settings-sub-actions">
+                        <button
+                          className="settings-primary-btn"
+                          onClick={handleSubscriptionPrimaryAction}
+                          disabled={isSubscriptionLoading}
+                        >
+                          {getSubscriptionAction(subscriptionStatus.status).label}
+                        </button>
+                        <button
+                          className="settings-secondary-btn"
+                          onClick={handleRefreshSubscriptionStatus}
+                          disabled={isSubscriptionLoading}
+                        >
+                          Refresh
+                        </button>
+                      </div>
+                    </>
+                  ) : subscriptionError ? (
+                    <>
+                      <p className="settings-sub-error">{subscriptionError}</p>
+                      <button
+                        className="settings-secondary-btn"
+                        onClick={handleRefreshSubscriptionStatus}
+                        disabled={isSubscriptionLoading}
+                      >
+                        Retry
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               )}
             </div>

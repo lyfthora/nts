@@ -197,11 +197,7 @@
 
 .settings-panel {
     width: 100%;
-    background: #232323;
-    border: 1px solid #3a3a3a;
-    border-radius: 14px;
-    padding: 24px;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+
 }
 
 .settings-panel-header h2 {
@@ -217,8 +213,8 @@
 }
 
 .settings-primary-btn {
-    border: none;
-    border-radius: 8px;
+    border: 1px solid #3a3a3a;
+    /* border-radius: 8px; */
     padding: 10px 16px;
     background: #4a9eff;
     color: #fff;
@@ -229,4 +225,161 @@
 
 .settings-primary-btn:hover {
     background: #3d8ee6;
+}
+
+.settings-sub-status {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    /* border-radius: 6px; */
+    background: #2a2a2a;
+    border: 1px solid #333;
+}
+.settings-sub-status-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+}
+.settings-sub-status-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e0e0e0;
+}
+.settings-sub-pill {
+    padding: 2px 8px;
+    /* border-radius: 4px; */
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+.settings-sub-pill-active,
+.settings-sub-pill-trial,
+.settings-sub-pill-trialing {
+    background: rgba(88, 200, 138, 0.12);
+    color: #7ee2a3;
+}
+.settings-sub-pill-expired {
+    background: rgba(255, 159, 67, 0.12);
+    color: #ffb866;
+}
+.settings-sub-pill-past_due,
+.settings-sub-pill-canceled,
+.settings-sub-pill-unpaid,
+.settings-sub-pill-incomplete {
+    background: rgba(255, 107, 107, 0.1);
+    color: #ff8f8f;
+}
+.settings-sub-summary {
+    color: #999;
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 0;
+}
+.settings-sub-plan {
+    margin-bottom: 16px;
+    padding: 14px;
+    border-radius: 6px;
+    background: #1e1e1e;
+    border: 1px solid #333;
+}
+.settings-sub-price {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+    margin-bottom: 12px;
+}
+.settings-sub-price-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #4a9eff;
+}
+.settings-sub-price-period {
+    font-size: 13px;
+    color: #666;
+}
+.settings-sub-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.settings-sub-features li {
+    position: relative;
+    padding-left: 20px;
+    color: #999;
+    font-size: 13px;
+}
+.settings-sub-features li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #4a9eff;
+    font-size: 12px;
+    font-weight: 700;
+}
+.settings-sub-error {
+    color: #ff5555;
+    font-size: 12px;
+    margin-bottom: 12px;
+}
+.settings-sub-actions {
+    display: flex;
+    gap: 10px;
+}
+.settings-secondary-btn {
+    border: 1px solid #3a3a3a;
+    /* border-radius: 8px; */
+    padding: 10px 16px;
+    background: transparent;
+    color: #b5b5b5;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.settings-secondary-btn:hover:not(:disabled) {
+    background: #2c2c2c;
+    color: #ececec;
+}
+.settings-secondary-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.account-info-section {
+    margin-bottom: 20px;
+}
+.account-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #2e2e2e;
+}
+.account-row:last-child {
+    border-bottom: none;
+}
+.account-row-label {
+    font-size: 14px;
+    color: #e0e0e0;
+}
+.account-row-value {
+    font-size: 14px;
+    color: #9a9a9a;
+}
+.account-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e0e0e0;
+    margin-bottom: 12px;
+    padding-top: 4px;
+}
+.settings-primary-btn,
+.settings-secondary-btn {
+    height: 38px;
+    padding: 0 16px;
+    line-height: 38px;
+    width: 100px;
 }
