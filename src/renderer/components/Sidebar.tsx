@@ -56,10 +56,10 @@ interface SidebarProps {
   userName: string;
   onLogout: () => void;
   isSettingsView: boolean;
-  settingsSection: "subscription";
+  settingsSection: "account";
   onOpenSettings: () => void;
   onCloseSettings: () => void;
-  onSettingsSectionChange: (section: "subscription") => void;
+  onSettingsSectionChange: (section: "account") => void;
 }
 
 const Sidebar = memo(function Sidebar({
@@ -487,9 +487,9 @@ const Sidebar = memo(function Sidebar({
         ) : (
           <div className="nav-section" id="mainLinksSection">
             <NavItem
-              itemView="subscription"
+              itemView="account"
               currentView={settingsSection}
-              onViewChange={() => onSettingsSectionChange("subscription")}
+              onViewChange={() => onSettingsSectionChange("account")}
             >
               <svg
                 width={16}
@@ -499,11 +499,10 @@ const Sidebar = memo(function Sidebar({
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
-
-              <span>Subscription</span>
+              <span>Account</span>
             </NavItem>
 
             <a
