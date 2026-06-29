@@ -320,7 +320,7 @@
     flex-shrink: 0;
 }
 
-.logout-btn {
+.settings-footer-btn {
     background: none;
     border: none;
     color: #808080;
@@ -333,27 +333,28 @@
     transition: all 0.15s ease;
     flex-shrink: 0;
 }
-.logout-btn:hover {
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.1);
-}
-.sub-manage-btn {
-    background: none;
-    border: none;
-    color: #808080;
-    cursor: pointer;
-    padding: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.15s ease;
-    margin-right: 8px;
-}
-.sub-manage-btn:hover {
+.settings-footer-btn:hover {
     color: #facd15;
     background: rgba(250, 205, 21, 0.1);
 }
+.settings-logout-item:hover {
+    color: #ff6b6b !important;
+}
+
+.sidebar-back-btn {
+    padding: 0;
+    gap: 6px;
+    color: #808080;
+    font-size: 11px;
+}
+
+.sidebar-back-btn:hover {
+    color: #e5e5e5;
+    background: transparent !important;
+}
+
+
+
 .sidebar-user-info {
     display: flex;
     align-items: center;
