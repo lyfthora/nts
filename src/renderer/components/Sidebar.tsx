@@ -504,13 +504,12 @@ const Sidebar = memo(function Sidebar({
               </svg>
               <span>Account</span>
             </NavItem>
-
             <a
               href="#"
-              className="nav-item"
+              className="nav-item settings-logout-item"
               onClick={(e) => {
                 e.preventDefault();
-                onCloseSettings();
+                onLogout();
               }}
             >
               <svg
@@ -521,56 +520,43 @@ const Sidebar = memo(function Sidebar({
                 stroke="currentColor"
                 strokeWidth={2}
               >
-                <polyline points="15 18 9 12 15 6" />
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
-
-              <span>Back to notes</span>
-
-              <span className="nav-count" />
+              <span>Log out</span>
             </a>
+
           </div>
         )}
       </nav>
       <div className="sidebar-footer">
         <div className="sidebar-user-info">
-          <button
-            className="sub-manage-btn"
-            onClick={onOpenSettings}
-            title="Open settings"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+          {isSettingsView ? (
+            <a
+              href="#"
+              className="nav-item sidebar-back-btn"
+              onClick={(e) => {
+                e.preventDefault();
+                onCloseSettings();
+              }}
             >
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </button>
+              <span>Back to notes</span>
+            </a>
+          ) : (
+            lastSyncTime > 0 && (
+              <span className="sidebar-sync-time">
 
-          {lastSyncTime > 0 && (
-            <span className="sidebar-sync-time">
-              <svg
-                width={10}
-                height={10}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <polyline points="23 4 23 10 17 10" />
-                <polyline points="1 20 1 14 7 14" />
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-              </svg>
-              {formatSyncDate(lastSyncTime)}
-            </span>
+                {formatSyncDate(lastSyncTime)}
+              </span>
+            )
           )}
         </div>
-
-        <button className="logout-btn" onClick={onLogout} title="Log out">
+        <button
+          className="settings-footer-btn"
+          onClick={onOpenSettings}
+          title="Open settings"
+        >
           <svg
             width={16}
             height={16}
@@ -579,9 +565,8 @@ const Sidebar = memo(function Sidebar({
             stroke="currentColor"
             strokeWidth={2}
           >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01A1.65 1.65 0 0 0 10 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
           </svg>
         </button>
       </div>
