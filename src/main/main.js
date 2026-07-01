@@ -22,16 +22,36 @@ if (process.defaultApp) {
 
 let pendingOAuthToken = null;
 
-function handleOAuthUrl(url) {
+function handleDeepLinkUrl(url) {
   try {
     const parsed = new URL(url);
+    const host = parsed.hostname || parsed.host;
+    const win = getDashboardWindow();
+
     const token = parsed.searchParams.get("token");
     if (token) {
       pendingOAuthToken = token;
-      const win = getDashboardWindow();
       if (win && !win.isDestroyed()) {
         win.focus();
       }
+      return;
+    }
+
+    if (host === "payment-success") {
+      const sessionId = parsed.searchParams.get("session_id");
+      if (win && !win.isDestroyed()) {
+        win.focus();
+        win.webContents.send("payment-event", { status: "success", sessionId });
+      }
+      return;
+    }
+
+    if (host === "payment-cancel") {
+      if (win && !win.isDestroyed()) {
+        win.focus();
+        win.webContents.send("payment-event", { status: "cancel" });
+      }
+      return;
     }
   } catch { /* */ }
 }
@@ -42,7 +62,7 @@ if (!gotTheLock) {
 } else {
   app.on("second-instance", (_event, argv) => {
     const url = argv.find((arg) => arg.startsWith("nts://"));
-    if (url) handleOAuthUrl(url);
+    if (url) handleDeepLinkUrl(url);
 
     const win = getDashboardWindow();
     if (win) {
@@ -55,6 +75,11 @@ if (!gotTheLock) {
 // IPC handlers
 registerAllHandlers();
 ipcMain.handle("open-oauth", async (_event, url) => {
+  const { shell } = require("electron");
+  shell.openExternal(url);
+});
+
+ipcMain.handle("open-external", async (_event, url) => {
   const { shell } = require("electron");
   shell.openExternal(url);
 });

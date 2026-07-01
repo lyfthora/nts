@@ -1,5 +1,9 @@
 const { contextBridge, ipcRenderer } = require("electron");
-const API_URL = "https://nts-api-production-5769.up.railway.app/api";
+
+const isDev = !process.resourcesPath || !process.resourcesPath.includes("app.asar");
+const API_URL = isDev
+  ? "http://localhost:3001/api"
+  : "https://nts-api-production-5769.up.railway.app/api";
 
 const TOKEN_KEY = "nts_auth_token";
 async function apiRequest(path, options = {}) {
@@ -21,12 +25,14 @@ if (existingToken) {
 }
 
 contextBridge.exposeInMainWorld("api", {
+  isDev,
   // Auth
   setAuthToken: (token) => {
     localStorage.setItem(TOKEN_KEY, token);
     ipcRenderer.send("set-auth-token", token);
   },
   getAuthToken: () => localStorage.getItem(TOKEN_KEY),
+  openExternal: (url) => ipcRenderer.invoke("open-external", url),
   openOAuth: (url) => ipcRenderer.invoke("open-oauth", url),
   getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
   clearAuthToken: () => {
@@ -182,6 +188,11 @@ contextBridge.exposeInMainWorld("api", {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("note-window-init", handler);
     return () => ipcRenderer.removeListener("note-window-init", handler);
+  },
+  onPaymentEvent: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on("payment-event", handler);
+    return () => ipcRenderer.removeListener("payment-event", handler);
   },
   // Auto-Update
   checkForUpdates: () => ipcRenderer.invoke("check-for-updates"),
