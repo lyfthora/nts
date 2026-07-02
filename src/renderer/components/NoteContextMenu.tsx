@@ -18,6 +18,7 @@ interface NoteContextMenuProps {
   onDelete: (note: Note) => void;
   onClose: () => void;
   onExport: (note: Note, format: 'json' | 'md') => void;
+  isPremium: boolean;
 }
 
 const statusOptions: { value: NoteStatus; label: string; icon: string | null }[] = [
@@ -28,7 +29,7 @@ const statusOptions: { value: NoteStatus; label: string; icon: string | null }[]
   { value: 'dropped', label: 'Dropped', icon: removeIcon },
 ];
 const NoteContextMenu = memo(function NoteContextMenu({
-  note, x, y, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onClose, onExport
+  note, x, y, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onClose, onExport, isPremium
 }: NoteContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -254,17 +255,17 @@ const NoteContextMenu = memo(function NoteContextMenu({
               }}
             >
               <div
-                className="context-submenu-item"
+                className={`context-submenu-item${!isPremium ? ' disabled-premium' : ''}`}
                 onClick={() => handleExport('json')}
               >
-                <span className="context-submenu-check"></span>
+                <span className="context-submenu-check">{!isPremium ? '🔒' : ''}</span>
                 <span>JSON</span>
               </div>
               <div
-                className="context-submenu-item"
+                className={`context-submenu-item${!isPremium ? ' disabled-premium' : ''}`}
                 onClick={() => handleExport('md')}
               >
-                <span className="context-submenu-check"></span>
+                <span className="context-submenu-check">{!isPremium ? '🔒' : ''}</span>
                 <span>Markdown</span>
               </div>
             </div>
