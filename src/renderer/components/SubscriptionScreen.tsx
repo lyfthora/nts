@@ -34,6 +34,43 @@ export default function SubscriptionScreen({
     });
   }, [loadStatus]);
 
+  useEffect(() => {
+    const cleanup = window.api.onPaymentEvent(async (data) => {
+      if (data.status === "success") {
+        setError("");
+        setLoading(true);
+        try {
+          const nextStatus = await loadStatus();
+          if (canAccessApp(nextStatus.status)) {
+            onSubscribed();
+            setLoading(false);
+            return;
+          }
+          let attempt = 0;
+          const interval = setInterval(async () => {
+            attempt++;
+            const s = await loadStatus();
+            if (canAccessApp(s.status)) {
+              clearInterval(interval);
+              onSubscribed();
+              setLoading(false);
+            } else if (attempt >= 5) {
+              clearInterval(interval);
+              setLoading(false);
+              setError("Subscription update not detected yet. Please tap 'Refresh subscription status'.");
+            }
+          }, 2000);
+        } catch (err) {
+          setLoading(false);
+          setError("Error refreshing status. Please try manually.");
+        }
+      } else if (data.status === "cancel") {
+        setError("Subscription flow canceled.");
+      }
+    });
+    return cleanup;
+  }, [loadStatus, onSubscribed]);
+
   const handleSubscriptionAction = useCallback(async () => {
     setLoading(true);
     setError("");

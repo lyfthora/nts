@@ -721,6 +721,50 @@ export default function Dashboard({ userName, userEmail, onLogout }: DashboardPr
     }
   }, [isSettingsView, subscriptionStatus, isSubscriptionLoading, loadSubscriptionStatus]);
 
+  useEffect(() => {
+    const cleanup = window.api.onPaymentEvent(async (data) => {
+      if (data.status === "success") {
+        setToastMessage("Payment succeeded! Updating subscription...");
+        setIsSubscriptionModalOpen(false);
+        setIsSubscriptionLoading(true);
+        try {
+          const nextStatus = await loadSubscriptionStatus();
+          if (nextStatus.status === "active") {
+            setIsSubscriptionLoading(false);
+            setToastMessage("Premium activated successfully!");
+            setTimeout(() => setToastMessage(null), 3000);
+            return;
+          }
+          let attempt = 0;
+          const interval = setInterval(async () => {
+            attempt++;
+            const s = await loadSubscriptionStatus();
+            if (s.status === "active") {
+              clearInterval(interval);
+              setIsSubscriptionLoading(false);
+              setToastMessage("Premium activated successfully!");
+              setTimeout(() => setToastMessage(null), 3000);
+            } else if (attempt >= 5) {
+              clearInterval(interval);
+              setIsSubscriptionLoading(false);
+              setToastMessage("Subscription update not detected yet. Webhook might be delayed.");
+              setTimeout(() => setToastMessage(null), 5000);
+            }
+          }, 2000);
+        } catch (err) {
+          setIsSubscriptionLoading(false);
+          setToastMessage("Error refreshing subscription status.");
+          setTimeout(() => setToastMessage(null), 3000);
+        }
+      } else if (data.status === "cancel") {
+        setToastMessage("Subscription process was canceled.");
+        setIsSubscriptionModalOpen(false);
+        setTimeout(() => setToastMessage(null), 3000);
+      }
+    });
+    return cleanup;
+  }, [loadSubscriptionStatus]);
+
   const handleSubscriptionPrimaryAction = useCallback(async () => {
     setIsSubscriptionLoading(true);
     setSubscriptionError("");

@@ -1,6 +1,10 @@
 import { SubscriptionStatus } from "../types/models";
 
-const API_URL = "https://nts-api-production-5769.up.railway.app/api";
+const isDev = window.api ? window.api.isDev : false;
+const API_URL = isDev
+  ? "http://localhost:3001/api"
+  : "https://nts-api-production-5769.up.railway.app/api";
+
 async function request<T>(path: string, options?: RequestInit): Promise<T>{
   const token = window.api.getAuthToken();
   const headers: Record<string, string> = {
@@ -15,6 +19,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T>{
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      window.api.clearAuthToken();
+      window.api.clearCachedData();
+      window.location.reload();
+    }
     throw new Error(`API error: ${res.status} ${res.statusText}`);
   }
   return res.json() as Promise<T>;
