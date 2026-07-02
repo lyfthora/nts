@@ -1,6 +1,7 @@
 import { Note, Folder, ProgressData } from "./models";
 
 export interface WindowAPI {
+  isDev: boolean;
   // Auth
   setAuthToken: (token: string) => void;
   getAuthToken: () => string | null;
@@ -64,6 +65,9 @@ export interface WindowAPI {
 
   // Callbacks
   onNoteData: (callback: (data: Note) => void) => () => void;
+  onPaymentEvent: (
+    callback: (data: { status: "success" | "cancel"; sessionId?: string }) => void,
+  ) => () => void;
 
   // Utilidades de ventana
   getWindowPosition: () => Promise<[number, number]>;

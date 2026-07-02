@@ -17,7 +17,7 @@ export function canAccessApp(status: SubscriptionStatus["status"]) {
 export function getSubscriptionAction(status: SubscriptionStatus["status"]) {
   return status === "active"
     ? {
-        label: "Manage subscription",
+        label: "Pay",
         mode: "portal" as const,
       }
     : {
