@@ -60,6 +60,7 @@ interface SidebarProps {
   onOpenSettings: () => void;
   onCloseSettings: () => void;
   onSettingsSectionChange: (section: "account") => void;
+  isPremium: boolean;
 }
 
 const Sidebar = memo(function Sidebar({
@@ -86,6 +87,7 @@ const Sidebar = memo(function Sidebar({
   onOpenSettings,
   onCloseSettings,
   onSettingsSectionChange,
+  isPremium,
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<
@@ -127,6 +129,7 @@ const Sidebar = memo(function Sidebar({
   };
 
   const handleExportAllNotes = async () => {
+    if (!isPremium) return;
     if (isExporting) return;
     setIsExporting(true);
     try {
@@ -278,10 +281,10 @@ const Sidebar = memo(function Sidebar({
                 <span>Notebooks</span>
                 <div className="section-actions">
                   <button
-                    className={`section-action-btn export-btn ${isExporting ? "loading" : ""}`}
+                    className={`section-action-btn export-btn ${isExporting ? "loading" : ""}${!isPremium ? " disabled-premium" : ""}`}
                     onClick={handleExportAllNotes}
-                    title="Export all as Markdown (ZIP)"
-                    disabled={isExporting}
+                    title={isPremium ? "Export all as Markdown (ZIP)" : "Premium feature"}
+                    disabled={isExporting || !isPremium}
                   >
                     <svg
                       width={14}

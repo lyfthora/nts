@@ -333,10 +333,10 @@
     transition: all 0.15s ease;
     flex-shrink: 0;
 }
-.settings-footer-btn:hover {
+/* .settings-footer-btn:hover {
     color: #facd15;
     background: rgba(250, 205, 21, 0.1);
-}
+} */
 .settings-logout-item:hover {
     color: #ff6b6b !important;
 }
@@ -424,6 +424,13 @@
     margin-left: auto;
     font-size: 16px;
 }
+
+.disabled-premium {
+    opacity: 0.4 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
+}
+
 
 /*.settings-nav-section {
     display: flex;
