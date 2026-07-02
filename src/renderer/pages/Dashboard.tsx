@@ -31,8 +31,9 @@ interface DashboardProps {
   userName: string;
   userEmail: string;
   onLogout: () => void;
+  isPremium: boolean;
 }
-export default function Dashboard({ userName, userEmail, onLogout }: DashboardProps) {
+export default function Dashboard({ userName, userEmail, onLogout, isPremium }: DashboardProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loadedContents, setLoadedContents] = useState<Map<number, string>>(
     new Map(),
@@ -596,10 +597,20 @@ export default function Dashboard({ userName, userEmail, onLogout }: DashboardPr
   }, []);
 
   const onExport = useCallback(async (note: Note, format: "json" | "md") => {
+    if (!isPremium) {
+      setToastMessage("Premium feature — subscribe to export notes");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
     await window.api.exportNote(note.id, format);
-  }, []);
+  }, [isPremium]);
 
   const onImport = useCallback(async () => {
+    if (!isPremium) {
+      setToastMessage("Premium feature — subscribe to import notes");
+      setTimeout(() => setToastMessage(null), 3000);
+      return;
+    }
     const result = await window.api.importNote();
     if (result?.success) {
       const data = await window.api.getAllData();
@@ -619,7 +630,7 @@ export default function Dashboard({ userName, userEmail, onLogout }: DashboardPr
         setCurrentId(result.note.id);
       }
     }
-  }, []);
+  }, [isPremium]);
 
   const onMoveToFolder = useCallback(
     (noteId: number, folderId: number | null) => {
@@ -847,6 +858,7 @@ export default function Dashboard({ userName, userEmail, onLogout }: DashboardPr
           onOpenSettings={handleOpenSettings}
           onCloseSettings={handleCloseSettings}
           onSettingsSectionChange={handleSettingsSectionChange}
+          isPremium={isPremium}
         />
       )}
       <div className="main-content">
@@ -871,6 +883,7 @@ export default function Dashboard({ userName, userEmail, onLogout }: DashboardPr
                   onDelete={onDelete}
                   onExport={onExport}
                   onImport={onImport}
+                  isPremium={isPremium}
                 />
               )}
 

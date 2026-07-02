@@ -3,9 +3,8 @@ import Dashboard from "./pages/Dashboard";
 import NoteWindow from "./pages/NoteWindow";
 import AuthScreen from "./components/AuthScreen";
 import "./styles/global.css";
-import SubscriptionScreen from "./components/SubscriptionScreen";
 import { apiClient } from "./services/apiClient";
-import { canAccessApp, getSubscriptionStatusKind } from "./utils/subscription";
+import { getSubscriptionStatusKind } from "./utils/subscription";
 const params = new URLSearchParams(window.location.search);
 const mode = params.get("mode");
 
@@ -119,14 +118,5 @@ const [userEmail, setUserEmail] = useState("");
     return <div className="loading-screen">Checking subscription...</div>;
   }
 
-  if (!hasAccess) {
-    return (
-      <SubscriptionScreen
-        onLogout={handleLogout}
-        onSubscribed={() => setHasAccess(true)}
-      />
-    );
-  }
-
-  return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} />;
+  return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} isPremium={hasAccess === true} />;
 }
