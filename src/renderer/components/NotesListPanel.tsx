@@ -24,10 +24,11 @@ interface NotesListPanelProps {
   onDelete: (note: Note) => void;
   onExport: (note: Note, format: 'json' | 'md') => void;
   onImport: () => void;
+  isPremium: boolean;
 }
 
 const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAddNote, onSelect, isTrashView, title,
-  onNoteDrag, onPopOut, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onExport, onImport }: NotesListPanelProps) {
+  onNoteDrag, onPopOut, folders, onPin, onSetStatus, onMoveToFolder, onDuplicate, onDelete, onExport, onImport, isPremium }: NotesListPanelProps) {
   const [panelWidth, setPanelWidth] = useState(320);
   const panelRef = useRef<HTMLDivElement>(null);
   const isResizing = useRef(false);
@@ -126,7 +127,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
         <div className="panel-actions">
           {!isTrashView && (
             <>
-              <button className="action-btn" id="importNoteBtn" title="Import Note" onClick={onImport}>
+              <button className={`action-btn${!isPremium ? " disabled-premium" : ""}`} id="importNoteBtn" title={isPremium ? "Import Note" : "Premium feature"} onClick={onImport} disabled={!isPremium}>
                 <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
@@ -255,7 +256,7 @@ const NotesListPanel = memo(function NotesListPanel({ notes, currentNoteId, onAd
           onDelete={onDelete}
           onClose={() => setContextMenu(null)}
           onExport={onExport}
-
+          isPremium={isPremium}
         />
       )}
       <div
