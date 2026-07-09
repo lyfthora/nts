@@ -20,3 +20,7 @@ test-results/
 playwright.config.ts
 playwright-report/
 test-data-*
+
+# lockfiles to ignore (since we use pnpm)
+package-lock.json
+yarn.lock
