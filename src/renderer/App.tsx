@@ -107,7 +107,11 @@ const [userEmail, setUserEmail] = useState("");
     return <NoteWindow />;
   }
   if (isBootstrapping) {
-    return <div className="loading-screen">Loading...</div>;
+    return (
+      <div className="loading-screen">
+        <div className="loader"></div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -115,7 +119,11 @@ const [userEmail, setUserEmail] = useState("");
   }
 
   if (hasAccess === null) {
-    return <div className="loading-screen">Checking subscription...</div>;
+    return (
+      <div className="loading-screen">
+        <div className="loader"></div>
+      </div>
+    );
   }
 
   return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} isPremium={hasAccess === true} />;
