@@ -11,6 +11,10 @@ async function buildAll(watch = false) {
     const iconsDir = path.join(__dirname, "../src/renderer/assets/icons");
     const distDir = path.join(__dirname, "../dist");
 
+    if (!fs.existsSync(distDir)) {
+      fs.mkdirSync(distDir, { recursive: true });
+    }
+
     const iconFiles = ["button.png", "pause.png", "checked.png", "remove.png"];
     for (const icon of iconFiles) {
       const src = path.join(iconsDir, icon);

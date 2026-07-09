@@ -26,6 +26,7 @@ async function createDashboardWindow() {
       preload: path.join(__dirname, "../preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
     },
   });
 
@@ -69,6 +70,7 @@ async function createNoteWindow(noteId, x, y) {
       preload: path.join(__dirname, "../preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,
     },
   });
   noteWindows.set(noteId, noteWin);
