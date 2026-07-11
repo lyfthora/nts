@@ -3,7 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 const isDev = !process.resourcesPath || !process.resourcesPath.includes("app.asar");
 const API_URL = isDev
   ? "http://localhost:3001/api"
-  : "https://nts-api-production-5769.up.railway.app/api";
+  : "https://nts-api-production-5785.up.railway.app/api";
 
 const TOKEN_KEY = "nts_auth_token";
 async function apiRequest(path, options = {}) {
@@ -60,7 +60,7 @@ contextBridge.exposeInMainWorld("api", {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       localStorage.setItem(key, JSON.stringify(data));
-    } catch {}
+    } catch { }
   },
   clearCachedData: () => {
     try {

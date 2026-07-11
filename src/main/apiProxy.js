@@ -1,4 +1,4 @@
-const API_URL = "https://nts-api-production-5769.up.railway.app/api";
+const API_URL = "https://nts-api-production-5785.up.railway.app/api";
 
 let authToken = null;
 
