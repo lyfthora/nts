@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import "./AuthScreen.css";
 
-const API_URL = "https://nts-api-production-5769.up.railway.app/api";
+const API_URL = "https://nts-api-production-5785.up.railway.app/api";
 
 
 interface AuthScreenProps {
@@ -138,8 +138,8 @@ export default function AuthScreen({ onAuthenticated }: AuthScreenProps) {
           >
             <GitHubIcon />
             <span style={{ position: 'relative', top: '0.1rem' }}>
-  {oauthPending ? "Waiting for GitHub..." : "Continue with GitHub"}
-</span>
+              {oauthPending ? "Waiting for GitHub..." : "Continue with GitHub"}
+            </span>
           </button>
         </div>
 
