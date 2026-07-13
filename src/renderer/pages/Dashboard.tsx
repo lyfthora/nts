@@ -45,6 +45,24 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showErrorToast = useCallback((msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  }, []);
+
+  const safeUpdate = useCallback(
+    async <T,>(operation: () => Promise<T>, errorMsg: string): Promise<T | null> => {
+      try {
+        return await operation();
+      } catch (err) {
+        console.error(errorMsg, err);
+        showErrorToast(`Error: ${errorMsg}`);
+        return null;
+      }
+    },
+    [showErrorToast]
+  );
   const [isFolderSearchOpen, setIsFolderSearchOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [externalNoteIds, setExternalNoteIds] = useState<Set<number>>(
@@ -294,7 +312,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
       if (newNote && selectedFolderId) {
         newNote.folderId = selectedFolderId;
         newNote.noteType = noteType;
-        await window.api.updateNote(newNote);
+        await safeUpdate(
+          () => window.api.updateNote(newNote),
+          "Could not save note"
+        );
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       if (newNote) {
@@ -303,7 +324,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
         setCurrentId(newNote.id);
       }
     },
-    [selectedFolderId],
+    [selectedFolderId, safeUpdate],
   );
 
   const saveNote = useCallback((note: Note) => {
@@ -353,9 +374,12 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
 
       noteWithPreview.images = referencedImages;
 
-      await window.api.updateNote(noteWithPreview);
+      await safeUpdate(
+        () => window.api.updateNote(noteWithPreview),
+        "Could not save note"
+      );
     }, 200);
-  }, []);
+  }, [safeUpdate]);
 
   const onDelete = useCallback(async (note: Note) => {
     await window.api.deleteNote(note.id);
@@ -436,13 +460,16 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
 
   useEffect(() => {
     if (folderToUpdate) {
-      const timeout = setTimeout(() => {
-        window.api.updateFolder(folderToUpdate);
+      const timeout = setTimeout(async () => {
+        await safeUpdate(
+          () => window.api.updateFolder(folderToUpdate),
+          "Could not update folder"
+        );
         setFolderToUpdate(null);
       }, 300);
       return () => clearTimeout(timeout);
     }
-  }, [folderToUpdate]);
+  }, [folderToUpdate, safeUpdate]);
 
   const onFolderCreate = useCallback(
     async (parentId: number | null, name: string) => {
@@ -467,19 +494,24 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   const onFolderRename = useCallback(async (id: number, newName: string) => {
     if (!newName.trim()) return;
 
-    setFolders((prev) => {
-      const updatedFolders = prev.map((f) =>
-        f.id === id ? { ...f, name: newName } : f,
+    const originalFolder = folders.find((f) => f.id === id);
+    if (!originalFolder) return;
+
+    setFolders((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, name: newName } : f))
+    );
+
+    const result = await safeUpdate(
+      () => window.api.updateFolder({ ...originalFolder, name: newName }),
+      "Could not rename folder"
+    );
+
+    if (!result) {
+      setFolders((prev) =>
+        prev.map((f) => (f.id === id ? originalFolder : f))
       );
-
-      const folder = updatedFolders.find((f) => f.id === id);
-      if (folder) {
-        window.api.updateFolder(folder);
-      }
-
-      return updatedFolders;
-    });
-  }, []);
+    }
+  }, [folders, safeUpdate]);
 
   const onFolderDelete = useCallback((id: number) => {
     setFolderToDelete(id);
@@ -591,10 +623,15 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
       color: note.color,
       noteType: note.noteType,
     };
-    await window.api.updateNote(duplicated);
-    setNotes((prev) => [...prev, duplicated]);
-    setCurrentId(duplicated.id);
-  }, []);
+    const result = await safeUpdate(
+      () => window.api.updateNote(duplicated),
+      "Could not duplicate note"
+    );
+    if (result) {
+      setNotes((prev) => [...prev, duplicated]);
+      setCurrentId(duplicated.id);
+    }
+  }, [safeUpdate]);
 
   const onExport = useCallback(async (note: Note, format: "json" | "md") => {
     if (!isPremium) {
@@ -633,14 +670,20 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   }, [isPremium]);
 
   const onMoveToFolder = useCallback(
-    (noteId: number, folderId: number | null) => {
+    async (noteId: number, folderId: number | null) => {
       const note = notes.find((n) => n.id === noteId);
       if (!note) return;
       const updatedNote = { ...note, folderId };
       setNotes((prev) => prev.map((n) => (n.id === noteId ? updatedNote : n)));
-      window.api.updateNote(updatedNote);
+      const result = await safeUpdate(
+        () => window.api.updateNote(updatedNote),
+        "Could not move note to folder"
+      );
+      if (!result) {
+        setNotes((prev) => prev.map((n) => (n.id === noteId ? note : n)));
+      }
     },
-    [notes],
+    [notes, safeUpdate],
   );
 
   const onNoteTypeChange = useCallback(
@@ -688,17 +731,25 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   }, [view]);
 
   const onNoteDrop = useCallback(
-    (noteId: number, targetFolderId: number) => {
+    async (noteId: number, targetFolderId: number) => {
       const note = notes.find((n) => n.id === noteId);
       if (note) {
         const updatedNote = { ...note, folderId: targetFolderId };
         setNotes((prev) =>
           prev.map((n) => (n.id === noteId ? updatedNote : n)),
         );
-        window.api.updateNote(updatedNote);
+        const result = await safeUpdate(
+          () => window.api.updateNote(updatedNote),
+          "Could not drop note in folder"
+        );
+        if (!result) {
+          setNotes((prev) =>
+            prev.map((n) => (n.id === noteId ? note : n)),
+          );
+        }
       }
     },
-    [notes],
+    [notes, safeUpdate],
   );
 
   const onFolderDrop = useCallback(
@@ -709,10 +760,18 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
         setFolders((prev) =>
           prev.map((f) => (f.id === folderId ? updatedFolder : f)),
         );
-        await window.api.updateFolder(updatedFolder);
+        const result = await safeUpdate(
+          () => window.api.updateFolder(updatedFolder),
+          "Could not move folder"
+        );
+        if (!result) {
+          setFolders((prev) =>
+            prev.map((f) => (f.id === folderId ? folder : f)),
+          );
+        }
       }
     },
-    [folders],
+    [folders, safeUpdate],
   );
 
   const loadSubscriptionStatus = useCallback(async () => {
