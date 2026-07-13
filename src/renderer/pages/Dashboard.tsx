@@ -308,7 +308,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
 
   const onAddNote = useCallback(
     async (noteType: "text" | "drawing" = "text") => {
-      const newNote = await window.api.createNoteDashboard();
+      const newNote = await safeUpdate(
+        () => window.api.createNoteDashboard(),
+        "Could not create note"
+      );
       if (newNote && selectedFolderId) {
         newNote.folderId = selectedFolderId;
         newNote.noteType = noteType;
@@ -382,37 +385,52 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   }, [safeUpdate]);
 
   const onDelete = useCallback(async (note: Note) => {
-    await window.api.deleteNote(note.id);
-    setNotes((prev) =>
-      prev.map((n) => (n.id === note.id ? { ...n, deleted: true } : n)),
+    const result = await safeUpdate(
+      () => window.api.deleteNote(note.id),
+      "Could not move note to trash"
     );
-    setCurrentId(null);
-  }, []);
+    if (result) {
+      setNotes((prev) =>
+        prev.map((n) => (n.id === note.id ? { ...n, deleted: true } : n)),
+      );
+      setCurrentId(null);
+    }
+  }, [safeUpdate]);
 
   const onRestore = useCallback(async (note: Note) => {
-    await window.api.restoreNote(note.id);
-    setNotes((prev) =>
-      prev.map((n) => {
-        if (n.id === note.id) {
-          const { deleted, ...rest } = n;
-          return rest;
-        }
-        return n;
-      }),
+    const result = await safeUpdate(
+      () => window.api.restoreNote(note.id),
+      "Could not restore note"
     );
-    setCurrentId(null);
-  }, []);
+    if (result) {
+      setNotes((prev) =>
+        prev.map((n) => {
+          if (n.id === note.id) {
+            const { deleted, ...rest } = n;
+            return rest;
+          }
+          return n;
+        }),
+      );
+      setCurrentId(null);
+    }
+  }, [safeUpdate]);
 
   const onDeletePermanently = useCallback(async (note: Note) => {
     setNoteToDeletePermanently(note);
   }, []);
   const handleConfirmDeletePermanently = useCallback(async () => {
     if (!noteToDeletePermanently) return;
-    await window.api.deleteNotePermanently(noteToDeletePermanently.id);
-    setNotes((prev) => prev.filter((n) => n.id !== noteToDeletePermanently.id));
-    setCurrentId(null);
+    const result = await safeUpdate(
+      () => window.api.deleteNotePermanently(noteToDeletePermanently.id),
+      "Could not permanently delete note"
+    );
+    if (result) {
+      setNotes((prev) => prev.filter((n) => n.id !== noteToDeletePermanently.id));
+      setCurrentId(null);
+    }
     setNoteToDeletePermanently(null);
-  }, [noteToDeletePermanently]);
+  }, [noteToDeletePermanently, safeUpdate]);
 
   const onFolderSelect = useCallback((id: number) => {
     setSelectedFolderId(id);
@@ -475,20 +493,30 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     async (parentId: number | null, name: string) => {
       if (!name.trim()) return;
 
-      await window.api.createFolder({ name, parentId });
-      const data = await window.api.getAllData();
-      setFolders(data.folders || []);
-      setNotes((prevNotes) => {
-        return (data.notes || []).map((n: Note) => {
-          const existing = prevNotes.find((p) => p.id === n.id);
-          if (existing && existing.content !== undefined) {
-            return { ...n, content: existing.content };
-          }
-          return n;
+      const newFolder = await safeUpdate(
+        () => window.api.createFolder({ name, parentId }),
+        "Could not create folder"
+      );
+      if (!newFolder) return;
+
+      const data = await safeUpdate(
+        () => window.api.getAllData(),
+        "Could not refresh data"
+      );
+      if (data) {
+        setFolders(data.folders || []);
+        setNotes((prevNotes) => {
+          return (data.notes || []).map((n: Note) => {
+            const existing = prevNotes.find((p) => p.id === n.id);
+            if (existing && existing.content !== undefined) {
+              return { ...n, content: existing.content };
+            }
+            return n;
+          });
         });
-      });
+      }
     },
-    [],
+    [safeUpdate],
   );
 
   const onFolderRename = useCallback(async (id: number, newName: string) => {
@@ -520,23 +548,33 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     if (folderToDelete === null) return;
     const id = folderToDelete;
     setFolderToDelete(null);
-    await window.api.deleteFolder(id);
-    const data = await window.api.getAllData();
-    setFolders(data.folders || []);
-    setNotes((prevNotes) => {
-      return (data.notes || []).map((n: Note) => {
-        const existing = prevNotes.find((p) => p.id === n.id);
-        if (existing && existing.content !== undefined) {
-          return { ...n, content: existing.content };
-        }
-        return n;
-      });
-    });
-    if (selectedFolderId === id) {
-      setSelectedFolderId(null);
-      setView("all-notes");
+    const result = await safeUpdate(
+      () => window.api.deleteFolder(id),
+      "Could not delete folder"
+    );
+    if (result) {
+      const data = await safeUpdate(
+        () => window.api.getAllData(),
+        "Could not refresh data"
+      );
+      if (data) {
+        setFolders(data.folders || []);
+        setNotes((prevNotes) => {
+          return (data.notes || []).map((n: Note) => {
+            const existing = prevNotes.find((p) => p.id === n.id);
+            if (existing && existing.content !== undefined) {
+              return { ...n, content: existing.content };
+            }
+            return n;
+          });
+        });
+      }
+      if (selectedFolderId === id) {
+        setSelectedFolderId(null);
+        setView("all-notes");
+      }
     }
-  }, [folderToDelete, selectedFolderId]);
+  }, [folderToDelete, selectedFolderId, safeUpdate]);
 
   const onViewChange = useCallback((v: string) => {
     setView(v);
@@ -610,7 +648,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   );
 
   const onDuplicate = useCallback(async (note: Note) => {
-    const newNote = await window.api.createNoteDashboard();
+    const newNote = await safeUpdate(
+      () => window.api.createNoteDashboard(),
+      "Could not create note"
+    );
     if (!newNote) return;
     const duplicated: Note = {
       ...newNote,
