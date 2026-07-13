@@ -23,7 +23,7 @@ export interface WindowAPI {
   closeWindow: () => void;
 
   // Operaciones de notas
-  updateNote: (note: Note) => void;
+  updateNote: (note: Note) => Promise<Note>;
   deleteNote: (id: number) => void;
   deleteNotePermanently: (id: number) => void;
   restoreNote: (id: number) => void;
@@ -60,7 +60,7 @@ export interface WindowAPI {
 
   // Operaciones de carpetas
   createFolder: (folderData: Partial<Folder>) => Promise<Folder>;
-  updateFolder: (folder: Folder) => void;
+  updateFolder: (folder: Folder) => Promise<Folder>;
   deleteFolder: (id: number) => void;
 
   // Callbacks
