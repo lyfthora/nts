@@ -84,13 +84,14 @@ contextBridge.exposeInMainWorld("api", {
     });
   },
   getAllData: () => apiRequest("/notes/all"),
-  updateNote: (note) => {
+  updateNote: async (note) => {
     const { id, ...data } = note;
-    apiRequest(`/notes/${id}`, {
+    const result = await apiRequest(`/notes/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
     ipcRenderer.send("sync-note-change", note);
+    return result;
   },
   deleteNote: (id) => apiRequest(`/notes/${id}`, { method: "DELETE" }),
   deleteNotePermanently: (id) =>
@@ -134,9 +135,9 @@ contextBridge.exposeInMainWorld("api", {
       method: "POST",
       body: JSON.stringify(folderData),
     }),
-  updateFolder: (folder) => {
+  updateFolder: async (folder) => {
     const { id, ...data } = folder;
-    apiRequest(`/folders/${id}`, {
+    return apiRequest(`/folders/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
