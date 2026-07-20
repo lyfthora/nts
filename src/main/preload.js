@@ -5,10 +5,18 @@ const API_URL = isDev
   ? "http://localhost:3001/api"
   : "https://nts-api-production-5785.up.railway.app/api";
 
-const TOKEN_KEY = "nts_auth_token";
+// Obtener el token de forma síncrona al arrancar y guardarlo en memoria local
+let cachedToken = ipcRenderer.sendSync("get-auth-token-sync") || null;
+
+try {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("nts_auth_token");
+  }
+} catch (e) { }
+
 async function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
-  const token = localStorage.getItem(TOKEN_KEY);
+  const token = cachedToken;
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -19,31 +27,27 @@ async function apiRequest(path, options = {}) {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
-const existingToken = localStorage.getItem(TOKEN_KEY);
-if (existingToken) {
-  ipcRenderer.send("set-auth-token", existingToken);
-}
 
 contextBridge.exposeInMainWorld("api", {
   isDev,
   // Auth
   setAuthToken: (token) => {
-    localStorage.setItem(TOKEN_KEY, token);
+    cachedToken = token;
     ipcRenderer.send("set-auth-token", token);
   },
-  getAuthToken: () => localStorage.getItem(TOKEN_KEY),
+  getAuthToken: () => cachedToken,
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
   openOAuth: (url) => ipcRenderer.invoke("open-oauth", url),
   getOAuthToken: () => ipcRenderer.invoke("get-oauth-token"),
   clearAuthToken: () => {
-    localStorage.removeItem(TOKEN_KEY);
+    cachedToken = null;
     ipcRenderer.send("set-auth-token", null);
   },
 
   //cache
   getCachedData: () => {
     try {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = cachedToken;
       if (!token) return null;
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
@@ -55,7 +59,7 @@ contextBridge.exposeInMainWorld("api", {
   },
   setCachedData: (data) => {
     try {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = cachedToken;
       if (!token) return;
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
@@ -64,7 +68,7 @@ contextBridge.exposeInMainWorld("api", {
   },
   clearCachedData: () => {
     try {
-      const token = localStorage.getItem(TOKEN_KEY);
+      const token = cachedToken;
       if (!token) return;
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
@@ -74,9 +78,7 @@ contextBridge.exposeInMainWorld("api", {
     }
   },
 
-  // =============================================
   // data → http to api
-  // =============================================
   createNoteDashboard: async () => {
     return apiRequest("/notes", {
       method: "POST",
@@ -153,9 +155,7 @@ contextBridge.exposeInMainWorld("api", {
     ipcRenderer.on("export-import-progress", handler);
     return () => ipcRenderer.removeListener("export-import-progress", handler);
   },
-  // =============================================
   // WINDOW → IPC local
-  // =============================================
   minimizeWindow: () => ipcRenderer.send("window-minimize"),
   closeWindow: () => ipcRenderer.send("window-close"),
   onNoteData: (callback) => {
