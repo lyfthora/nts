@@ -10,8 +10,8 @@ export interface WindowAPI {
   clearAuthToken: () => string | null;
 
   //cache
-  getCachedData: () => { notes: Note[]; folders: Folder[]} | null;
-  setCachedData: (data: { notes: Note[]; folders: Folder[]}) => void;
+  getCachedData: () => { notes: Note[]; folders: Folder[] } | null;
+  setCachedData: (data: { notes: Note[]; folders: Folder[] }) => void;
   clearCachedData: () => void;
 
   // Acciones de ventana
@@ -24,9 +24,9 @@ export interface WindowAPI {
 
   // Operaciones de notas
   updateNote: (note: Note) => Promise<Note>;
-  deleteNote: (id: number) => void;
-  deleteNotePermanently: (id: number) => void;
-  restoreNote: (id: number) => void;
+  deleteNote: (id: number) => Promise<void>;
+  deleteNotePermanently: (id: number) => Promise<void>;
+  restoreNote: (id: number) => Promise<void>;
   getNoteContent: (noteId: number) => Promise<string>;
   saveAsset: (data: {
     fileBuffer: ArrayBuffer;
@@ -61,7 +61,7 @@ export interface WindowAPI {
   // Operaciones de carpetas
   createFolder: (folderData: Partial<Folder>) => Promise<Folder>;
   updateFolder: (folder: Folder) => Promise<Folder>;
-  deleteFolder: (id: number) => void;
+  deleteFolder: (id: number) => Promise<void>;
 
   // Callbacks
   onNoteData: (callback: (data: Note) => void) => () => void;
