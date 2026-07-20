@@ -110,7 +110,7 @@ contextBridge.exposeInMainWorld("api", {
     const result = await apiRequest("/assets/upload", {
       method: "POST",
       body: JSON.stringify({
-        fileBuffer: Array.from(new Uint8Array(fileBuffer)),
+        fileBuffer: Buffer.from(fileBuffer).toString("base64"),
         fileName,
         noteId,
       }),
