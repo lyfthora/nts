@@ -1,14 +1,15 @@
+const { getSecureToken, saveSecureToken } = require("./secureStorage.js");
+
 const API_URL = "https://nts-api-production-5785.up.railway.app/api";
 
-let authToken = null;
-
 function setToken(token) {
-  authToken = token;
+  saveSecureToken(token);
 }
 
 
 async function apiRequest(path, options = {}) {
   const headers = { "Content-Type": "application/json" };
+  const authToken = getSecureToken();
   if (authToken) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }

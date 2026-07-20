@@ -94,6 +94,11 @@ ipcMain.on("set-auth-token",(_event, token) =>{
   setToken(token);
 });
 
+ipcMain.on("get-auth-token-sync", (event) => {
+  const { getSecureToken } = require("./secureStorage.js");
+  event.returnValue = getSecureToken();
+});
+
 
 app.whenReady().then(async () => {
   createDashboardWindow();
