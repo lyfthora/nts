@@ -43,6 +43,17 @@ const [userEmail, setUserEmail] = useState("");
       return false;
     }
 
+    const exp = payload.exp as number | undefined;
+    if (exp && exp * 1000 < Date.now()) {
+      window.api.clearAuthToken();
+      window.api.clearCachedData();
+      setIsAuthenticated(false);
+      setUserName("");
+      setUserEmail("");
+      setHasAccess(null);
+      return false;
+    }
+
     const email = (payload.email as string) || "";
     setUserName((payload.name as string) || email || "User");
     setUserEmail(email);
