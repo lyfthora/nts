@@ -84,15 +84,24 @@ export const apiClient = {
 
   //assets
 
-  uploadAsset: (fileBuffer: ArrayBuffer, fileName: string, noteId: number) =>
-    request<{ url: string }>("/assets/upload", {
+  uploadAsset: (fileBuffer: ArrayBuffer, fileName: string, noteId: number) => {
+    const bytes = new Uint8Array(fileBuffer);
+    let binary = "";
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = window.btoa(binary);
+
+    return request<{ url: string }>("/assets/upload", {
       method: "POST",
       body: JSON.stringify({
-        fileBuffer: Array.from(new Uint8Array(fileBuffer)),
+        fileBuffer: base64,
         fileName,
         noteId,
       }),
-    }),
+    });
+  },
   cleanUnusedAssets: (currentImages: string[], referencedImages: string[]) =>
     request<{ success: boolean }>("/assets/clean", {
       method: "POST",
