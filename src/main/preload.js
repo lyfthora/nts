@@ -73,6 +73,14 @@ contextBridge.exposeInMainWorld("api", {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       localStorage.removeItem(key);
+      
+      // Limpiar caché de contenidos y dibujos individuales
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith("nts_content_") || k.startsWith("nts_drawing_"))) {
+          localStorage.removeItem(k);
+        }
+      }
     } catch {
       /* silenciar */
     }
