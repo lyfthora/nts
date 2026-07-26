@@ -26,6 +26,7 @@ import ProgressToast from "../components/ProgressToast";
 import type { ProgressData } from "../types/models";
 import { apiClient } from "../services/apiClient";
 import { getSubscriptionSummary, getSubscriptionAction, } from "../utils/subscription";
+import { getCachedContent, setCachedContent } from "../utils/contentCache";
 
 interface DashboardProps {
   userName: string;
@@ -35,9 +36,6 @@ interface DashboardProps {
 }
 export default function Dashboard({ userName, userEmail, onLogout, isPremium }: DashboardProps) {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loadedContents, setLoadedContents] = useState<Map<number, string>>(
-    new Map(),
-  );
   const [folders, setFolders] = useState<Folder[]>([]);
   const [view, setView] = useState("all-notes");
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
@@ -190,54 +188,108 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     };
   }, []);
 
+  const fetchedNotesRef = useRef<Set<number>>(new Set());
+
   useEffect(() => {
-    if (currentId && !loadedContents.has(currentId)) {
-      const note = notes.find((n) => n.id === currentId);
-      if (note?.noteType === "drawing") {
-        window.api.getDrawingData(currentId).then((drawingData) => {
-          setLoadedContents((prev) =>
-            new Map(prev).set(currentId, drawingData || ""),
-          );
+    if (!currentId) return;
+
+    const note = notes.find((n) => n.id === currentId);
+    if (!note) return;
+
+    const noteType = note.noteType || "text";
+
+    // 1. Cargar del caché local inmediatamente si no está en RAM
+    if (noteType === "drawing") {
+      if (note.drawingData === undefined) {
+        const cached = getCachedContent(currentId, "drawing");
+        if (cached !== null) {
           setNotes((prev) =>
-            prev.map((n) => {
-              if (n.id === currentId && n.drawingData === undefined) {
-                return { ...n, drawingData };
-              }
-              return n;
-            }),
+            prev.map((n) => (n.id === currentId ? { ...n, drawingData: cached } : n))
+          );
+        }
+      }
+    } else {
+      if (note.content === undefined) {
+        const cached = getCachedContent(currentId, "text");
+        if (cached !== null) {
+          setNotes((prev) =>
+            prev.map((n) => (n.id === currentId ? { ...n, content: cached } : n))
+          );
+        }
+      }
+    }
+
+    // 2. Fetch en segundo plano desde la API si no se ha buscado en esta sesión
+    if (!fetchedNotesRef.current.has(currentId)) {
+      fetchedNotesRef.current.add(currentId);
+      if (noteType === "drawing") {
+        window.api.getDrawingData(currentId).then((drawingData) => {
+          const val = drawingData || "";
+          setCachedContent(currentId, val, "drawing");
+          setNotes((prev) =>
+            prev.map((n) => (n.id === currentId ? { ...n, drawingData: val } : n))
           );
         });
       } else {
         window.api.getNoteContent(currentId).then((content) => {
-          setLoadedContents((prev) => new Map(prev).set(currentId, content));
+          const val = content || "";
+          setCachedContent(currentId, val, "text");
           setNotes((prev) =>
-            prev.map((n) => {
-              if (n.id === currentId && n.content === undefined) {
-                return { ...n, content };
-              }
-              return n;
-            }),
+            prev.map((n) => (n.id === currentId ? { ...n, content: val } : n))
           );
         });
       }
     }
-  }, [currentId, loadedContents, notes]);
+
+    // 3. Desalojar de memoria RAM el contenido de otras notas para optimizar consumo
+    const needsEviction = notes.some(
+      (n) =>
+        n.id !== currentId &&
+        n.id !== linkedNoteId &&
+        (n.content !== undefined || n.drawingData !== undefined)
+    );
+    if (needsEviction) {
+      setNotes((prev) =>
+        prev.map((n) => {
+          if (
+            n.id !== currentId &&
+            n.id !== linkedNoteId &&
+            (n.content !== undefined || n.drawingData !== undefined)
+          ) {
+            return { ...n, content: undefined, drawingData: undefined };
+          }
+          return n;
+        })
+      );
+    }
+  }, [currentId, notes, linkedNoteId]);
 
   useEffect(() => {
-    if (linkedNoteId && !loadedContents.has(linkedNoteId)) {
-      window.api.getNoteContent(linkedNoteId).then((content) => {
-        setLoadedContents((prev) => new Map(prev).set(linkedNoteId, content));
+    if (!linkedNoteId) return;
+
+    const note = notes.find((n) => n.id === linkedNoteId);
+    if (!note) return;
+
+    if (note.content === undefined) {
+      const cached = getCachedContent(linkedNoteId, "text");
+      if (cached !== null) {
         setNotes((prev) =>
-          prev.map((n) => {
-            if (n.id === linkedNoteId && n.content === undefined) {
-              return { ...n, content };
-            }
-            return n;
-          }),
+          prev.map((n) => (n.id === linkedNoteId ? { ...n, content: cached } : n))
+        );
+      }
+    }
+
+    if (!fetchedNotesRef.current.has(linkedNoteId)) {
+      fetchedNotesRef.current.add(linkedNoteId);
+      window.api.getNoteContent(linkedNoteId).then((content) => {
+        const val = content || "";
+        setCachedContent(linkedNoteId, val, "text");
+        setNotes((prev) =>
+          prev.map((n) => (n.id === linkedNoteId ? { ...n, content: val } : n))
         );
       });
     }
-  }, [linkedNoteId, loadedContents]);
+  }, [linkedNoteId, notes]);
 
   useEffect(() => {
     const cleanupChanged = window.api.onExternalNoteChanged((note: Note) => {
@@ -323,6 +375,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
       }
       if (newNote) {
         newNote.noteType = noteType;
+        fetchedNotesRef.current.add(newNote.id);
         setNotes((prev) => [...prev, newNote]);
         setCurrentId(newNote.id);
       }
@@ -331,6 +384,20 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   );
 
   const saveNote = useCallback((note: Note) => {
+    // Guardar inmediatamente en caché local
+    if (note.noteType === "drawing") {
+      if (note.drawingData !== undefined) {
+        setCachedContent(note.id, note.drawingData, "drawing");
+      }
+    } else {
+      if (note.content !== undefined) {
+        setCachedContent(note.id, note.content, "text");
+      }
+    }
+
+    // Asegurar que no hagamos fetch en segundo plano de lo que acabamos de guardar
+    fetchedNotesRef.current.add(note.id);
+
     const preview = (note.content || "")
       .replace(/!\[.*?\]\(.*?\)/g, "")
       .replace(/[#*_`~\[\]]/g, "")
@@ -653,10 +720,15 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
       "Could not create note"
     );
     if (!newNote) return;
+
+    const content = note.content ?? getCachedContent(note.id, "text") ?? undefined;
+    const drawingData = note.drawingData ?? getCachedContent(note.id, "drawing") ?? undefined;
+
     const duplicated: Note = {
       ...newNote,
       name: `${note.name || "Untitled"} (copy)`,
-      content: note.content,
+      content,
+      drawingData,
       preview: note.preview,
       status: note.status,
       tags: note.tags ? [...note.tags] : [],
