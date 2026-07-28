@@ -21,6 +21,11 @@ playwright.config.ts
 playwright-report/
 test-data-*
 
+# Generated git notes & exports
+exported_git_notes/
+git_commits_nts.zip
+
 # lockfiles to ignore (since we use pnpm)
 package-lock.json
 yarn.lock
+

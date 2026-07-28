@@ -5,28 +5,24 @@ import AuthScreen from "./components/AuthScreen";
 import "./styles/global.css";
 import { apiClient } from "./services/apiClient";
 import { getSubscriptionStatusKind } from "./utils/subscription";
+import { decodeJwt, isTokenExpired } from "./utils/authUtils";
+
 const params = new URLSearchParams(window.location.search);
 const mode = params.get("mode");
-
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
-  try {
-    const base64 = token.split(".")[1];
-    const json = atob(base64.replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [userName, setUserName] = useState("");
-const [userEmail, setUserEmail] = useState("");
+  const [userEmail, setUserEmail] = useState("");
 
   const applyTokenSession = useCallback((token: string | null) => {
-    if (!token) {
+    if (!token || isTokenExpired(token)) {
+      if (token) {
+        window.api.clearAuthToken();
+        window.api.clearCachedData();
+      }
       setIsAuthenticated(false);
       setUserName("");
       setUserEmail("");
@@ -34,22 +30,11 @@ const [userEmail, setUserEmail] = useState("");
       return false;
     }
 
-    const payload = decodeJwtPayload(token);
+    const payload = decodeJwt(token);
     if (!payload) {
       window.api.clearAuthToken();
       setIsAuthenticated(false);
       setUserName("");
-      setHasAccess(null);
-      return false;
-    }
-
-    const exp = payload.exp as number | undefined;
-    if (exp && exp * 1000 < Date.now()) {
-      window.api.clearAuthToken();
-      window.api.clearCachedData();
-      setIsAuthenticated(false);
-      setUserName("");
-      setUserEmail("");
       setHasAccess(null);
       return false;
     }
