@@ -115,32 +115,63 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   );
 
   const folderCounts = useMemo<FolderCounts>(() => {
-    const getAllDescendantIds = (parentId: number): number[] => {
-      const children = folders.filter((f) => f.parentId === parentId);
-      const ids: number[] = [];
-      children.forEach((child) => {
-        ids.push(child.id);
-        ids.push(...getAllDescendantIds(child.id));
-      });
-      return ids;
+    // 1. Count direct notes per folder in a single pass over notes
+    const directCounts: Record<number, number> = {};
+    folders.forEach((f) => {
+      directCounts[f.id] = 0;
+    });
+
+    notes.forEach((n) => {
+      if (n.deleted) return;
+      let folderId = n.folderId;
+      if (folderId === null || folderId === undefined || folderId === 1) {
+        folderId = 1;
+      }
+      if (directCounts[folderId] !== undefined) {
+        directCounts[folderId]++;
+      } else {
+        directCounts[folderId] = (directCounts[folderId] || 0) + 1;
+      }
+    });
+
+    // 2. Build parent -> children folder lookup map
+    const childrenMap: Record<number, number[]> = {};
+    folders.forEach((f) => {
+      if (f.parentId !== null && f.parentId !== undefined) {
+        if (!childrenMap[f.parentId]) {
+          childrenMap[f.parentId] = [];
+        }
+        childrenMap[f.parentId].push(f.id);
+      }
+    });
+
+    // 3. Memoized calculation for descendant note counts
+    const descendantCountsMemo: Record<number, number> = {};
+    const visiting = new Set<number>();
+    const getDescendantCount = (folderId: number): number => {
+      if (descendantCountsMemo[folderId] !== undefined) {
+        return descendantCountsMemo[folderId];
+      }
+      if (visiting.has(folderId)) {
+        return 0;
+      }
+      visiting.add(folderId);
+      let total = 0;
+      const children = childrenMap[folderId] || [];
+      for (const childId of children) {
+        total += (directCounts[childId] || 0) + getDescendantCount(childId);
+      }
+      visiting.delete(folderId);
+      descendantCountsMemo[folderId] = total;
+      return total;
     };
+
+    // 4. Compute final counts per folder
     const counts: FolderCounts = {};
     folders.forEach((folder) => {
-      const directCount = notes.filter((n) => {
-        if (n.deleted) return false;
-        if (folder.id === 1) {
-          return (
-            n.folderId === null || n.folderId === undefined || n.folderId === 1
-          );
-        }
-        return n.folderId === folder.id;
-      }).length;
+      const directCount = directCounts[folder.id] || 0;
       if (!folder.expanded) {
-        const descendantIds = getAllDescendantIds(folder.id);
-        const descendantCount = notes.filter(
-          (n) => !n.deleted && descendantIds.includes(n.folderId as number),
-        ).length;
-        counts[folder.id] = directCount + descendantCount;
+        counts[folder.id] = directCount + getDescendantCount(folder.id);
       } else {
         counts[folder.id] = directCount;
       }
