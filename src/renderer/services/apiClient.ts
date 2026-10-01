@@ -1,12 +1,60 @@
 import { SubscriptionStatus } from "../types/models";
+import { isTokenExpiringSoon } from "../utils/authUtils";
 
 const isDev = window.api ? window.api.isDev : false;
 const API_URL = isDev
   ? "http://localhost:3001/api"
   : "https://nts-api-production-5785.up.railway.app/api";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+let activeRefreshPromise: Promise<string | null> | null = null;
+
+async function refreshToken(): Promise<string | null> {
+  const token = window.api ? window.api.getAuthToken() : null;
+  if (!token) return null;
+
+  try {
+    const res = await fetch(`${API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    if (data?.token) {
+      window.api.setAuthToken(data.token);
+      return data.token as string;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureValidToken(): Promise<void> {
+  if (!window.api) return;
   const token = window.api.getAuthToken();
+  if (!token) return;
+
+  if (isTokenExpiringSoon(token, 300)) {
+    if (!activeRefreshPromise) {
+      activeRefreshPromise = refreshToken().finally(() => {
+        activeRefreshPromise = null;
+      });
+    }
+    await activeRefreshPromise;
+  }
+}
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  if (!path.startsWith("/auth/")) {
+    await ensureValidToken();
+  }
+
+  const token = window.api ? window.api.getAuthToken() : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(token ? { "Authorization": `Bearer ${token}` } : {}),
