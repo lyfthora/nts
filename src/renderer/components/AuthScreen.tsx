@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import "./AuthScreen.css";
 
-const API_URL = "https://nts-api-production-5785.up.railway.app/api";
+const API_URL = "https://nts-api-3e8i.onrender.com/api";
 
 
 interface AuthScreenProps {
