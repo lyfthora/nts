@@ -1,9 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
-
 const isDev = !process.resourcesPath || !process.resourcesPath.includes("app.asar");
-const API_URL = isDev
-  ? "http://localhost:3001/api"
-  : "https://nts-api-production-5785.up.railway.app/api";
+const API_URL = "https://nts-api-3e8i.onrender.com/api";
 
 // Obtener el token de forma síncrona al arrancar y guardarlo en memoria local
 let cachedToken = ipcRenderer.sendSync("get-auth-token-sync") || null;
@@ -73,7 +70,7 @@ contextBridge.exposeInMainWorld("api", {
       const payload = JSON.parse(atob(token.split(".")[1]));
       const key = `nts_cache_${payload.id || payload.sub || "default"}`;
       localStorage.removeItem(key);
-      
+
       // Limpiar caché de contenidos y dibujos individuales
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const k = localStorage.key(i);
