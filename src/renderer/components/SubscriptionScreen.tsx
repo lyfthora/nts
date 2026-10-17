@@ -49,17 +49,27 @@ export default function SubscriptionScreen({
           let attempt = 0;
           const interval = setInterval(async () => {
             attempt++;
-            const s = await loadStatus();
-            if (canAccessApp(s.status)) {
-              clearInterval(interval);
-              onSubscribed();
-              setLoading(false);
-            } else if (attempt >= 5) {
-              clearInterval(interval);
-              setLoading(false);
-              setError("Subscription update not detected yet. Please tap 'Refresh subscription status'.");
+            try {
+              const s = await loadStatus();
+              if (canAccessApp(s.status)) {
+                clearInterval(interval);
+                onSubscribed();
+                setLoading(false);
+              } else if (attempt === 5) {
+                setError("Waiting for payment confirmation...");
+              } else if (attempt >= 15) {
+                clearInterval(interval);
+                setLoading(false);
+                setError("Subscription update not detected yet. Please tap 'Refresh subscription status'.");
+              }
+            } catch {
+              if (attempt >= 15) {
+                clearInterval(interval);
+                setLoading(false);
+                setError("Could not confirm payment. Please tap 'Refresh subscription status'.");
+              }
             }
-          }, 2000);
+          }, 3000);
         } catch (err) {
           setLoading(false);
           setError("Error refreshing status. Please try manually.");

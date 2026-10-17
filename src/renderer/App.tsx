@@ -90,6 +90,10 @@ export default function App() {
     checkAccess();
   }, [applyTokenSession, checkAccess]);
 
+  const handleAccessChanged = useCallback((access: boolean) => {
+    setHasAccess(access);
+  }, []);
+
   const handleLogout = useCallback(() => {
     window.api.clearCachedData();
     window.api.clearAuthToken();
@@ -122,5 +126,5 @@ export default function App() {
     );
   }
 
-  return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} isPremium={hasAccess === true} />;
+  return <Dashboard userName={userName} userEmail={userEmail} onLogout={handleLogout} isPremium={hasAccess === true} onAccessChanged={handleAccessChanged} />;
 }
