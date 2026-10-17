@@ -33,8 +33,9 @@ interface DashboardProps {
   userEmail: string;
   onLogout: () => void;
   isPremium: boolean;
+  onAccessChanged: (access: boolean) => void;
 }
-export default function Dashboard({ userName, userEmail, onLogout, isPremium }: DashboardProps) {
+export default function Dashboard({ userName, userEmail, onLogout, isPremium, onAccessChanged }: DashboardProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [view, setView] = useState("all-notes");
@@ -43,8 +44,64 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<"success" | "error">("error");
+
+  // TODO: remove — dev.. test all toast messages
+  // Usage: __testToast()          → cycles through all toasts automatically
+  //        __testToast("success") → show only success toasts
+  //        __testToast("error")   → show only error toasts
+  //        __testToast("progress")→ show ProgressToast states
+  useEffect(() => {
+    const allToasts: { msg: string; type: "success" | "error" }[] = [
+      { msg: "Premium activated successfully!", type: "success" },
+      { msg: "Payment succeeded! Updating subscription...", type: "success" },
+      { msg: "Waiting for payment confirmation...", type: "success" },
+      { msg: "Payment received! If features aren't unlocked, use Refresh in Settings.", type: "success" },
+      { msg: 'Note "Example" not found', type: "error" },
+      { msg: "Premium feature - subscribe to export notes", type: "error" },
+      { msg: "Premium feature - subscribe to import notes", type: "error" },
+      { msg: "Could not confirm payment. Please refresh in Settings.", type: "error" },
+      { msg: "Error refreshing subscription status.", type: "error" },
+      { msg: "Subscription process was canceled.", type: "error" },
+      { msg: "Error: Failed to save note", type: "error" },
+    ];
+
+    (window as any).__testToast = (filter?: "success" | "error" | "progress") => {
+      if (filter === "progress") {
+        // Test ProgressToast states
+        const steps: ProgressData[] = [
+          { status: "loading", message: "Exporting notes...", percent: 35 },
+          { status: "loading", message: "Importing notes...", percent: 70 },
+          { status: "success", message: "Export complete!", percent: 100 },
+          { status: "error", message: "Import failed", percent: 60 },
+        ];
+        let i = 0;
+        setProgressData(steps[0]);
+        const iv = setInterval(() => {
+          i++;
+          if (i >= steps.length) { clearInterval(iv); setTimeout(() => setProgressData(null), 2500); return; }
+          setProgressData(steps[i]);
+        }, 2500);
+        return;
+      }
+
+      const list = filter ? allToasts.filter(t => t.type === filter) : allToasts;
+      let i = 0;
+
+      const show = () => {
+        if (i >= list.length) { setToastMessage(null); return; }
+        setToastType(list[i].type);
+        setToastMessage(`[${i + 1}/${list.length}] ${list[i].msg}`);
+        i++;
+        setTimeout(show, 2500);
+      };
+      show();
+    };
+    return () => { delete (window as any).__testToast; };
+  }, []);
 
   const showErrorToast = useCallback((msg: string) => {
+    setToastType("error");
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   }, []);
@@ -438,13 +495,13 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     const hasDrawingData =
       note.noteType === "drawing" && note.drawingData
         ? (() => {
-            try {
-              const d = JSON.parse(note.drawingData);
-              return !!(d.strokes && d.strokes.length > 0);
-            } catch {
-              return false;
-            }
-          })()
+          try {
+            const d = JSON.parse(note.drawingData);
+            return !!(d.strokes && d.strokes.length > 0);
+          } catch {
+            return false;
+          }
+        })()
         : note.hasDrawingData;
     const noteWithPreview = {
       ...note,
@@ -938,6 +995,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
   useEffect(() => {
     const cleanup = window.api.onPaymentEvent(async (data) => {
       if (data.status === "success") {
+        setToastType("success");
         setToastMessage("Payment succeeded! Updating subscription...");
         setIsSubscriptionModalOpen(false);
         setIsSubscriptionLoading(true);
@@ -945,6 +1003,8 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
           const nextStatus = await loadSubscriptionStatus();
           if (nextStatus.status === "active") {
             setIsSubscriptionLoading(false);
+            onAccessChanged(true);
+            setToastType("success");
             setToastMessage("Premium activated successfully!");
             setTimeout(() => setToastMessage(null), 3000);
             return;
@@ -952,19 +1012,36 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
           let attempt = 0;
           const interval = setInterval(async () => {
             attempt++;
-            const s = await loadSubscriptionStatus();
-            if (s.status === "active") {
-              clearInterval(interval);
-              setIsSubscriptionLoading(false);
-              setToastMessage("Premium activated successfully!");
-              setTimeout(() => setToastMessage(null), 3000);
-            } else if (attempt >= 5) {
-              clearInterval(interval);
-              setIsSubscriptionLoading(false);
-              setToastMessage("Subscription update not detected yet. Webhook might be delayed.");
-              setTimeout(() => setToastMessage(null), 5000);
+            try {
+              const s = await loadSubscriptionStatus();
+              if (s.status === "active") {
+                clearInterval(interval);
+                setIsSubscriptionLoading(false);
+                onAccessChanged(true);
+                setToastType("success");
+                setToastMessage("Premium activated successfully!");
+                setTimeout(() => setToastMessage(null), 3000);
+              } else if (attempt === 5) {
+                setToastType("success");
+                setToastMessage("Waiting for payment confirmation...");
+              } else if (attempt >= 15) {
+                clearInterval(interval);
+                setIsSubscriptionLoading(false);
+                onAccessChanged(true);
+                setToastType("success");
+                setToastMessage("Payment received! If features aren't unlocked, use Refresh in Settings.");
+                setTimeout(() => setToastMessage(null), 6000);
+              }
+            } catch {
+              // Network error during poll — keep trying
+              if (attempt >= 15) {
+                clearInterval(interval);
+                setIsSubscriptionLoading(false);
+                setToastMessage("Could not confirm payment. Please refresh in Settings.");
+                setTimeout(() => setToastMessage(null), 5000);
+              }
             }
-          }, 2000);
+          }, 3000);
         } catch (err) {
           setIsSubscriptionLoading(false);
           setToastMessage("Error refreshing subscription status.");
@@ -977,7 +1054,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
       }
     });
     return cleanup;
-  }, [loadSubscriptionStatus]);
+  }, [loadSubscriptionStatus, onAccessChanged]);
 
   const handleSubscriptionPrimaryAction = useCallback(async () => {
     setIsSubscriptionLoading(true);
@@ -1004,7 +1081,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     setSubscriptionError("");
 
     try {
-      await loadSubscriptionStatus();
+      const status = await loadSubscriptionStatus();
+      if (status.status === "active") {
+        onAccessChanged(true);
+      }
     } catch {
       setSubscriptionError(
         "Could not refresh subscription status. Please try again.",
@@ -1012,7 +1092,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
     } finally {
       setIsSubscriptionLoading(false);
     }
-  }, [loadSubscriptionStatus]);
+  }, [loadSubscriptionStatus, onAccessChanged]);
 
   const handleManageSubscription = useCallback(async () => {
     setIsSubscriptionModalOpen(true);
@@ -1110,16 +1190,16 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
 
               {linkedNote && (
                 <LinkedNotePanel
-                   note={linkedNote}
-  folders={folders}
-  onClose={handleCloseLinkedNote}
-  onChange={onChange}
-  onDelete={onDelete}
-  onStatus={onStatus}
-  onTagAdd={onTagAdd}
-  onTagRemove={onTagRemove}
-  onPin={onPin}
-  onPopOutLinkedNote={handleLinkedNotePopOut}
+                  note={linkedNote}
+                  folders={folders}
+                  onClose={handleCloseLinkedNote}
+                  onChange={onChange}
+                  onDelete={onDelete}
+                  onStatus={onStatus}
+                  onTagAdd={onTagAdd}
+                  onTagRemove={onTagRemove}
+                  onPin={onPin}
+                  onPopOutLinkedNote={handleLinkedNotePopOut}
                 />
               )}
             </>
@@ -1203,7 +1283,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium }: 
         </div>
 
         {toastMessage && (
-          <div className="toast-notification">{toastMessage}</div>
+          <div className={`toast-notification${toastType === "success" ? " toast-success" : ""}`}>{toastMessage}</div>
         )}
         <ProgressToast
           progress={progressData}
