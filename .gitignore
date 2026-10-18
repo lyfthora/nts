@@ -30,3 +30,6 @@ git_commits_nts.zip
 package-lock.json
 yarn.lock
 
+# Freebuff workspace metadata
+.freebuff/project-id
+
