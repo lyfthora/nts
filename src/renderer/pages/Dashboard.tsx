@@ -271,8 +271,14 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       .catch(() => {
         if (mounted) setIsLoading(false);
       });
+    const unsubscribeOfflineData = window.api.onOfflineDataChanged((data) => {
+      if (!mounted) return;
+      setNotes(data.notes || []);
+      setFolders(data.folders || []);
+    });
     return () => {
       mounted = false;
+      unsubscribeOfflineData();
     };
   }, []);
 
@@ -315,17 +321,17 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
           const val = drawingData || "";
           setCachedContent(currentId, val, "drawing");
           setNotes((prev) =>
-            prev.map((n) => (n.id === currentId ? { ...n, drawingData: val } : n))
+            prev.map((n) => (n.id === currentId && n.drawingData === undefined ? { ...n, drawingData: val } : n))
           );
-        });
+        }).catch(() => fetchedNotesRef.current.delete(currentId));
       } else {
         window.api.getNoteContent(currentId).then((content) => {
           const val = content || "";
           setCachedContent(currentId, val, "text");
           setNotes((prev) =>
-            prev.map((n) => (n.id === currentId ? { ...n, content: val } : n))
+            prev.map((n) => (n.id === currentId && n.content === undefined ? { ...n, content: val } : n))
           );
-        });
+        }).catch(() => fetchedNotesRef.current.delete(currentId));
       }
     }
 
@@ -373,9 +379,9 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         const val = content || "";
         setCachedContent(linkedNoteId, val, "text");
         setNotes((prev) =>
-          prev.map((n) => (n.id === linkedNoteId ? { ...n, content: val } : n))
+          prev.map((n) => (n.id === linkedNoteId && n.content === undefined ? { ...n, content: val } : n))
         );
-      });
+      }).catch(() => fetchedNotesRef.current.delete(linkedNoteId));
     }
   }, [linkedNoteId, notes]);
 
@@ -473,14 +479,14 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
 
   const saveNote = useCallback((note: Note) => {
     // Guardar inmediatamente en caché local
-    if (note.noteType === "drawing") {
-      if (note.drawingData !== undefined) {
-        setCachedContent(note.id, note.drawingData, "drawing");
-      }
-    } else {
-      if (note.content !== undefined) {
-        setCachedContent(note.id, note.content, "text");
-      }
+    const durableNote = {
+      ...note,
+      preview: (note.content || "").replace(/!\\[.*?\\]\\(.*?\\)/g, "").replace(/[#*_`~\\[\\]]/g, "").trim().substring(0, 150),
+      updatedAt: Date.now(),
+      ...(note.noteType === "drawing" && note.drawingData !== undefined ? { drawingData: note.drawingData } : {}),
+    };
+    if (!window.api.saveNoteLocally(durableNote)) {
+      showErrorToast("Could not save note locally. Changes may be lost if the app closes.");
     }
 
     // Asegurar que no hagamos fetch en segundo plano de lo que acabamos de guardar
@@ -504,7 +510,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         })()
         : note.hasDrawingData;
     const noteWithPreview = {
-      ...note,
+      ...durableNote,
       preview,
       updatedAt: Date.now(),
       hasDrawingData,
@@ -523,7 +529,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         referencedImages.push(match[1]);
       }
 
-      if (note.images && note.images.length > 0) {
+      if (note.images && note.images.length > 0 && navigator.onLine) {
         await window.api.cleanUnusedAssets({
           noteId: note.id,
           referencedImages,
@@ -534,7 +540,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
 
       await safeUpdate(
         () => window.api.updateNote(noteWithPreview),
-        "Could not save note"
+        "Could not queue note sync"
       );
     }, 200);
   }, [safeUpdate]);

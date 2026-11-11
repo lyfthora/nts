@@ -5,6 +5,7 @@ const {
   getNoteWindow,
 } = require("../windows/windowManager.js");
 const { apiRequest } = require("../apiProxy.js");
+const { getOfflineSync } = require("../offlineSync.js");
 
 function registerWindowHandlers() {
   // Window minimize
@@ -42,21 +43,9 @@ function registerWindowHandlers() {
     await createNoteWindow(noteId, x, y);
   });
   // note window request its data when redy
-ipcMain.handle("get-note-window-data", async (event, noteId) => {
+ipcMain.handle("get-note-window-data", async (_event, noteId) => {
   try {
-    const [allData, contentData] = await Promise.all([
-      apiRequest("/notes/all"),
-      apiRequest(`/notes/${noteId}/content`),
-    ]);
-    const note = allData.notes.find((n) => n.id === noteId);
-    if (note) {
-      if (note.noteType === "drawing") {
-        note.drawingData = contentData.drawingData;
-      } else {
-        note.content = contentData.content;
-      }
-    }
-    return { note, folders: allData.folders };
+    return await getOfflineSync().getNoteWindowData(noteId);
   } catch (err) {
     console.error("Error fetching note window data:", err);
     return { note: null, folders: [] };
@@ -69,12 +58,7 @@ ipcMain.handle("get-note-window-data", async (event, noteId) => {
     dashboard.webContents.send("external-note-changed", noteData);
   }
   try {
-    const { id, content, drawingData, ...metadata } = noteData;
-    // Actualizar metadata + contenido vía API
-    await apiRequest(`/notes/${id}`, {
-      method: "PUT",
-      body: JSON.stringify({ content, drawingData, ...metadata }),
-    });
+    await getOfflineSync().updateNote(noteData);
   } catch (err) {
     console.error("Error updating note from external window:", err);
   }
