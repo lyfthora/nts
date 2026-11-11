@@ -95,6 +95,9 @@ const Sidebar = memo(function Sidebar({
   >({});
   const [sidebarWidth, setSidebarWidth] = useState(240);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const sidebarNavRef = useRef<HTMLElement>(null);
+  const foldersSectionRef = useRef<HTMLDivElement>(null);
+  const [hasMoreSidebarContent, setHasMoreSidebarContent] = useState(false);
   const isResizing = useRef(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -157,6 +160,44 @@ const Sidebar = memo(function Sidebar({
   }, []);
 
   useEffect(() => {
+    const nav = sidebarNavRef.current;
+    const foldersSection = foldersSectionRef.current;
+    if (!nav) return;
+
+    const updateScrollIndicator = () => {
+      if (!foldersSection || isSettingsView || collapsedSections["folders"]) {
+        setHasMoreSidebarContent(false);
+        return;
+      }
+
+      const navBounds = nav.getBoundingClientRect();
+      const foldersBounds = foldersSection.getBoundingClientRect();
+      setHasMoreSidebarContent(foldersBounds.bottom > navBounds.bottom + 1);
+    };
+
+    updateScrollIndicator();
+    nav.addEventListener("scroll", updateScrollIndicator, { passive: true });
+
+    const resizeObserver = new ResizeObserver(updateScrollIndicator);
+    resizeObserver.observe(nav);
+    if (foldersSection) resizeObserver.observe(foldersSection);
+
+    return () => {
+      nav.removeEventListener("scroll", updateScrollIndicator);
+      resizeObserver.disconnect();
+    };
+  }, [folders, tags, collapsedSections, isSettingsView]);
+
+  const showMoreSidebarContent = () => {
+    const nav = sidebarNavRef.current;
+    if (!nav) return;
+    nav.scrollBy({
+      top: Math.max(nav.clientHeight * 0.75, 80),
+      behavior: "smooth",
+    });
+  };
+
+  useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing.current) return;
       const newWidth = e.clientX;
@@ -187,9 +228,11 @@ const Sidebar = memo(function Sidebar({
         <pre className="ascii-logo">{`█░░ ▄▀█ █ █▄░█
 █▄▄ █▀█ █ █░▀█`}</pre>
       </div>
-      <nav className="sidebar-nav">
-        {!isSettingsView ? (
-          <>
+      <div className="sidebar-scroll-container">
+        <nav className="sidebar-nav" ref={sidebarNavRef}>
+          <div className="sidebar-nav-content">
+            {!isSettingsView ? (
+              <>
             <div className="nav-section" id="mainLinksSection">
               <NavItem
                 itemView="all-notes"
@@ -314,6 +357,7 @@ const Sidebar = memo(function Sidebar({
                   <motion.div
                     className="nav-subsection"
                     id="foldersSection"
+                    ref={foldersSectionRef}
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -529,10 +573,40 @@ const Sidebar = memo(function Sidebar({
               </svg>
               <span>Log out</span>
             </a>
-
           </div>
-        )}
-      </nav>
+            )}
+          </div>
+        </nav>
+        <AnimatePresence initial={false}>
+          {hasMoreSidebarContent && (
+            <motion.button
+              className="sidebar-scroll-more"
+              type="button"
+              aria-label="Desplazar para ver más contenido"
+              title="Ver más contenido"
+              onClick={showMoreSidebarContent}
+              initial={{ opacity: 0, y: 8, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.9 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </motion.button>
+          )}
+        </AnimatePresence>
+      </div>
       <div className="sidebar-footer">
         <div className="sidebar-user-info">
           {isSettingsView ? (
