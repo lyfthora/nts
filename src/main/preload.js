@@ -1,9 +1,14 @@
 const { contextBridge, ipcRenderer } = require("electron");
+const { getOfflineSync } = require("./offlineSync.js");
 const isDev = !process.resourcesPath || !process.resourcesPath.includes("app.asar");
 const API_URL = "https://nts-api-3e8i.onrender.com/api";
 
 // Obtener el token de forma síncrona al arrancar y guardarlo en memoria local
 let cachedToken = ipcRenderer.sendSync("get-auth-token-sync") || null;
+const offlineSync = getOfflineSync({
+  getToken: () => cachedToken,
+  apiRequest: (path, options) => apiRequest(path, options),
+});
 
 try {
   if (typeof localStorage !== "undefined") {
@@ -18,10 +23,14 @@ async function apiRequest(path, options = {}) {
     headers["Authorization"] = `Bearer ${token}`;
   }
   const res = await fetch(`${API_URL}${path}`, {
-    headers,
     ...options,
+    headers: { ...headers, ...(options.headers || {}) },
   });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const error = new Error(`API error: ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
   return res.json();
 }
 
@@ -31,6 +40,7 @@ contextBridge.exposeInMainWorld("api", {
   setAuthToken: (token) => {
     cachedToken = token;
     ipcRenderer.send("set-auth-token", token);
+    if (cachedToken) offlineSync.flushPendingSync().catch(() => {});
   },
   getAuthToken: () => cachedToken,
   openExternal: (url) => ipcRenderer.invoke("open-external", url),
@@ -42,84 +52,65 @@ contextBridge.exposeInMainWorld("api", {
   },
 
   //cache
+  saveNoteLocally: (note) => {
+    try {
+      return !!cachedToken && offlineSync.saveNoteLocally(note);
+    } catch {
+      return false;
+    }
+  },
   getCachedData: () => {
     try {
-      const token = cachedToken;
-      if (!token) return null;
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : null;
+      if (!cachedToken) return null;
+      return offlineSync.getCachedData();
     } catch {
       return null;
     }
   },
   setCachedData: (data) => {
     try {
-      const token = cachedToken;
-      if (!token) return;
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
-      localStorage.setItem(key, JSON.stringify(data));
+      if (!cachedToken) return;
+      offlineSync.setCachedData(data);
     } catch { }
   },
   clearCachedData: () => {
     try {
-      const token = cachedToken;
-      if (!token) return;
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const key = `nts_cache_${payload.id || payload.sub || "default"}`;
-      localStorage.removeItem(key);
-
-      // Limpiar caché de contenidos y dibujos individuales
-      for (let i = localStorage.length - 1; i >= 0; i--) {
-        const k = localStorage.key(i);
-        if (k && (k.startsWith("nts_content_") || k.startsWith("nts_drawing_"))) {
-          localStorage.removeItem(k);
-        }
-      }
+      if (!cachedToken) return;
+      offlineSync.clearCachedData();
     } catch {
       /* silenciar */
     }
   },
 
   // data → http to api
-  createNoteDashboard: async () => {
-    return apiRequest("/notes", {
-      method: "POST",
-      body: JSON.stringify({ noteType: "text" }),
-    });
+  createNoteDashboard: async () => offlineSync.createNote("text"),
+  getAllData: () => offlineSync.getAllData(),
+  getSyncStatus: () => offlineSync.getSyncStatus(),
+  retryPendingSync: () => offlineSync.flushPendingSync(),
+  onOfflineDataChanged: (callback) => {
+    const handler = (data) => callback(data);
+    return offlineSync.onDataChange(handler);
   },
-  getAllData: () => apiRequest("/notes/all"),
   updateNote: async (note) => {
-    const { id, ...data } = note;
-    const result = await apiRequest(`/notes/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
+    const result = await offlineSync.updateNote(note);
     ipcRenderer.send("sync-note-change", note);
     return result;
   },
-  deleteNote: (id) => apiRequest(`/notes/${id}`, { method: "DELETE" }),
-  deleteNotePermanently: (id) =>
-    apiRequest(`/notes/${id}/permanent`, { method: "DELETE" }),
-  restoreNote: (id) => apiRequest(`/notes/${id}/restore`, { method: "POST" }),
-  getNoteContent: async (noteId) => {
-    const data = await apiRequest(`/notes/${noteId}/content`);
-    return data.content;
-  },
-  getDrawingData: async (noteId) => {
-    const data = await apiRequest(`/notes/${noteId}/content`);
-    return data.drawingData;
-  },
+  deleteNote: (id) => offlineSync.deleteNote(id),
+  deleteNotePermanently: (id) => offlineSync.deleteNotePermanently(id),
+  restoreNote: (id) => offlineSync.restoreNote(id),
+  getNoteContent: (noteId) => offlineSync.getNoteContent(noteId, "text"),
+  getDrawingData: (noteId) => offlineSync.getNoteContent(noteId, "drawing"),
   saveAsset: async (data) => {
     const { fileBuffer, fileName, noteId } = data;
+    const note = offlineSync.getCachedData().notes.find((item) => item.id === noteId);
+    const remoteNoteId = note?.remoteId ?? noteId;
     const result = await apiRequest("/assets/upload", {
       method: "POST",
       body: JSON.stringify({
         fileBuffer: Buffer.from(fileBuffer).toString("base64"),
         fileName,
-        noteId,
+        noteId: remoteNoteId,
       }),
     });
     return result.url;
@@ -137,19 +128,9 @@ contextBridge.exposeInMainWorld("api", {
   getBacklinks: (noteName) =>
     apiRequest(`/notes/${encodeURIComponent(noteName)}/backlinks`),
   // folders
-  createFolder: (folderData) =>
-    apiRequest("/folders", {
-      method: "POST",
-      body: JSON.stringify(folderData),
-    }),
-  updateFolder: async (folder) => {
-    const { id, ...data } = folder;
-    return apiRequest(`/folders/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-  },
-  deleteFolder: (id) => apiRequest(`/folders/${id}`, { method: "DELETE" }),
+  createFolder: (folderData) => offlineSync.createFolder(folderData),
+  updateFolder: (folder) => offlineSync.updateFolder(folder),
+  deleteFolder: (id) => offlineSync.deleteFolder(id),
   // import/export
   exportNote: (noteId, format) =>
     ipcRenderer.invoke(`export-note-${format}`, noteId),
@@ -172,8 +153,7 @@ contextBridge.exposeInMainWorld("api", {
   getWindowSize: () => ipcRenderer.invoke("get-window-size"),
   openNoteWindow: (noteId, x, y) =>
     ipcRenderer.invoke("open-note-window", { noteId, x, y }),
-  getNoteWindowData: (noteId) =>
-    ipcRenderer.invoke("get-note-window-data", noteId),
+  getNoteWindowData: (noteId) => offlineSync.getNoteWindowData(noteId),
   sendNoteChange: (note) => ipcRenderer.send("note-window-change", note),
   onExternalNoteChanged: (callback) => {
     const handler = (event, note) => callback(note);

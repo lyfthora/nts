@@ -12,18 +12,22 @@ export interface WindowAPI {
   //cache
   getCachedData: () => { notes: Note[]; folders: Folder[] } | null;
   setCachedData: (data: { notes: Note[]; folders: Folder[] }) => void;
+  saveNoteLocally: (note: Note) => boolean;
+  onOfflineDataChanged: (callback: (data: { notes: Note[]; folders: Folder[] }) => void) => () => void;
   clearCachedData: () => void;
 
   // Acciones de ventana
   createNoteDashboard: () => Promise<Note>;
   getAllData: () => Promise<{ notes: Note[]; folders: Folder[] }>;
+  getSyncStatus: () => { pending: number; lastError: string | null };
+  retryPendingSync: () => Promise<{ synced: number; pending: number; blocked?: boolean }>;
 
   // Control de ventana
   minimizeWindow: () => void;
   closeWindow: () => void;
 
   // Operaciones de notas
-  updateNote: (note: Note) => Promise<Note>;
+  updateNote: (note: Note) => Promise<Note & { pendingSync?: boolean }>;
   deleteNote: (id: number) => Promise<void>;
   deleteNotePermanently: (id: number) => Promise<void>;
   restoreNote: (id: number) => Promise<void>;
