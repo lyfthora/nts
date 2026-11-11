@@ -14,7 +14,11 @@ async function apiRequest(path, options = {}) {
     headers["Authorization"] = `Bearer ${authToken}`;
   }
   const res = await fetch(`${API_URL}${path}`, { headers, ...options });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (!res.ok) {
+    const error = new Error(`API error: ${res.status}`);
+    error.status = res.status;
+    throw error;
+  }
   return res.json();
 }
 module.exports = { setToken, apiRequest };

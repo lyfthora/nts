@@ -10,6 +10,7 @@
     "dev": "node scripts/build.js --watch",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "test:unit": "node --test tests/offline/*.test.js",
     "clean:test": "powershell -Command \"Remove-Item -Recurse -Force test-data-* -ErrorAction SilentlyContinue\"",
     "clean:dist": "powershell -Command \"Remove-Item -Recurse -Force dist, release -ErrorAction SilentlyContinue\""
   },

@@ -17,6 +17,12 @@ coverage/
 *.tsbuildinfo
 
 tests/
+!tests/
+tests/*
+!tests/offline/
+tests/offline/*
+!tests/offline/*.spec.js
+!tests/offline/*.test.js
 test-results/
 playwright.config.ts
 playwright-report/
