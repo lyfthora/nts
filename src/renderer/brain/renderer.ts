@@ -1,0 +1,1613 @@
+import {
+	AdditiveBlending,
+	BufferAttribute,
+	BufferGeometry,
+	Color,
+	DoubleSide,
+	Fog,
+	LineBasicMaterial,
+	LineSegments,
+	LinearSRGBColorSpace,
+	Matrix4,
+	Mesh,
+	MOUSE,
+	OrthographicCamera,
+	PerspectiveCamera,
+	Points,
+	Scene,
+	ShaderMaterial,
+	TOUCH,
+	Vector3,
+	WebGLRenderer,
+} from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {
+	HEMI_CENTER,
+	anatomyMeshes,
+	cerebellumCenter,
+	cortexRadius,
+	mulberry32,
+	sampleShell,
+	type Shell,
+	type SurfaceMesh,
+} from "./brain-shape";
+import type { GraphCore } from "./graph-core";
+import { BrainLayout, type SavedPosition } from "./layout";
+import { customColor, darkTheme, groupColor, meshColors, shellColors, type BrainTheme } from "./theme";
+
+export type ViewMode = "3d" | "2d";
+export type ViewPreset = "lateral" | "superior" | "frontal";
+
+export interface RenderOptions {
+	mode: ViewMode;
+	showCortex: boolean;
+	nodeSize: number;
+	hubLabels: boolean;
+	/** Soft halo around the nodes. */
+	glow: boolean;
+	/** Signals running along the links of the note under the mouse. */
+	hoverPulses: boolean;
+	/** Slow signals traveling through the brain at all times. */
+	ambientPulses: boolean;
+	ambientCount: number;
+	/** Subtle activity wave and breathing when nobody is interacting. */
+	idleAnimation: boolean;
+	/**
+	 * Semi-transparent brain surface (notes outside, links arcing) or
+	 * transparent point cloud (notes inside the cortex, links diving toward the center).
+	 */
+	surface: boolean;
+	/** Depth of field: what is behind the brain center becomes blurred and dimmed. */
+	dof: boolean;
+	/** At rest, the camera slowly orbits the brain. */
+	idleOrbit: boolean;
+}
+
+/** User-chosen colors (hex), on top of the palette. The node color wins over the region color. */
+export type ColorOverrides = Map<number, string>;
+
+const NO_OVERRIDES: ColorOverrides = new Map();
+
+export interface RendererCallbacks {
+	onNodeClick?: (index: number, evt: MouseEvent) => void;
+	/** Performance meter: called ~2x per second while frames are being drawn. */
+	onStats?: (fps: number) => void;
+	/** The layout finished settling (`moved` = false if everything came ready from cache). */
+	onLayoutSettled?: (moved: boolean) => void;
+	/** Entered/left the "resting screen" (so the view can fade the UI). */
+	onRestChange?: (resting: boolean) => void;
+}
+
+const TARGET = new Vector3(0, -0.08, 0);
+const PRESETS: Record<ViewPreset, [number, number, number]> = {
+	lateral: [1, 0.08, 0.02],
+	superior: [0, 1, -0.01],
+	frontal: [0.02, 0.08, 1],
+};
+const CAMERA_DISTANCE = 3.5;
+const ORTHO_HALF_HEIGHT = 1.15;
+/** Segments per edge: long links curve toward the center (white matter). */
+const EDGE_SEGMENTS = 6;
+/** Center used for arcs between hemispheres (they pass over the fissure). */
+const MIDLINE = [0, HEMI_CENTER[1], HEMI_CENTER[2]];
+/** Cloud mode: long links dive toward this point (white matter). */
+const FIBER_CENTER = [0, 0.05, -0.1];
+/**
+ * The layout keeps notes just above the surface. In cloud mode they are pulled toward the center
+ * when drawing (they end up inside the cortex / cerebellum); saved positions do not change.
+ */
+const CLOUD_CORTEX_SCALE = 0.88;
+const CLOUD_CEREB_SCALE = 0.7;
+/** Brain surface opacity: keeps the back side slightly visible. */
+const SURFACE_OPACITY = 0.85;
+
+const SURFACE_VERT = /* glsl */ `
+attribute vec3 aColor;
+uniform float uOrtho;
+varying vec3 vNormal;
+varying vec3 vView;
+varying vec3 vColor;
+void main() {
+	vec4 mv = modelViewMatrix * vec4(position, 1.0);
+	vNormal = normalize(normalMatrix * normal);
+	vView = uOrtho > 0.5 ? vec3(0.0, 0.0, 1.0) : normalize(-mv.xyz);
+	vColor = aColor;
+	gl_Position = projectionMatrix * mv;
+}`;
+
+// "Headlight" shading (light coming from the camera) + soft edge rim: adds volume without scene lights.
+const SURFACE_FRAG = /* glsl */ `
+uniform float uOpacity;
+uniform float uRim;
+uniform vec3 uRimColor;
+varying vec3 vNormal;
+varying vec3 vView;
+varying vec3 vColor;
+void main() {
+	float ndv = abs(dot(normalize(vNormal), normalize(vView)));
+	vec3 c = vColor * (0.45 + 0.8 * ndv) + uRimColor * pow(1.0 - ndv, 2.5) * 0.5 * uRim;
+	gl_FragColor = vec4(c, uOpacity);
+}`;
+
+/** Framebuffer pixel cap (~1080p). Above that, fill cost grows without visible gain. */
+const PIXEL_BUDGET = 1.6e6;
+const MAX_POINT_PX = 28;
+/** Halo cap in px: limits fill cost when zoomed in. */
+const MAX_HALO_PX = 60;
+/** Hover pulses: at most one per link, up to this limit (most connected neighbors first). */
+const MAX_HOVER_PULSES = 40;
+/** Points per pulse: head + short trail. */
+const PULSE_TRAIL = 4;
+const TRAIL_STEP = 0.06;
+/** Links per second traveled by a pulse. */
+const PULSE_SPEED = 0.25;
+/** Ambient pulse limit (geometry is allocated once with this size). */
+const AMBIENT_MAX = 150;
+/** When only ambient pulses animate, draw at most ~30 fps (steady pace, half the cost). */
+const AMBIENT_FRAME_MS = 31;
+/** Ambient pulse intensity (more discreet than hover pulses). */
+const AMBIENT_INTENSITY = 0.45;
+/** Time without interaction until the resting animation starts. */
+const IDLE_DELAY_MS = 1500;
+/** Resting orbit: rad/s (~90 s per revolution). */
+const IDLE_ORBIT_SPEED = 0.07;
+/** Interval between chain reactions on the resting screen (s). */
+const BURST_MIN_S = 2.5;
+const BURST_MAX_S = 5;
+/** Generations of a chain reaction (how many times neighbors relay the signal). */
+const BURST_GENERATIONS = 2;
+/** Goal: never below 20 fps. The governor lowers resolution when a frame exceeds that. */
+const SLOW_FRAME_MS = 50;
+
+const VERT = /* glsl */ `
+attribute vec3 aColor;
+attribute float aSize;
+attribute float aHighlight;
+attribute float aFlash;
+attribute float aAlpha;
+uniform float uScale;
+uniform float uPixelRatio;
+uniform float uOrtho;
+uniform float uFocus;
+uniform float uMinSize;
+uniform float uMaxSize;
+uniform float uSizeScale;
+uniform float uTime;
+uniform float uIdle;
+uniform float uWave;
+uniform float uDof;
+uniform float uDofNear;
+uniform float uDofFar;
+uniform float uLodCull;
+uniform vec3 uBg;
+uniform vec3 uFlash;
+varying vec3 vColor;
+varying float vDim;
+varying float vBlur;
+varying float vAlpha;
+void main() {
+	vec4 mv = modelViewMatrix * vec4(position, 1.0);
+	gl_Position = projectionMatrix * mv;
+	// Approximate depth of field: 0 = in focus (front), 1 = heavily blurred (back of the brain).
+	vBlur = uDof * smoothstep(uDofNear, uDofFar, -mv.z);
+	float px = uOrtho > 0.5 ? aSize * uScale : aSize * uScale / max(-mv.z, 0.001);
+	// Activity wave (resting): narrow band sweeping the brain from back to front.
+	float wave = pow(0.5 + 0.5 * sin(uTime * 0.55 - position.z * 2.2 - position.y * 0.8), 4.0) * uIdle * uWave;
+	px *= (1.0 + aHighlight * 0.5) * uSizeScale * (1.0 + wave * 0.45 + aFlash * 0.9);
+	gl_PointSize = clamp(px, uMinSize, uMaxSize) * (1.0 + vBlur * 1.6) * uPixelRatio;
+	// LOD: halos and pulses in the blurred background are not drawn (zero fill cost).
+	if (uLodCull > 0.5 && vBlur > 0.6) {
+		gl_PointSize = 0.0;
+		gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+	}
+	vDim = uFocus * (1.0 - step(0.5, aHighlight));
+	vAlpha = aAlpha;
+	vColor = mix(mix(aColor, uBg, vDim * 0.8), uFlash, clamp(wave * 0.55 + aFlash * 0.6, 0.0, 1.0));
+}`;
+
+const FRAG = /* glsl */ `
+uniform vec3 uBg;
+uniform float uRing;
+varying vec3 vColor;
+varying float vBlur;
+void main() {
+	float r = length(gl_PointCoord - 0.5) * 2.0;
+	// In focus: sharp disk with a dark ring. Blurred: wide, diffuse edge pulling toward the background.
+	// Bokeh: blurred becomes a larger disk, low and uniform opacity, with a soft edge.
+	float edge = mix(0.12, 0.3, vBlur);
+	float a = 1.0 - smoothstep(1.0 - edge, 1.0, r);
+	if (a < 0.03) discard;
+	vec3 col = (r > 0.75 && vBlur < 0.35) ? vColor * uRing : vColor;
+	col = mix(col, uBg, vBlur * 0.6);
+	gl_FragColor = vec4(col, a * mix(1.0, 0.32, vBlur));
+}`;
+
+/**
+ * Halo: soft falloff from center to edge. Disappears when the node is out of focus.
+ * In dark mode it is added to the scene (additive); in light mode it is a translucent aura and pulses fade through transparency.
+ */
+const HALO_FRAG = /* glsl */ `
+uniform float uIntensity;
+uniform float uBreath;
+uniform float uGain;
+varying vec3 vColor;
+varying float vDim;
+varying float vBlur;
+varying float vAlpha;
+void main() {
+	float d = length(gl_PointCoord - 0.5) * 2.0;
+	if (d > 1.0) discard;
+	float a = (1.0 - d) * (1.0 - d) * uIntensity * (1.0 + uBreath) * (1.0 - vDim * 0.85) * (1.0 - vBlur) * uGain * vAlpha;
+	gl_FragColor = vec4(vColor, a);
+}`;
+
+function pointMaterial(minSize: number, depthWrite: boolean): ShaderMaterial {
+	return new ShaderMaterial({
+		uniforms: {
+			uScale: { value: 1 },
+			uPixelRatio: { value: 1 },
+			uOrtho: { value: 0 },
+			uFocus: { value: 0 },
+			uMinSize: { value: minSize },
+			uMaxSize: { value: MAX_POINT_PX },
+			uSizeScale: { value: 1 },
+			uTime: { value: 0 },
+			uIdle: { value: 0 },
+			uWave: { value: 0 },
+			uDof: { value: 0 },
+			uDofNear: { value: 3 },
+			uDofFar: { value: 4 },
+			uLodCull: { value: 0 },
+			uBg: { value: new Color() },
+			uFlash: { value: new Color() },
+			uRing: { value: 0.6 },
+		},
+		vertexShader: VERT,
+		fragmentShader: FRAG,
+		transparent: true,
+		depthWrite,
+	});
+}
+
+/** Soft additive points for pulses (same shader as the halo, without enlargement). */
+function pulseMaterial(): ShaderMaterial {
+	const m = haloMaterial();
+	m.uniforms.uSizeScale.value = 1;
+	m.uniforms.uMinSize.value = 3;
+	m.uniforms.uMaxSize.value = 26;
+	m.uniforms.uIntensity.value = 0.75;
+	return m;
+}
+
+function haloMaterial(): ShaderMaterial {
+	const m = pointMaterial(7, false);
+	m.fragmentShader = HALO_FRAG;
+	m.uniforms.uSizeScale.value = 2.3;
+	m.uniforms.uMaxSize.value = MAX_HALO_PX;
+	m.uniforms.uIntensity = { value: 0.2 };
+	m.uniforms.uGain = { value: 1 };
+	m.uniforms.uBreath = { value: 0 };
+	m.transparent = true;
+	return m;
+}
+
+function pointGeometry(positions: Float32Array, colors: Float32Array, size: Float32Array): BufferGeometry {
+	const geo = new BufferGeometry();
+	geo.setAttribute("position", new BufferAttribute(positions, 3));
+	geo.setAttribute("aColor", new BufferAttribute(colors, 3));
+	geo.setAttribute("aSize", new BufferAttribute(size, 1));
+	geo.setAttribute("aHighlight", new BufferAttribute(new Float32Array(positions.length / 3), 1));
+	geo.setAttribute("aFlash", new BufferAttribute(new Float32Array(positions.length / 3), 1));
+	geo.setAttribute("aAlpha", new BufferAttribute(new Float32Array(positions.length / 3).fill(1), 1));
+	return geo;
+}
+
+/**
+ * Lean renderer: draws only when something changes (camera, hover, layout converging).
+ * When idle, it consumes neither GPU nor CPU.
+ */
+export class BrainRenderer {
+	private readonly renderer: WebGLRenderer;
+	private readonly scene = new Scene();
+	private readonly persp = new PerspectiveCamera(40, 1, 0.05, 50);
+	private readonly ortho = new OrthographicCamera(-1, 1, 1, -1, 0.05, 50);
+	private controls!: OrbitControls;
+	private readonly labelLayer: HTMLDivElement;
+	private readonly labelPool: HTMLDivElement[] = [];
+
+	private readonly shell: Points;
+	/** Uncolored anatomy (the theme paints it), kept to repaint when the theme changes. */
+	private readonly shellData: Shell;
+	private readonly meshData: SurfaceMesh[] = [];
+	private readonly shellMat = pointMaterial(1, true);
+	private readonly surfaces: Mesh[] = [];
+	private readonly surfaceMat = new ShaderMaterial({
+		uniforms: {
+			uOrtho: { value: 0 },
+			uOpacity: { value: SURFACE_OPACITY },
+			uRim: { value: 1 },
+			uRimColor: { value: new Color() },
+		},
+		vertexShader: SURFACE_VERT,
+		fragmentShader: SURFACE_FRAG,
+		side: DoubleSide,
+		transparent: true,
+		depthWrite: true,
+	});
+	private readonly cerebCenter = cerebellumCenter();
+	private readonly fog = new Fog(0x000000, 3, 4);
+	private readonly nodeMat = pointMaterial(2.5, true);
+	private readonly haloMat = haloMaterial();
+	private readonly edgeMat = new LineBasicMaterial({
+		vertexColors: true,
+		transparent: true,
+		opacity: 0.55,
+		depthWrite: true,
+	});
+
+	private graph?: GraphCore;
+	private layout?: BrainLayout;
+	private nodes?: Points;
+	/** Display positions (layout adjusted to surface/cloud mode). */
+	private view = new Float32Array(0);
+	/** Shares the node geometry; only the material changes. */
+	private halo?: Points;
+	private readonly pulseMat = pulseMaterial();
+	private readonly pulses: Points;
+	/** Edge, direction (1 = travels from b to a) and phase of each active pulse. */
+	private readonly pulseEdge = new Int32Array(MAX_HOVER_PULSES);
+	private readonly pulseDir = new Uint8Array(MAX_HOVER_PULSES);
+	private readonly pulseT = new Float32Array(MAX_HOVER_PULSES);
+	private pulseCount = 0;
+	private readonly ambientMat = pulseMaterial();
+	private readonly ambient: Points;
+	private readonly ambEdge = new Int32Array(AMBIENT_MAX);
+	private readonly ambDir = new Uint8Array(AMBIENT_MAX);
+	private readonly ambT = new Float32Array(AMBIENT_MAX);
+	private readonly ambSpeed = new Float32Array(AMBIENT_MAX);
+	private ambCount = 0;
+	/** Live (visible) pulse and remaining generation (0 = ordinary ambient pulse; >0 = chain reaction). */
+	private readonly ambAlive = new Uint8Array(AMBIENT_MAX);
+	private readonly ambGen = new Uint8Array(AMBIENT_MAX);
+	private burstTimer = BURST_MIN_S;
+	private burstCursor = 0;
+	/** Brightness of each neuron (nodes' aFlash attribute) and the target it chases. */
+	private flash: Float32Array = new Float32Array(0);
+	private flashTarget = new Float32Array(0);
+	private resting = false;
+	private ambLast = 0;
+	private readonly ambRng = mulberry32(11);
+	private readonly ambColor = new Color();
+	/** Frame requested by interaction/change (draw immediately) vs. animation continuation (can wait for the 30 fps pace). */
+	private urgent = true;
+	private lastRender = 0;
+	/** 0 = interacting, 1 = at rest (smooth transition). */
+	private idleMix = 0;
+	private idleTime = 0;
+	private idleLast = 0;
+	private lastInteraction = 0;
+	private pulseLast = 0;
+	private readonly pulseColor = new Color();
+	private edges?: LineSegments;
+	/** Color of each region (index + 1; 0 = orphans) in the shaders and links. */
+	private colors: Color[] = [];
+	private edgeColors: Color[] = [];
+	private overrides: ColorOverrides = NO_OVERRIDES;
+	/** Color of each node in the shaders (screen values) and links (linear), including user colors. */
+	private nodeRGB = new Float32Array(0);
+	private nodeEdgeRGB = new Float32Array(0);
+	private edgeBase = new Float32Array(0);
+	private edgeCtrl = new Float32Array(0);
+	private edgeFocus = new Float32Array(0);
+	private edgeLen = new Float32Array(0);
+	private hubs: number[] = [];
+
+	private fit = 1;
+	private hover = -1;
+	private active = -1;
+	private search: number[] = [];
+	/** Region highlighted by the legend (from most connected to least). */
+	private highlight: number[] = [];
+	private labelSet: { i: number; cls: string }[] = [];
+
+	private width = 1;
+	private height = 1;
+	/** Resolution multiplier adjusted by the fps governor. */
+	private quality = 1;
+	private slowFrames = 0;
+	private mouseX = 0;
+	private mouseY = 0;
+	private mouseInside = false;
+	private pickDirty = false;
+	private dragging = false;
+	private downX = 0;
+	private downY = 0;
+	private raf = 0;
+	/** Window where the frame was requested (the canvas may be in a detached window). */
+	private rafWin: Window = window;
+	private lastFrame = 0;
+	private disposed = false;
+	private visible = true;
+	private readonly observer: IntersectionObserver;
+	private readonly tmp = new Vector3();
+	private readonly viewProj = new Matrix4();
+	private readonly pt = [0, 0, 0];
+	private statStart = 0;
+	private statFrames = 0;
+	private statLast = 0;
+
+	constructor(
+		private readonly container: HTMLElement,
+		private opts: RenderOptions,
+		private readonly callbacks: RendererCallbacks = {},
+		private theme: BrainTheme = darkTheme(),
+	) {
+		this.renderer = new WebGLRenderer({ antialias: false, alpha: false, stencil: false });
+		this.applyTheme();
+		container.appendChild(this.renderer.domElement);
+
+		this.labelLayer = document.createElement("div");
+		this.labelLayer.className = "brain-graph-labels";
+		container.appendChild(this.labelLayer);
+
+		const shell = (this.shellData = sampleShell(mulberry32(3)));
+		const shellSize = new Float32Array(shell.positions.length / 3).fill(0.007);
+		this.shell = new Points(pointGeometry(shell.positions, shellColors(shell, this.theme), shellSize), this.shellMat);
+		this.shell.frustumCulled = false;
+		this.shell.renderOrder = 0;
+		// Resting wave intensity per layer: anatomical landmarks slightly more than nodes.
+		this.shellMat.uniforms.uWave.value = 2.0;
+		this.nodeMat.uniforms.uWave.value = 1.0;
+		this.haloMat.uniforms.uWave.value = 1.2;
+		for (const m of [this.haloMat, this.pulseMat, this.ambientMat]) m.uniforms.uLodCull.value = 1;
+
+		// Almost opaque surface. Draw order: nodes and links (write depth) -> surface
+		// (covers 85% of what is behind it) -> halos and pulses (those behind are hidden).
+		for (const m of anatomyMeshes()) {
+			const geo = new BufferGeometry();
+			geo.setAttribute("position", new BufferAttribute(m.positions, 3));
+			geo.setAttribute("aColor", new BufferAttribute(meshColors(m, this.theme), 3));
+			geo.setIndex(new BufferAttribute(m.indices, 1));
+			geo.computeVertexNormals();
+			const mesh = new Mesh(geo, this.surfaceMat);
+			mesh.renderOrder = 5;
+			this.surfaces.push(mesh);
+			this.meshData.push(m);
+			this.scene.add(mesh);
+		}
+		this.scene.add(this.shell);
+
+		// Pulse geometry allocated once; only the drawn count changes.
+		const pulsePts = MAX_HOVER_PULSES * PULSE_TRAIL;
+		const pulseSize = new Float32Array(pulsePts);
+		for (let p = 0; p < MAX_HOVER_PULSES; p++)
+			for (let k = 0; k < PULSE_TRAIL; k++) pulseSize[p * PULSE_TRAIL + k] = 0.026 * (1 - (k / PULSE_TRAIL) * 0.6);
+		const pulseGeo = pointGeometry(new Float32Array(pulsePts * 3), new Float32Array(pulsePts * 3), pulseSize);
+		(pulseGeo.getAttribute("aHighlight") as BufferAttribute).array.fill(1); // never dimmed by focus
+		this.pulses = new Points(pulseGeo, this.pulseMat);
+		this.pulses.frustumCulled = false;
+		this.pulses.renderOrder = 7;
+		this.scene.add(this.pulses);
+
+		const ambPts = AMBIENT_MAX * PULSE_TRAIL;
+		const ambSize = new Float32Array(ambPts);
+		for (let p = 0; p < AMBIENT_MAX; p++)
+			for (let k = 0; k < PULSE_TRAIL; k++) ambSize[p * PULSE_TRAIL + k] = 0.022 * (1 - (k / PULSE_TRAIL) * 0.6);
+		const ambGeo = pointGeometry(new Float32Array(ambPts * 3), new Float32Array(ambPts * 3), ambSize);
+		(ambGeo.getAttribute("aHighlight") as BufferAttribute).array.fill(1);
+		this.ambientMat.uniforms.uIntensity.value = AMBIENT_INTENSITY;
+		this.ambient = new Points(ambGeo, this.ambientMat);
+		this.ambient.frustumCulled = false;
+		this.ambient.renderOrder = 7;
+		this.scene.add(this.ambient);
+		// Compile the shaders now: otherwise the first hover stutters (~30 ms) compiling the pulse material.
+		this.renderer.compile(this.scene, this.persp);
+		this.pulses.visible = false;
+
+		this.setupControls();
+		this.resize();
+		this.applyPreset("lateral");
+
+		const el = this.renderer.domElement;
+		el.addEventListener("pointermove", this.onPointerMove);
+		el.addEventListener("pointerdown", this.onPointerDown);
+		el.addEventListener("pointerup", this.onPointerUp);
+		el.addEventListener("pointerleave", this.onPointerLeave);
+		document.addEventListener("visibilitychange", this.requestFrame);
+
+		this.observer = new IntersectionObserver((entries) => {
+			this.visible = entries.some((e) => e.isIntersecting);
+			if (this.visible) this.requestFrame();
+		});
+		this.observer.observe(container);
+
+		this.applyOptions();
+	}
+
+	// ---------- Public API ----------
+
+	setGraph(graph: GraphCore, prev?: Map<string, SavedPosition>, overrides: ColorOverrides = NO_OVERRIDES): void {
+		this.graph = graph;
+		this.overrides = overrides;
+		this.setGroupColors();
+		this.computeNodeColors();
+		this.layout = new BrainLayout(graph, prev);
+		this.hover = -1;
+		this.pulseCount = 0;
+		this.buildAmbient();
+		this.search = [];
+		this.highlight = [];
+		this.active = -1;
+		this.buildNodes();
+		this.buildEdges();
+		this.hubs = [...graph.degree.keys()]
+			.filter((i) => graph.degree[i] >= 3)
+			.sort((a, b) => graph.degree[b] - graph.degree[a])
+			.slice(0, 10);
+		this.refreshFocus();
+		this.requestFrame();
+		if (!this.layout.running) queueMicrotask(() => this.callbacks.onLayoutSettled?.(false));
+	}
+
+	/** Current positions by id ([x, y, z, orphan]), to reuse the layout on a rebuild or save it. */
+	positionsById(): Map<string, number[]> {
+		const out = new Map<string, number[]>();
+		if (!this.graph || !this.layout) return out;
+		const pos = this.layout.pos;
+		const group = this.graph.group;
+		this.graph.ids.forEach((id, i) =>
+			out.set(id, [pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2], group[i] < 0 ? 1 : 0]),
+		);
+		return out;
+	}
+
+	setOptions(partial: Partial<RenderOptions>): void {
+		const modeChanged = partial.mode !== undefined && partial.mode !== this.opts.mode;
+		const sizeChanged = partial.nodeSize !== undefined && partial.nodeSize !== this.opts.nodeSize;
+		const ambientChanged =
+			(partial.ambientCount !== undefined && partial.ambientCount !== this.opts.ambientCount) ||
+			(partial.ambientPulses !== undefined && partial.ambientPulses !== this.opts.ambientPulses);
+		const surfaceChanged = partial.surface !== undefined && partial.surface !== this.opts.surface;
+		this.opts = { ...this.opts, ...partial };
+		if (modeChanged) {
+			const dir = this.camera.position.clone().sub(this.controls.target).normalize();
+			this.setupControls();
+			this.placeCamera(dir);
+		}
+		if (sizeChanged) this.buildNodes();
+		if (ambientChanged) this.buildAmbient();
+		if (surfaceChanged) {
+			this.syncView();
+			this.syncEdgePositions();
+		}
+		this.setupPulses();
+		this.applyOptions();
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	/** Switches scene colors without rebuilding layout or geometry. */
+	setTheme(theme: BrainTheme): void {
+		this.theme = theme;
+		this.applyTheme();
+		const shellAttr = this.shell.geometry.getAttribute("aColor") as BufferAttribute;
+		shellColors(this.shellData, theme, shellAttr.array as Float32Array);
+		shellAttr.needsUpdate = true;
+		this.surfaces.forEach((mesh, k) => {
+			const attr = mesh.geometry.getAttribute("aColor") as BufferAttribute;
+			meshColors(this.meshData[k], theme, attr.array as Float32Array);
+			attr.needsUpdate = true;
+		});
+		this.setGroupColors();
+		this.applyNodeColors();
+		this.requestFrame();
+	}
+
+	/** Switches user-chosen colors without rebuilding layout or geometry. */
+	setColorOverrides(overrides: ColorOverrides): void {
+		this.overrides = overrides;
+		this.applyNodeColors();
+		this.requestFrame();
+	}
+
+	/** Color of a region as it appears on screen (for the legend): "#rrggbb". */
+	regionSwatch(group: number): string {
+		const custom = this.overrides.get(group);
+		const c = custom ? customColor(custom) : this.colors[group + 1];
+		if (!c) return "#000000";
+		// Nodes show these values without conversion (in the dark palette, the linear version of the hex).
+		return "#" + c.getHexString(LinearSRGBColorSpace);
+	}
+
+	/** Highlights a set of nodes (legend region); empty clears it. The first ones get labels. */
+	setHighlight(indices: number[]): void {
+		this.highlight = indices;
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	setActive(index: number): void {
+		this.active = index;
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	setSearch(indices: number[]): void {
+		this.search = indices;
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	applyPreset(preset: ViewPreset): void {
+		const [x, y, z] = PRESETS[preset];
+		this.placeCamera(new Vector3(x, y, z).normalize());
+		this.requestFrame();
+	}
+
+	resize(): void {
+		const w = Math.max(1, this.container.clientWidth);
+		const h = Math.max(1, this.container.clientHeight);
+		// Cached: reading clientWidth inside the loop forces a reflow.
+		this.width = w;
+		this.height = h;
+		this.applyResolution();
+		const aspect = w / h;
+		this.persp.aspect = aspect;
+		this.persp.updateProjectionMatrix();
+		// In narrow (portrait) panels, move the camera back so the brain fits the width.
+		this.fit = Math.max(1, 1.15 / aspect);
+		const half = ORTHO_HALF_HEIGHT * this.fit;
+		this.ortho.left = -half * aspect;
+		this.ortho.right = half * aspect;
+		this.ortho.top = half;
+		this.ortho.bottom = -half;
+		this.ortho.updateProjectionMatrix();
+		this.requestFrame();
+	}
+
+	dispose(): void {
+		this.disposed = true;
+		this.rafWin.cancelAnimationFrame(this.raf);
+		this.observer.disconnect();
+		document.removeEventListener("visibilitychange", this.requestFrame);
+		const el = this.renderer.domElement;
+		el.removeEventListener("pointermove", this.onPointerMove);
+		el.removeEventListener("pointerdown", this.onPointerDown);
+		el.removeEventListener("pointerup", this.onPointerUp);
+		el.removeEventListener("pointerleave", this.onPointerLeave);
+		this.controls.dispose();
+		for (const obj of [this.shell, this.nodes, this.edges, ...this.surfaces]) obj?.geometry.dispose();
+		this.surfaceMat.dispose();
+		this.pulses.geometry.dispose();
+		this.ambient.geometry.dispose();
+		this.ambientMat.dispose();
+		for (const m of [this.shellMat, this.nodeMat, this.haloMat, this.pulseMat, this.edgeMat]) m.dispose();
+		this.renderer.dispose();
+		this.renderer.forceContextLoss();
+		el.remove();
+		this.labelLayer.remove();
+	}
+
+	// ---------- Scene ----------
+
+	private get additiveGlow(): boolean {
+		return this.theme.glowBlending === AdditiveBlending;
+	}
+
+	private setGroupColors(): void {
+		const count = this.graph?.groupCount ?? 0;
+		this.colors = Array.from({ length: count + 1 }, (_, k) => groupColor(this.theme, k - 1));
+		// "As seen" palette: links get the linear version so they show the same tone as nodes.
+		this.edgeColors = this.theme.displayPalette
+			? this.colors.map((c) => c.clone().convertSRGBToLinear())
+			: this.colors;
+	}
+
+	/**
+	 * Color of each node: the node's own (rules, frontmatter), the region's picked in the legend, or the palette's.
+	 * Nodes and halos use the screen color; links (LineBasicMaterial, which converts linear -> sRGB) use the linear one.
+	 */
+	private computeNodeColors(): void {
+		const g = this.graph;
+		if (!g) return;
+		const n = g.ids.length;
+		if (this.nodeRGB.length !== n * 3) {
+			this.nodeRGB = new Float32Array(n * 3);
+			this.nodeEdgeRGB = new Float32Array(n * 3);
+		}
+		const custom = new Map<string, [Color, Color]>();
+		for (let i = 0; i < n; i++) {
+			const group = g.group[i];
+			const hex = this.overrides.get(group);
+			let screen = this.colors[group + 1];
+			let edge = this.edgeColors[group + 1];
+			if (hex) {
+				let pair = custom.get(hex);
+				if (!pair) {
+					const c = customColor(hex);
+					pair = [c, c.clone().convertSRGBToLinear()];
+					custom.set(hex, pair);
+				}
+				[screen, edge] = pair;
+			}
+			screen.toArray(this.nodeRGB, i * 3);
+			edge.toArray(this.nodeEdgeRGB, i * 3);
+		}
+	}
+
+	/** Recomputes node colors and repaints nodes, halos, links and pulses. */
+	private applyNodeColors(): void {
+		this.computeNodeColors();
+		if (!this.nodes) return;
+		const attr = this.nodes.geometry.getAttribute("aColor") as BufferAttribute;
+		(attr.array as Float32Array).set(this.nodeRGB);
+		attr.needsUpdate = true;
+		this.fillEdgeBase();
+		this.writeEdgeColors();
+		this.setupPulses();
+	}
+
+	/** Color of both ends of each link (gradient from one region to the other). */
+	private fillEdgeBase(): void {
+		const g = this.graph;
+		if (!g) return;
+		const src = this.nodeEdgeRGB;
+		for (let e = 0; e < g.edges.length / 2; e++) {
+			const a = g.edges[e * 2] * 3;
+			const b = g.edges[e * 2 + 1] * 3;
+			this.edgeBase.set(src.subarray(a, a + 3), e * 6);
+			this.edgeBase.set(src.subarray(b, b + 3), e * 6 + 3);
+		}
+	}
+
+	/** Background, fog, color uniforms and glow blending. */
+	private applyTheme(): void {
+		const t = this.theme;
+		this.renderer.setClearColor(t.bg, 1);
+		this.fog.color.copy(t.bg);
+		this.edgeMat.opacity = t.edgeOpacity;
+		(this.surfaceMat.uniforms.uRimColor.value as Color).copy(t.rim);
+		for (const m of [this.shellMat, this.nodeMat, this.haloMat, this.pulseMat, this.ambientMat]) {
+			(m.uniforms.uBg.value as Color).copy(t.bg);
+			(m.uniforms.uFlash.value as Color).copy(t.flash);
+			m.uniforms.uRing.value = t.nodeRing;
+		}
+		for (const m of [this.haloMat, this.pulseMat, this.ambientMat]) {
+			m.blending = t.glowBlending;
+			m.uniforms.uGain.value = t.glowGain;
+		}
+	}
+
+	private get camera(): PerspectiveCamera | OrthographicCamera {
+		return this.opts.mode === "3d" ? this.persp : this.ortho;
+	}
+
+	/** Resolution = min(DPR, 1, pixel budget) x governor quality. */
+	private applyResolution(): void {
+		const budget = Math.sqrt(PIXEL_BUDGET / (this.width * this.height));
+		const pr = Math.max(0.35, Math.min(window.devicePixelRatio || 1, 1, budget) * this.quality);
+		this.renderer.setPixelRatio(pr);
+		this.renderer.setSize(this.width, this.height);
+	}
+
+	private setupControls(): void {
+		const target = this.controls ? this.controls.target.clone() : TARGET.clone();
+		this.controls?.dispose();
+		const c = new OrbitControls(this.camera, this.renderer.domElement);
+		c.target.copy(target);
+		// No damping: the camera stops the moment the mouse stops (no extra frames).
+		c.enableDamping = false;
+		c.rotateSpeed = 0.7;
+		c.zoomSpeed = 0.9;
+		c.screenSpacePanning = true;
+		if (this.opts.mode === "2d") {
+			c.enableRotate = false;
+			c.mouseButtons = { LEFT: MOUSE.PAN, MIDDLE: MOUSE.DOLLY, RIGHT: MOUSE.PAN };
+			c.touches = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN };
+			c.minZoom = 0.5;
+			c.maxZoom = 12;
+		} else {
+			c.minDistance = 0.5;
+			c.maxDistance = 9;
+		}
+		c.addEventListener("change", this.requestFrame);
+		c.addEventListener("change", this.markInteraction);
+		c.addEventListener("start", this.onControlsStart);
+		c.addEventListener("end", this.onControlsEnd);
+		this.controls = c;
+	}
+
+	private placeCamera(dir: Vector3): void {
+		const cam = this.camera;
+		cam.position.copy(TARGET).addScaledVector(dir, CAMERA_DISTANCE * this.fit);
+		cam.up.set(0, 1, 0);
+		if (cam instanceof OrthographicCamera) {
+			cam.zoom = 1;
+			cam.updateProjectionMatrix();
+		}
+		this.controls.target.copy(TARGET);
+		cam.lookAt(TARGET);
+		this.controls.update();
+	}
+
+	private applyOptions(): void {
+		this.shell.visible = this.opts.showCortex;
+		const surface = this.opts.surface && this.opts.showCortex;
+		for (const m of this.surfaces) m.visible = surface;
+		// With a surface, landmarks and links write depth (the surface does not cover them in front).
+		this.shellMat.depthWrite = surface;
+		this.edgeMat.depthWrite = surface;
+		// Cloud: transparent nodes (diffuse edges) drawn over the links.
+		this.nodeMat.depthWrite = surface;
+		if (this.nodes) this.nodes.renderOrder = surface ? 1 : 3;
+		this.scene.fog = this.opts.dof ? this.fog : null;
+		this.surfaceMat.uniforms.uOrtho.value = this.opts.mode === "2d" ? 1 : 0;
+		const ortho = this.opts.mode === "2d" ? 1 : 0;
+		for (const m of [this.shellMat, this.nodeMat, this.haloMat, this.pulseMat, this.ambientMat]) m.uniforms.uOrtho.value = ortho;
+		if (this.halo) this.halo.visible = this.opts.glow;
+	}
+
+	private buildNodes(): void {
+		const g = this.graph;
+		const layout = this.layout;
+		if (!g || !layout) return;
+		if (this.nodes) {
+			this.scene.remove(this.nodes);
+			if (this.halo) this.scene.remove(this.halo);
+			this.nodes.geometry.dispose();
+		}
+		const n = g.ids.length;
+		const colors = new Float32Array(this.nodeRGB);
+		const sizes = new Float32Array(n);
+		for (let i = 0; i < n; i++) {
+			sizes[i] = Math.min(0.09, 0.018 * this.opts.nodeSize * (0.8 + 0.4 * Math.sqrt(g.degree[i])));
+		}
+		this.view = new Float32Array(n * 3);
+		this.syncView();
+		this.nodes = new Points(pointGeometry(this.view, colors, sizes), this.nodeMat);
+		this.flash = (this.nodes.geometry.getAttribute("aFlash") as BufferAttribute).array as Float32Array;
+		this.flashTarget = new Float32Array(n);
+		this.nodes.frustumCulled = false;
+		this.nodes.renderOrder = this.opts.surface && this.opts.showCortex ? 1 : 3;
+		this.scene.add(this.nodes);
+		this.halo = new Points(this.nodes.geometry, this.haloMat);
+		this.halo.frustumCulled = false;
+		this.halo.renderOrder = 6;
+		this.halo.visible = this.opts.glow;
+		this.scene.add(this.halo);
+	}
+
+	private buildEdges(): void {
+		const g = this.graph;
+		if (!g) return;
+		if (this.edges) {
+			this.scene.remove(this.edges);
+			this.edges.geometry.dispose();
+		}
+		const m = g.edges.length / 2;
+		const verts = m * EDGE_SEGMENTS * 2;
+		this.edgeBase = new Float32Array(m * 6);
+		this.edgeCtrl = new Float32Array(m * 3);
+		this.edgeFocus = new Float32Array(m).fill(1);
+		this.edgeLen = new Float32Array(m);
+		this.fillEdgeBase();
+		const geo = new BufferGeometry();
+		geo.setAttribute("position", new BufferAttribute(new Float32Array(verts * 3), 3));
+		geo.setAttribute("color", new BufferAttribute(new Float32Array(verts * 3), 3));
+		this.edges = new LineSegments(geo, this.edgeMat);
+		this.edges.frustumCulled = false;
+		this.edges.renderOrder = 2;
+		this.scene.add(this.edges);
+		this.syncEdgePositions();
+	}
+
+	// ---------- On-demand loop ----------
+
+	/** Requested by interaction or change: the next frame draws without waiting. */
+	private readonly requestFrame = (): void => {
+		this.urgent = true;
+		if (this.disposed || this.raf) return;
+		this.raf = this.nextFrame();
+	};
+
+	/** Animation continuation: it can be delayed to keep the ~30 fps pace at rest. */
+	private scheduleAnimation(): void {
+		if (this.disposed || this.raf) return;
+		this.raf = this.nextFrame();
+	}
+
+	private nextFrame(): number {
+		this.rafWin = this.renderer.domElement.ownerDocument.defaultView ?? window;
+		return this.rafWin.requestAnimationFrame(this.frame);
+	}
+
+	private readonly onControlsStart = (): void => {
+		this.dragging = true;
+		this.slowFrames = 0;
+		this.lastFrame = 0;
+	};
+
+	private readonly onControlsEnd = (): void => {
+		this.dragging = false;
+		this.pickDirty = true;
+		this.requestFrame();
+	};
+
+	private readonly frame = (now: number): void => {
+		this.raf = 0;
+		if (this.disposed || !this.visible || document.hidden) return;
+		// Only ambient pulses animating (no interaction, layout or hover): hold at ~30 fps.
+		const hoverAnimating = this.pulseCount > 0 && this.hover >= 0 && this.opts.hoverPulses;
+		if (!this.urgent && !this.dragging && !this.layout?.running && !hoverAnimating && now - this.lastRender < AMBIENT_FRAME_MS) {
+			this.raf = this.nextFrame();
+			return;
+		}
+		// Governor: while dragging, if the interval between frames exceeds 50 ms (< 20 fps)
+		// for a few frames in a row, lower the resolution.
+		if (this.dragging && this.lastFrame) {
+			const gap = now - this.lastFrame;
+			this.slowFrames = gap > SLOW_FRAME_MS ? this.slowFrames + 1 : 0;
+			if (this.slowFrames >= 4 && this.quality > 0.4) {
+				this.quality *= 0.8;
+				this.slowFrames = 0;
+				this.applyResolution();
+			}
+		}
+		this.lastFrame = now;
+
+		let keepGoing = false;
+		if (this.layout?.running) {
+			this.layout.stepFor(6);
+			keepGoing = true;
+			this.syncView();
+			this.syncEdgePositions();
+			if (!this.layout.running) this.callbacks.onLayoutSettled?.(true);
+		}
+
+		if (this.pickDirty && !this.dragging) this.pick();
+		if (this.updatePulses(now)) keepGoing = true;
+		if (this.updateAmbient(now)) keepGoing = true;
+		if (this.updateIdle(now)) keepGoing = true;
+		this.updateUniforms();
+		this.renderer.render(this.scene, this.camera);
+		this.updateLabels();
+		this.urgent = false;
+		this.lastRender = now;
+
+		if (keepGoing) this.scheduleAnimation();
+		this.recordStats(now);
+	};
+
+	private recordStats(now: number): void {
+		if (!this.callbacks.onStats) return;
+		// Only measures continuous frame sequences (drag, zoom, layout); a single frame does not count.
+		if (!this.statLast || now - this.statLast > 250) {
+			this.statStart = now;
+			this.statFrames = 0;
+		} else {
+			this.statFrames++;
+		}
+		this.statLast = now;
+		const span = now - this.statStart;
+		if (span >= 500 && this.statFrames > 0) {
+			this.callbacks.onStats((this.statFrames * 1000) / span);
+			this.statStart = now;
+			this.statFrames = 0;
+		}
+	}
+
+	private syncEdgePositions(): void {
+		const g = this.graph;
+		if (!g || !this.edges || !this.layout) return;
+		const attr = this.edges.geometry.getAttribute("position") as BufferAttribute;
+		const out = attr.array as Float32Array;
+		const pos = this.view;
+		const ctrl = this.edgeCtrl;
+		const surface = this.opts.surface;
+		const e = g.edges;
+		const m = e.length / 2;
+		const pt = this.pt;
+		let w = 0;
+		for (let k = 0; k < m; k++) {
+			const a = e[k * 2] * 3;
+			const b = e[k * 2 + 1] * 3;
+			const dx = pos[b] - pos[a];
+			const dy = pos[b + 1] - pos[a + 1];
+			const dz = pos[b + 2] - pos[a + 2];
+			const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+			this.edgeLen[k] = len;
+			if (!surface) {
+				// Cloud: short links stay straight; the longer they are, the more they sink toward the center.
+				const x = Math.min(1, Math.max(0, (len - 0.3) / 0.9));
+				const bend = 0.7 * x * x * (3 - 2 * x);
+				for (let c = 0; c < 3; c++) {
+					const mid = (pos[a + c] + pos[b + c]) * 0.5;
+					ctrl[k * 3 + c] = mid + (FIBER_CENTER[c] - mid) * bend;
+				}
+			} else {
+				// Outward arc: the curve's midpoint sits just above the surface; long links rise a bit more.
+				const mx = (pos[a] + pos[b]) * 0.5;
+				const my = (pos[a + 1] + pos[b + 1]) * 0.5;
+				const mz = (pos[a + 2] + pos[b + 2]) * 0.5;
+				let cx: number, cy: number, cz: number, vx: number, vy: number, vz: number, r: number;
+				if (pos[a] * pos[b] >= 0) {
+					const h = mx >= 0 ? 1 : -1;
+					cx = h * HEMI_CENTER[0];
+					cy = HEMI_CENTER[1];
+					cz = HEMI_CENTER[2];
+					vx = mx - cx;
+					vy = my - cy;
+					vz = mz - cz;
+					const vl = Math.hypot(vx, vy, vz) || 1e-6;
+					vx /= vl;
+					vy /= vl;
+					vz /= vl;
+					r = cortexRadius(h, vx, vy, vz) * 1.035 + 0.04 * len;
+				} else {
+					// Between hemispheres: passes over the longitudinal fissure.
+					cx = MIDLINE[0];
+					cy = MIDLINE[1];
+					cz = MIDLINE[2];
+					vx = mx - cx;
+					vy = my - cy + 0.5;
+					vz = mz - cz;
+					const vl = Math.hypot(vx, vy, vz) || 1e-6;
+					vx /= vl;
+					vy /= vl;
+					vz /= vl;
+					r = 0.7 + 0.05 * len;
+				}
+				// Quadratic Bézier: midpoint = (a + 2c + b) / 4 -> c = 2·target − midpoint.
+				ctrl[k * 3] = 2 * (cx + vx * r) - mx;
+				ctrl[k * 3 + 1] = 2 * (cy + vy * r) - my;
+				ctrl[k * 3 + 2] = 2 * (cz + vz * r) - mz;
+			}
+			for (let s = 0; s < EDGE_SEGMENTS; s++) {
+				this.edgePoint(k, s / EDGE_SEGMENTS, pt);
+				out[w++] = pt[0];
+				out[w++] = pt[1];
+				out[w++] = pt[2];
+				this.edgePoint(k, (s + 1) / EDGE_SEGMENTS, pt);
+				out[w++] = pt[0];
+				out[w++] = pt[1];
+				out[w++] = pt[2];
+			}
+		}
+		attr.needsUpdate = true;
+		this.writeEdgeColors();
+	}
+
+	/** (Re)creates the ambient pulses scattered through the graph. */
+	private buildAmbient(): void {
+		const g = this.graph;
+		const m = g ? g.edges.length / 2 : 0;
+		this.ambCount = m === 0 ? 0 : Math.min(this.opts.ambientCount, AMBIENT_MAX, m);
+		this.ambLast = 0;
+		for (let p = 0; p < this.ambCount; p++) {
+			this.spawnAmbient(p);
+			this.ambT[p] = this.ambRng(); // start scattered, not all together
+			this.ambAlive[p] = this.opts.ambientPulses ? 1 : 0;
+			this.ambGen[p] = 0;
+		}
+	}
+
+	/** Fires a chain-reaction pulse from `node` along edge `e`. */
+	private firePulse(node: number, e: number, gen: number): void {
+		if (this.ambCount === 0) return;
+		const p = this.burstCursor++ % this.ambCount;
+		const g = this.graph!;
+		this.ambEdge[p] = e;
+		this.ambDir[p] = g.edges[e * 2] === node ? 0 : 1;
+		this.ambT[p] = 0;
+		this.ambSpeed[p] = PULSE_SPEED * 1.6;
+		this.ambAlive[p] = 1;
+		this.ambGen[p] = gen;
+	}
+
+	/** Resting screen: every so often a highly connected note fires toward its neighbors. */
+	private maybeBurst(dt: number): void {
+		this.burstTimer -= dt;
+		if (this.burstTimer > 0) return;
+		this.burstTimer = BURST_MIN_S + this.ambRng() * (BURST_MAX_S - BURST_MIN_S);
+		const g = this.graph;
+		if (!g || g.ids.length === 0) return;
+		let node = -1;
+		for (let tries = 0; tries < 8; tries++) {
+			const i = Math.floor(this.ambRng() * g.ids.length);
+			if (g.degree[i] >= 2 && (node < 0 || g.degree[i] > g.degree[node])) node = i;
+		}
+		if (node < 0) return;
+		this.flashTarget[node] = 1;
+		const opts = g.nodeEdges[node];
+		for (let k = 0; k < Math.min(opts.length, 5); k++) this.firePulse(node, opts[k], BURST_GENERATIONS);
+	}
+
+	/** Neuron brightness: fast, smooth attack, slow decay. Returns true if anything is still glowing. */
+	private updateFlash(dt: number): boolean {
+		if (!this.nodes || this.flash.length === 0) return false;
+		const f = this.flash;
+		const target = this.flashTarget;
+		const decay = Math.exp(-dt * 1.6);
+		const attack = Math.min(1, dt * 10);
+		let any = false;
+		for (let i = 0; i < f.length; i++) {
+			if (target[i] < 0.003 && f[i] < 0.003) continue;
+			target[i] *= decay;
+			f[i] += (target[i] - f[i]) * attack;
+			if (f[i] < 0.003 && target[i] < 0.003) f[i] = target[i] = 0;
+			any = true;
+		}
+		if (any) (this.nodes.geometry.getAttribute("aFlash") as BufferAttribute).needsUpdate = true;
+		return any;
+	}
+
+	private spawnAmbient(p: number): void {
+		const m = this.graph!.edges.length / 2;
+		this.ambEdge[p] = Math.floor(this.ambRng() * m);
+		this.ambDir[p] = this.ambRng() < 0.5 ? 0 : 1;
+		this.ambT[p] = 0;
+		this.ambSpeed[p] = PULSE_SPEED * (0.7 + this.ambRng() * 0.6);
+	}
+
+	/** Advances ambient pulses. Returns true if more frames are needed. */
+	private updateAmbient(now: number): boolean {
+		const g = this.graph;
+		let alive = 0;
+		for (let p = 0; p < this.ambCount; p++) alive += this.ambAlive[p];
+		const dt = this.ambLast ? Math.max(0, Math.min(0.05, (now - this.ambLast) / 1000)) : 0;
+		this.ambLast = now;
+		if (g && this.idleMix > 0.6) this.maybeBurst(dt);
+		const flashing = this.updateFlash(dt);
+		const active = !!g && this.ambCount > 0 && (this.opts.ambientPulses || alive > 0);
+		this.ambient.visible = active;
+		if (!active) return flashing;
+		const geo = this.ambient.geometry;
+		const pArr = (geo.getAttribute("position") as BufferAttribute).array as Float32Array;
+		const cArr = (geo.getAttribute("aColor") as BufferAttribute).array as Float32Array;
+		const aArr = (geo.getAttribute("aAlpha") as BufferAttribute).array as Float32Array;
+		const additive = this.additiveGlow;
+		const col = this.ambColor;
+		const pt = this.pt;
+		for (let p = 0; p < this.ambCount; p++) {
+			if (!this.ambAlive[p]) {
+				const o = p * PULSE_TRAIL * 3;
+				cArr.fill(0, o, o + PULSE_TRAIL * 3);
+				aArr.fill(0, p * PULSE_TRAIL, (p + 1) * PULSE_TRAIL);
+				continue;
+			}
+			this.ambT[p] += this.ambSpeed[p] * dt;
+			if (this.ambT[p] >= 1) {
+				const e = this.ambEdge[p];
+				const target = g.edges[e * 2 + (this.ambDir[p] ? 0 : 1)];
+				const options = g.nodeEdges[target];
+				const gen = this.ambGen[p];
+				// Arrived: the neuron flickers (strong in a chain reaction, slightly in an ordinary pulse).
+				this.flashTarget[target] = Math.min(1, this.flashTarget[target] + (gen > 0 ? 0.9 : 0.3));
+				if (gen > 1) {
+					// Chain reaction: relays to one more neighbor and this pulse continues along another (~15 pulses per reaction).
+					let fired = 0;
+					for (const next of options) {
+						if (next === e || fired >= 1) continue;
+						this.firePulse(target, next, gen - 1);
+						fired++;
+					}
+				}
+				if (gen > 0) this.ambGen[p] = gen - 1;
+				if (gen === 1 && !this.opts.ambientPulses) {
+					this.ambAlive[p] = 0; // end of the chain and ambient pulses off: disappear
+					continue;
+				}
+				// Continue to another link of the arrival neuron (or restart elsewhere).
+				if (options.length > 1 && this.ambRng() < 0.7) {
+					let next = options[Math.floor(this.ambRng() * options.length)];
+					if (next === e) next = options[(options.indexOf(e) + 1) % options.length];
+					this.ambEdge[p] = next;
+					this.ambDir[p] = g.edges[next * 2] === target ? 0 : 1;
+					this.ambT[p] = 0;
+				} else if (this.opts.ambientPulses) this.spawnAmbient(p);
+				else {
+					this.ambAlive[p] = 0;
+					continue;
+				}
+			}
+			const e = this.ambEdge[p];
+			const dir = this.ambDir[p];
+			const head = this.ambT[p];
+			col.fromArray(this.nodeRGB, g.edges[e * 2 + 1 - dir] * 3).lerp(this.theme.pulseTint, this.ambGen[p] > 0 ? 0.6 : 0.35);
+			if (this.ambGen[p] > 0 && additive) col.multiplyScalar(1.5); // chain reaction: brighter
+			const env = Math.sin(Math.PI * head);
+			for (let k = 0; k < PULSE_TRAIL; k++) {
+				const o = (p * PULSE_TRAIL + k) * 3;
+				const t = head - k * TRAIL_STEP;
+				if (t < 0) {
+					cArr[o] = cArr[o + 1] = cArr[o + 2] = 0;
+					aArr[p * PULSE_TRAIL + k] = 0;
+					continue;
+				}
+				const eased = t * t * (3 - 2 * t);
+				this.edgePoint(e, dir ? 1 - eased : eased, pt);
+				pArr[o] = pt[0];
+				pArr[o + 1] = pt[1];
+				pArr[o + 2] = pt[2];
+				// Additive: fades through color. Normal: full color, fades through transparency.
+				const fade = env * (1 - k / PULSE_TRAIL);
+				const cf = additive ? fade : 1;
+				cArr[o] = col.r * cf;
+				cArr[o + 1] = col.g * cf;
+				cArr[o + 2] = col.b * cf;
+				aArr[p * PULSE_TRAIL + k] = additive ? 1 : fade;
+			}
+		}
+		geo.setDrawRange(0, this.ambCount * PULSE_TRAIL);
+		(geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
+		(geo.getAttribute("aColor") as BufferAttribute).needsUpdate = true;
+		(geo.getAttribute("aAlpha") as BufferAttribute).needsUpdate = true;
+		return true;
+	}
+
+	/** Sets up one pulse per link of the note under the mouse (most connected neighbors first). */
+	private setupPulses(): void {
+		this.pulseCount = 0;
+		this.pulseLast = 0;
+		const g = this.graph;
+		if (!g || this.hover < 0 || !this.opts.hoverPulses) return;
+		const h = this.hover;
+		const edges = [...g.nodeEdges[h]]
+			.sort((a, b) => g.degree[g.edges[b * 2] ^ g.edges[b * 2 + 1] ^ h] - g.degree[g.edges[a * 2] ^ g.edges[a * 2 + 1] ^ h])
+			.slice(0, MAX_HOVER_PULSES);
+		edges.forEach((e, p) => {
+			this.pulseEdge[p] = e;
+			this.pulseDir[p] = g.edges[e * 2] === h ? 0 : 1; // always leaving the note under the mouse
+			this.pulseT[p] = (p * 0.37) % 1; // spread phases: they do not all leave together
+		});
+		this.pulseCount = edges.length;
+		this.pulseColor.fromArray(this.nodeRGB, h * 3).lerp(this.theme.pulseTint, 0.45);
+	}
+
+	/** Advances pulses. Returns true if more frames are needed. */
+	private updatePulses(now: number): boolean {
+		const active = this.pulseCount > 0 && this.hover >= 0 && !this.dragging && this.opts.hoverPulses;
+		this.pulses.visible = active;
+		if (!active) return false;
+		const dt = this.pulseLast ? Math.max(0, Math.min(0.05, (now - this.pulseLast) / 1000)) : 0;
+		this.pulseLast = now;
+		const geo = this.pulses.geometry;
+		const pArr = (geo.getAttribute("position") as BufferAttribute).array as Float32Array;
+		const cArr = (geo.getAttribute("aColor") as BufferAttribute).array as Float32Array;
+		const aArr = (geo.getAttribute("aAlpha") as BufferAttribute).array as Float32Array;
+		const additive = this.additiveGlow;
+		const col = this.pulseColor;
+		const pt = this.pt;
+		for (let p = 0; p < this.pulseCount; p++) {
+			this.pulseT[p] = (this.pulseT[p] + PULSE_SPEED * dt) % 1;
+			const head = this.pulseT[p];
+			const env = Math.sin(Math.PI * head); // appears on leaving, fades on arrival
+			for (let k = 0; k < PULSE_TRAIL; k++) {
+				const o = (p * PULSE_TRAIL + k) * 3;
+				const t = head - k * TRAIL_STEP;
+				if (t < 0) {
+					cArr[o] = cArr[o + 1] = cArr[o + 2] = 0; // additive: color 0 = invisible
+					aArr[p * PULSE_TRAIL + k] = 0;
+					continue;
+				}
+				// Easing: accelerates when leaving the note and decelerates when reaching the neighbor.
+				const eased = t * t * (3 - 2 * t);
+				this.edgePoint(this.pulseEdge[p], this.pulseDir[p] ? 1 - eased : eased, pt);
+				pArr[o] = pt[0];
+				pArr[o + 1] = pt[1];
+				pArr[o + 2] = pt[2];
+				// Additive: fades through color. Normal: full color, fades through transparency.
+				const fade = env * (1 - k / PULSE_TRAIL);
+				const cf = additive ? fade : 1;
+				cArr[o] = col.r * cf;
+				cArr[o + 1] = col.g * cf;
+				cArr[o + 2] = col.b * cf;
+				aArr[p * PULSE_TRAIL + k] = additive ? 1 : fade;
+			}
+		}
+		geo.setDrawRange(0, this.pulseCount * PULSE_TRAIL);
+		(geo.getAttribute("position") as BufferAttribute).needsUpdate = true;
+		(geo.getAttribute("aColor") as BufferAttribute).needsUpdate = true;
+		(geo.getAttribute("aAlpha") as BufferAttribute).needsUpdate = true;
+		return true;
+	}
+
+	/** Copies the layout to display positions, pulling them toward the center in cloud mode. */
+	private syncView(): void {
+		const g = this.graph;
+		const layout = this.layout;
+		if (!g || !layout || this.view.length !== layout.pos.length) return;
+		const src = layout.pos;
+		const out = this.view;
+		if (this.opts.surface) out.set(src);
+		else {
+			const [ccx, ccy, ccz] = this.cerebCenter;
+			for (let i = 0; i < g.ids.length; i++) {
+				const o = i * 3;
+				const orphan = g.group[i] < 0;
+				const cx = orphan ? ccx : (src[o] >= 0 ? 1 : -1) * HEMI_CENTER[0];
+				const cy = orphan ? ccy : HEMI_CENTER[1];
+				const cz = orphan ? ccz : HEMI_CENTER[2];
+				const k = orphan ? CLOUD_CEREB_SCALE : CLOUD_CORTEX_SCALE;
+				out[o] = cx + (src[o] - cx) * k;
+				out[o + 1] = cy + (src[o + 1] - cy) * k;
+				out[o + 2] = cz + (src[o + 2] - cz) * k;
+			}
+		}
+		if (this.nodes) (this.nodes.geometry.getAttribute("position") as BufferAttribute).needsUpdate = true;
+	}
+
+	private edgePoint(k: number, t: number, out: number[]): void {
+		const e = this.graph!.edges;
+		const pos = this.view;
+		const a = e[k * 2] * 3;
+		const b = e[k * 2 + 1] * 3;
+		const u = 1 - t;
+		for (let c = 0; c < 3; c++) {
+			out[c] = u * u * pos[a + c] + 2 * u * t * this.edgeCtrl[k * 3 + c] + t * t * pos[b + c];
+		}
+	}
+
+	private writeEdgeColors(): void {
+		if (!this.edges) return;
+		const attr = this.edges.geometry.getAttribute("color") as BufferAttribute;
+		const out = attr.array as Float32Array;
+		const base = this.edgeBase;
+		const gain = this.theme.edgeGain;
+		const m = this.edgeFocus.length;
+		let w = 0;
+		for (let k = 0; k < m; k++) {
+			// Long links more discreet; in focus, highlighted; out of focus, almost background.
+			const f = this.edgeFocus[k];
+			const bg = f < 1 ? this.theme.bg : this.theme.edgeFade;
+			const s = f > 1 ? 1 : Math.min(1, f * Math.max(0.35, Math.min(1, 0.35 / (this.edgeLen[k] + 1e-3))) * 0.6 * gain);
+			for (let v = 0; v < EDGE_SEGMENTS * 2; v++) {
+				const t = ((v + 1) >> 1) / EDGE_SEGMENTS;
+				out[w++] = bg.r + ((base[k * 6] * (1 - t) + base[k * 6 + 3] * t) - bg.r) * s;
+				out[w++] = bg.g + ((base[k * 6 + 1] * (1 - t) + base[k * 6 + 4] * t) - bg.g) * s;
+				out[w++] = bg.b + ((base[k * 6 + 2] * (1 - t) + base[k * 6 + 5] * t) - bg.b) * s;
+			}
+		}
+		attr.needsUpdate = true;
+	}
+
+	/** Enters smoothly after ~1.5 s without interaction and leaves quickly on activity. Returns true if more frames are needed. */
+	private updateIdle(now: number): boolean {
+		const dt = this.idleLast ? Math.max(0, Math.min(0.05, (now - this.idleLast) / 1000)) : 0;
+		this.idleLast = now;
+		const resting = !this.dragging && this.hover < 0 && performance.now() - this.lastInteraction > IDLE_DELAY_MS;
+		const target = this.opts.idleAnimation && resting ? 1 : 0;
+		this.idleMix += (target - this.idleMix) * Math.min(1, dt * (target ? 0.85 : 6));
+		if (this.idleMix < 0.001) this.idleMix = 0;
+		if (this.idleMix > 0) this.idleTime += dt;
+		const breath = this.idleMix * 0.5 * (1 + Math.sin(this.idleTime * 0.9));
+		const nowResting = this.idleMix > 0.5;
+		if (nowResting !== this.resting) {
+			this.resting = nowResting;
+			this.callbacks.onRestChange?.(nowResting);
+		}
+		// Slow orbit: rotates around the brain's vertical axis, with a slight up and down.
+		if (this.opts.idleOrbit && this.opts.mode === "3d" && this.idleMix > 0 && dt > 0) {
+			const cam = this.camera;
+			const t = this.controls.target;
+			const a = dt * IDLE_ORBIT_SPEED * this.idleMix;
+			const ox = cam.position.x - t.x;
+			const oz = cam.position.z - t.z;
+			cam.position.x = t.x + ox * Math.cos(a) - oz * Math.sin(a);
+			cam.position.z = t.z + ox * Math.sin(a) + oz * Math.cos(a);
+			cam.position.y += Math.cos(this.idleTime * 0.2) * 0.03 * dt * this.idleMix;
+			cam.lookAt(t);
+		}
+		for (const m of [this.shellMat, this.nodeMat, this.haloMat]) {
+			m.uniforms.uTime.value = this.idleTime;
+			m.uniforms.uIdle.value = this.idleMix;
+		}
+		this.haloMat.uniforms.uBreath.value = breath * 0.35;
+		this.surfaceMat.uniforms.uRim.value = 1 + breath * 0.3;
+		// Needs frames while the animation is on (rest arrives on its own) or during transition.
+		return this.opts.idleAnimation || this.idleMix > 0;
+	}
+
+	private updateUniforms(): void {
+		const pr = this.renderer.getPixelRatio();
+		const scale =
+			this.opts.mode === "3d"
+				? this.height / (2 * Math.tan((this.persp.fov * Math.PI) / 360))
+				: (this.height * this.ortho.zoom) / (this.ortho.top - this.ortho.bottom);
+		// Focus on the brain center: what is behind it blurs toward the back (~1.1 u later).
+		const focusDist = this.camera.position.distanceTo(this.controls.target);
+		// Blur starts a little before the center and peaks ~0.7 u after it.
+		const near = focusDist - 0.35;
+		const far = focusDist + 0.7;
+		const dof = this.opts.dof ? (this.opts.surface && this.opts.showCortex ? 0.5 : 1) : 0;
+		for (const m of [this.shellMat, this.nodeMat, this.haloMat, this.pulseMat, this.ambientMat]) {
+			m.uniforms.uScale.value = scale;
+			m.uniforms.uPixelRatio.value = pr;
+			m.uniforms.uDof.value = dof;
+			m.uniforms.uDofNear.value = near;
+			m.uniforms.uDofFar.value = far;
+		}
+		this.fog.near = near + 0.1;
+		this.fog.far = far + 0.5;
+	}
+
+	// ---------- Interaction ----------
+
+	private readonly markInteraction = (): void => {
+		this.lastInteraction = performance.now();
+	};
+
+	private readonly onPointerMove = (evt: PointerEvent): void => {
+		this.markInteraction();
+		this.mouseX = evt.offsetX;
+		this.mouseY = evt.offsetY;
+		this.mouseInside = true;
+		if (evt.buttons !== 0) return; // dragging: no picking
+		this.pickDirty = true;
+		this.requestFrame();
+	};
+
+	private readonly onPointerLeave = (): void => {
+		this.mouseInside = false;
+		this.pickDirty = true;
+		this.requestFrame();
+	};
+
+	private readonly onPointerDown = (evt: PointerEvent): void => {
+		this.markInteraction();
+		this.downX = evt.clientX;
+		this.downY = evt.clientY;
+	};
+
+	private readonly onPointerUp = (evt: PointerEvent): void => {
+		const moved = Math.hypot(evt.clientX - this.downX, evt.clientY - this.downY);
+		if (moved >= 5 || this.hover < 0) return;
+		this.callbacks.onNodeClick?.(this.hover, evt);
+	};
+
+	/**
+	 * Interaction LOD: with depth of field in cloud mode, notes in the blurred background do not
+	 * receive hover or labels (only the front half is interactive).
+	 */
+	private isFar(i: number): boolean {
+		if (!this.opts.dof || (this.opts.surface && this.opts.showCortex)) return false;
+		const cam = this.camera.position;
+		const o = i * 3;
+		const d = Math.hypot(this.view[o] - cam.x, this.view[o + 1] - cam.y, this.view[o + 2] - cam.z);
+		return d > cam.distanceTo(this.controls.target) + 0.45;
+	}
+
+	/** Is the node on the side of the brain facing the camera? (Those behind are dimmed by the surface.) */
+	private facesCamera(i: number): boolean {
+		if (!this.opts.showCortex || !this.opts.surface) return true;
+		const pos = this.view;
+		const o = i * 3;
+		let cx: number, cy: number, cz: number;
+		if (this.graph!.group[i] < 0) {
+			[cx, cy, cz] = this.cerebCenter;
+		} else {
+			cx = (pos[o] >= 0 ? 1 : -1) * HEMI_CENTER[0];
+			cy = HEMI_CENTER[1];
+			cz = HEMI_CENTER[2];
+		}
+		const cam = this.camera.position;
+		return (
+			(pos[o] - cx) * (cam.x - pos[o]) + (pos[o + 1] - cy) * (cam.y - pos[o + 1]) + (pos[o + 2] - cz) * (cam.z - pos[o + 2]) >
+			0
+		);
+	}
+
+	private pick(): void {
+		this.pickDirty = false;
+		let best = -1;
+		if (this.mouseInside && this.graph && this.layout) {
+			const cam = this.camera;
+			cam.updateMatrixWorld();
+			this.viewProj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+			const w = this.width;
+			const h = this.height;
+			const pos = this.view;
+			let bestD = 12 * 12;
+			let bestZ = Infinity;
+			for (let i = 0; i < this.graph.ids.length; i++) {
+				this.tmp.fromArray(pos, i * 3).applyMatrix4(this.viewProj);
+				if (this.tmp.z < -1 || this.tmp.z > 1) continue;
+				if (!this.facesCamera(i) || this.isFar(i)) continue;
+				const dx = (this.tmp.x + 1) * 0.5 * w - this.mouseX;
+				const dy = (1 - this.tmp.y) * 0.5 * h - this.mouseY;
+				const d = dx * dx + dy * dy;
+				if (d < bestD - 4 || (d <= bestD + 4 && this.tmp.z < bestZ)) {
+					bestD = Math.min(d, bestD);
+					bestZ = this.tmp.z;
+					best = i;
+				}
+			}
+		}
+		if (best !== this.hover) {
+			this.hover = best;
+			this.setupPulses();
+			this.renderer.domElement.style.cursor = best >= 0 ? "pointer" : "";
+			this.refreshFocus();
+		}
+	}
+
+	private refreshFocus(): void {
+		const g = this.graph;
+		if (!g || !this.nodes || !this.edges) return;
+		const hl = (this.nodes.geometry.getAttribute("aHighlight") as BufferAttribute).array as Float32Array;
+		hl.fill(0);
+		let focus = 0;
+		const labels: { i: number; cls: string }[] = [];
+
+		if (this.hover >= 0) {
+			focus = 1;
+			hl[this.hover] = 1;
+			const nb = [...g.neighbors[this.hover]].sort((a, b) => g.degree[b] - g.degree[a]);
+			for (const j of nb) hl[j] = 0.7;
+			labels.push({ i: this.hover, cls: "is-hover" });
+			for (const j of nb.slice(0, 25)) labels.push({ i: j, cls: "" });
+		} else if (this.highlight.length) {
+			focus = 1;
+			for (const i of this.highlight) hl[i] = 1;
+			for (const i of this.highlight.slice(0, 12)) labels.push({ i, cls: "" });
+		} else if (this.search.length) {
+			focus = 1;
+			for (const i of this.search) hl[i] = 1;
+			for (const i of this.search.slice(0, 30)) labels.push({ i, cls: "" });
+		} else if (this.opts.hubLabels) {
+			for (const i of this.hubs) labels.push({ i, cls: "is-hub" });
+		}
+		if (this.active >= 0 && this.active < hl.length) {
+			hl[this.active] = 1;
+			if (!labels.some((l) => l.i === this.active)) labels.push({ i: this.active, cls: "is-active" });
+		}
+		(this.nodes.geometry.getAttribute("aHighlight") as BufferAttribute).needsUpdate = true;
+		this.nodeMat.uniforms.uFocus.value = focus;
+		this.haloMat.uniforms.uFocus.value = focus;
+		this.ambientMat.uniforms.uIntensity.value = focus ? AMBIENT_INTENSITY * 0.25 : AMBIENT_INTENSITY;
+		this.labelSet = labels;
+
+		const e = g.edges;
+		for (let k = 0; k < e.length / 2; k++) {
+			let s = 1;
+			if (focus && this.hover >= 0) s = e[k * 2] === this.hover || e[k * 2 + 1] === this.hover ? 2 : 0.12;
+			else if (focus) s = hl[e[k * 2]] > 0.5 && hl[e[k * 2 + 1]] > 0.5 ? 2 : 0.12;
+			this.edgeFocus[k] = s;
+		}
+		this.writeEdgeColors();
+	}
+
+	private updateLabels(): void {
+		const g = this.graph;
+		const set = this.labelSet;
+		while (this.labelPool.length < set.length) {
+			const label = document.createElement("div");
+			label.className = "brain-graph-label is-hidden";
+			this.labelLayer.appendChild(label);
+			this.labelPool.push(label);
+		}
+		if (!g || !this.layout) return;
+		const cam = this.camera;
+		for (let k = 0; k < this.labelPool.length; k++) {
+			const el = this.labelPool[k];
+			const item = set[k];
+			if (!item) {
+				el.classList.add("is-hidden");
+				continue;
+			}
+			this.tmp.fromArray(this.view, item.i * 3).project(cam);
+			if (this.tmp.z > 1 || (item.cls !== "is-active" && (!this.facesCamera(item.i) || this.isFar(item.i)))) {
+				el.classList.add("is-hidden");
+				continue;
+			}
+			const text = g.names[item.i];
+			if (el.textContent !== text) el.textContent = text;
+			const cls = "brain-graph-label " + item.cls;
+			if (el.className !== cls) el.className = cls;
+			const x = (this.tmp.x + 1) * 0.5 * this.width;
+			const y = (1 - this.tmp.y) * 0.5 * this.height;
+			el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -150%)`;
+		}
+	}
+}
+
