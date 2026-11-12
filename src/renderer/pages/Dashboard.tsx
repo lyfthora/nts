@@ -23,6 +23,7 @@ import FolderSearchModal from "../components/FolderSearchModal";
 import ConfirmModal from "../components/ConfirmModal";
 import SubscriptionModal from "../components/SubscriptionModal";
 import ProgressToast from "../components/ProgressToast";
+import BrainGraph from "../components/BrainGraph";
 import type { ProgressData } from "../types/models";
 import { apiClient } from "../services/apiClient";
 import { getSubscriptionSummary, getSubscriptionAction, } from "../utils/subscription";
@@ -487,6 +488,9 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
     };
     if (!window.api.saveNoteLocally(durableNote)) {
       showErrorToast("Could not save note locally. Changes may be lost if the app closes.");
+    }
+    if (note.noteType !== "drawing" && note.content !== undefined) {
+      setCachedContent(note.id, note.content, "text");
     }
 
     // Asegurar que no hagamos fetch en segundo plano de lo que acabamos de guardar
@@ -1117,6 +1121,12 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
   }, [loadSubscriptionStatus]);
 
   const onSelect = useCallback((n: Note) => setCurrentId(n.id), []);
+  const handleOpenBrainNote = useCallback((noteId: number) => {
+    setLinkedNoteId(null);
+    setSelectedFolderId(null);
+    setView("all-notes");
+    setCurrentId(noteId);
+  }, []);
   const onMinimize = useCallback(() => window.api.minimizeWindow(), []);
   const onClose = useCallback(() => window.api.closeWindow(), []);
 
@@ -1154,6 +1164,14 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         <WindowBar onMinimize={onMinimize} onClose={onClose} />
         <div className="content-container">
           {!isSettingsView ? (
+            view === "brain" ? (
+              <BrainGraph
+                notes={notes}
+                folders={folders}
+                activeNoteId={currentId}
+                onOpenNote={handleOpenBrainNote}
+              />
+            ) : (
             <>
               {!isFocusMode && (
                 <NotesListPanel
@@ -1209,6 +1227,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                 />
               )}
             </>
+            )
           ) : (
             <div className="settings-content">
               {settingsSection === "account" && (
