@@ -51,6 +51,10 @@ interface SidebarProps {
   folderCounts: Record<number, number>;
   counts: StatusCounts;
   tags: Tag[];
+  /** Tag highlighted in the brain graph, if any. */
+  activeTag?: string | null;
+  /** In the brain view, a tag click filters the graph instead of changing the list view. */
+  onBrainTagChange?: (tag: string | null) => void;
   onNoteDrop?: (noteId: number, targetFolderId: number) => void;
   onFolderDrop?: (folderId: number, targetFolderId: number | null) => void;
   userName: string;
@@ -77,6 +81,8 @@ const Sidebar = memo(function Sidebar({
   onFolderRename,
   counts,
   tags,
+  activeTag,
+  onBrainTagChange,
   onNoteDrop,
   onFolderDrop,
   userName,
@@ -532,21 +538,28 @@ const Sidebar = memo(function Sidebar({
                     transition={{ duration: 0.2, ease: "easeInOut" }}
                     style={{ overflow: "hidden" }}
                   >
-                    {tags.map((t) => (
-                      <a
-                        key={t.name}
-                        href="#"
-                        className={`nav-item nav-nested ${view === `tag-${t.name}` ? "active" : ""}`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          onViewChange(`tag-${t.name}`);
-                        }}
-                      >
-                        <span className="tag-hash">#</span>
-                        <span>{t.name}</span>
-                        <span className="nav-count">{String(t.count)}</span>
-                      </a>
-                    ))}
+                    {tags.map((t) => {
+                      const isActive = view === `tag-${t.name}` || (view === "brain" && activeTag === t.name);
+                      return (
+                        <a
+                          key={t.name}
+                          href="#"
+                          className={`nav-item nav-nested ${isActive ? "active" : ""}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (view === "brain" && onBrainTagChange) {
+                              onBrainTagChange(activeTag === t.name ? null : t.name);
+                            } else {
+                              onViewChange(`tag-${t.name}`);
+                            }
+                          }}
+                        >
+                          <span className="tag-hash">#</span>
+                          <span>{t.name}</span>
+                          <span className="nav-count">{String(t.count)}</span>
+                        </a>
+                      );
+                    })}
                   </motion.div>
                 )}
               </AnimatePresence>
