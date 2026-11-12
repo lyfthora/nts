@@ -27,6 +27,7 @@ test-results/
 playwright.config.ts
 playwright-report/
 test-data-*
+.mock-profile/
 
 # Generated git notes & exports
 exported_git_notes/

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Folder, Note } from "../types/models";
 import { buildGraphCore, type GraphCore, type GroupBy, type GraphNode, type LinkMap } from "../brain/graph-core";
 import { BrainRenderer, type RenderOptions, type ViewPreset } from "../brain/renderer";
-import { LAYOUT_VERSION } from "../brain/layout";
+import { LAYOUT_VERSION, type LayoutAnchors } from "../brain/layout";
 import {
   PALETTE_NAMES,
   matchRegionColors,
@@ -21,10 +21,14 @@ interface BrainGraphProps {
   folders: Folder[];
   activeNoteId?: number | null;
   onOpenNote: (noteId: number) => void;
+  /** Tag highlighted in the graph (null = no tag filter). */
+  activeTag: string | null;
+  onActiveTagChange: (tag: string | null) => void;
 }
 
 interface BrainSettings extends RenderOptions {
   groupBy: GroupBy;
+  folderDepth: number;
   showOrphans: boolean;
   palette: PaletteId;
   regionColors: RegionColor[];
@@ -48,6 +52,7 @@ const DEFAULT_SETTINGS: BrainSettings = {
   dof: true,
   idleOrbit: true,
   groupBy: "links",
+  folderDepth: 1,
   showOrphans: true,
   palette: "nebula",
   regionColors: [],
@@ -116,7 +121,128 @@ function extractLinkTargets(content: string): string[] {
   return targets;
 }
 
-export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }: BrainGraphProps) {
+type Point = [number, number, number];
+
+const pointOf = (position: ArrayLike<number> | undefined): Point | undefined =>
+  position ? [position[0], position[1], position[2]] : undefined;
+
+const distance = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+/**
+ * Incremental depth change: unchanged folder groups stay fixed. A group that splits keeps its
+ * old hub as the parent center, while each new child gets a home near its most connected node.
+ * Groups that merge get homes around the surviving parent center.
+ */
+function buildLayoutAnchors(
+  oldGraph: GraphCore,
+  oldRegions: Region[],
+  oldPositions: Map<string, number[]>,
+  newGraph: GraphCore,
+  newRegions: Region[],
+): LayoutAnchors | null {
+  const oldFolderOfGroup = new Map<number, string>();
+  for (const region of oldRegions) if (region.folder !== undefined) oldFolderOfGroup.set(region.group, region.folder);
+  if (oldFolderOfGroup.size === 0 || !newRegions.some((region) => region.folder !== undefined)) return null;
+
+  const oldByKey = new Map<string, Region>();
+  const oldCenter = new Map<string, Point>();
+  for (const region of oldRegions) {
+    if (region.folder === undefined) continue;
+    oldByKey.set(region.folder, region);
+    const hub = region.members.map((i) => oldPositions.get(oldGraph.ids[i])).find(Boolean);
+    const point = pointOf(hub);
+    if (point) oldCenter.set(region.folder, point);
+  }
+
+  const oldKeyById = new Map<string, string>();
+  oldGraph.ids.forEach((id, i) => {
+    const key = oldFolderOfGroup.get(oldGraph.group[i]);
+    if (key !== undefined) oldKeyById.set(id, key);
+  });
+
+  const childCenter = (region: Region, parent: Point): Point | undefined => {
+    const candidates = region.members
+      .map((i) => ({ point: pointOf(oldPositions.get(newGraph.ids[i])), degree: newGraph.degree[i] }))
+      .filter((item): item is { point: Point; degree: number } => item.point !== undefined)
+      .sort(
+        (a, b) =>
+          b.degree - a.degree ||
+          a.point[0] - b.point[0] ||
+          a.point[1] - b.point[1] ||
+          a.point[2] - b.point[2],
+      );
+    if (candidates.length === 0) return undefined;
+    if (distance(candidates[0].point, parent) >= 0.045) return candidates[0].point;
+    const farthest = [...candidates].sort((a, b) => distance(b.point, parent) - distance(a.point, parent))[0];
+    if (distance(farthest.point, parent) >= 0.045) return farthest.point;
+    // A tiny split (or a single node) at the parent center: push it outward deterministically.
+    const key = region.folder ?? "";
+    let hash = 2166136261;
+    for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+    const angle = ((hash >>> 0) % 360) * (Math.PI / 180);
+    return [parent[0] + Math.cos(angle) * 0.09, parent[1] + Math.sin(angle) * 0.09, parent[2]];
+  };
+
+  const fixed = new Set<string>();
+  const homes = new Map<string, Point>();
+
+  for (const region of newRegions) {
+    const key = region.folder;
+    if (key === undefined) continue;
+
+    for (const i of region.members) {
+      const id = newGraph.ids[i];
+      if (oldKeyById.get(id) === key) fixed.add(id);
+    }
+
+    let center = oldCenter.get(key);
+    if (!center) {
+      const slash = key.lastIndexOf("/");
+      const parent = slash >= 0 ? oldCenter.get(key.slice(0, slash)) : undefined;
+      if (parent) center = childCenter(region, parent);
+    }
+    if (!center) {
+      // Going back up a level: use the largest old descendant as the merge center.
+      const descendant = [...oldCenter.keys()]
+        .filter((folder) => folder.startsWith(`${key}/`))
+        .sort((a, b) => (oldByKey.get(b)?.members.length ?? 0) - (oldByKey.get(a)?.members.length ?? 0))[0];
+      if (descendant) center = oldCenter.get(descendant);
+    }
+    if (!center) {
+      const points = region.members
+        .map((i) => pointOf(oldPositions.get(newGraph.ids[i])))
+        .filter((point): point is Point => point !== undefined);
+      if (points.length) {
+        center = [
+          points.reduce((sum, point) => sum + point[0], 0) / points.length,
+          points.reduce((sum, point) => sum + point[1], 0) / points.length,
+          points.reduce((sum, point) => sum + point[2], 0) / points.length,
+        ];
+      }
+    }
+    if (!center) continue;
+
+    for (const i of region.members) {
+      const id = newGraph.ids[i];
+      if (fixed.has(id)) continue;
+      const old = pointOf(oldPositions.get(id));
+      homes.set(
+        id,
+        old
+          ? [
+              center[0] + (old[0] - center[0]) * 0.55,
+              center[1] + (old[1] - center[1]) * 0.55,
+              center[2] + (old[2] - center[2]) * 0.55,
+            ]
+          : center,
+      );
+    }
+  }
+
+  return { positions: oldPositions, fixed, homes };
+}
+
+export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote, activeTag, onActiveTagChange }: BrainGraphProps) {
   const stageRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<BrainRenderer>();
   const graphRef = useRef<GraphCore>();
@@ -127,7 +253,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
   const [contents, setContents] = useState<Map<number, string> | null>(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [regions, setRegions] = useState<Region[]>([]);
-  const [stats, setStats] = useState({ notes: 0, links: 0, regions: 0 });
+  const [stats, setStats] = useState({ notes: 0, folders: 0, links: 0, regions: 0 });
   const [fps, setFps] = useState(0);
   const [resting, setResting] = useState(false);
   const [legendOpen, setLegendOpen] = useState(false);
@@ -149,13 +275,65 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
   );
   const noteSignature = useMemo(() => textNotes.map((note) => `${note.id}:${note.name}`).join("|"), [textNotes]);
 
+  const tagOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const note of textNotes) {
+      for (const tag of note.tags || []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [textNotes]);
+  const activeTagRef = useRef(activeTag);
+  activeTagRef.current = activeTag;
+
+  // Nodes highlighted by the active tag: matching notes plus their folder ancestors
+  // (or the Inbox node for unfiled notes), so the tag keeps its folder context.
+  const tagIndices = useCallback(
+    (graph: GraphCore) => {
+      const tag = activeTagRef.current;
+      if (!tag) return null;
+      const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+      const selected = new Set<string>();
+      for (const note of textNotes) {
+        if (!(note.tags || []).includes(tag)) continue;
+        selected.add(`note-${note.id}`);
+        let folderId = note.folderId;
+        if (folderId == null || !folderById.has(folderId)) {
+          selected.add("folder-inbox");
+          continue;
+        }
+        const seen = new Set<number>();
+        while (folderId != null && !seen.has(folderId)) {
+          seen.add(folderId);
+          selected.add(`folder-${folderId}`);
+          folderId = folderById.get(folderId)?.parentId ?? null;
+        }
+      }
+      const indices: number[] = [];
+      graph.ids.forEach((id, index) => {
+        if (selected.has(id)) indices.push(index);
+      });
+      return indices;
+    },
+    [folders, textNotes],
+  );
+
+  useEffect(() => {
+    if (activeTag && !tagOptions.some(([tag]) => tag === activeTag)) onActiveTagChange(null);
+  }, [activeTag, tagOptions, onActiveTagChange]);
+
   // Restore saved positions only when they match the current layout version and grouping.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LAYOUT_KEY);
       if (!raw) return;
-      const data = JSON.parse(raw) as { version?: number; groupBy?: string; positions?: Record<string, number[]> };
-      if (data.version !== LAYOUT_VERSION || data.groupBy !== settingsRef.current.groupBy || !data.positions) return;
+      const data = JSON.parse(raw) as { version?: number; groupBy?: string; folderDepth?: number; positions?: Record<string, number[]> };
+      if (
+        data.version !== LAYOUT_VERSION ||
+        data.groupBy !== settingsRef.current.groupBy ||
+        (data.folderDepth ?? 1) !== settingsRef.current.folderDepth ||
+        !data.positions
+      )
+        return;
       savedPositionsRef.current = new Map(Object.entries(data.positions));
     } catch {
       /* ignore a corrupt cache */
@@ -174,6 +352,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
         JSON.stringify({
           version: LAYOUT_VERSION,
           groupBy: settingsRef.current.groupBy,
+          folderDepth: settingsRef.current.folderDepth,
           positions: Object.fromEntries(
             [...positions].map(([id, p]) => [id, [round(p[0]), round(p[1]), round(p[2]), p[3]]]),
           ),
@@ -195,7 +374,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
       {
         onNodeClick: (index) => {
           const id = graphRef.current?.ids[index];
-          if (!id) return;
+          if (!id || !id.startsWith("note-")) return;
           const noteId = Number(id.slice("note-".length));
           if (Number.isFinite(noteId)) onOpenNoteRef.current(noteId);
         },
@@ -272,79 +451,167 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
       const renderer = rendererRef.current;
       if (!renderer || !contents) return;
 
+      // Capture the previous layout before replacing the graph, so a depth change can
+      // keep unchanged groups in place and only move the groups that split or merge.
+      const oldGraph = graphRef.current;
+      const oldRegions = regionsRef.current;
+      const oldPositions = fresh && oldGraph ? renderer.positionsById() : undefined;
+
       const folderPaths = buildFolderPaths(folders);
-      const nodes: GraphNode[] = textNotes.map((note) => {
+      const folderIds = new Set(folders.map((folder) => folder.id));
+      const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+      const folderLevel = (path: string) => path.split("/").filter(Boolean).length;
+      // Only folders up to the selected depth get a node. Hidden deeper folders collapse
+      // into the nearest visible ancestor, so changing depth adds/removes real nodes.
+      const visibleFolder = (id: number | null | undefined): number | null => {
+        let current = id;
+        const seen = new Set<number>();
+        while (current != null && !seen.has(current)) {
+          const folder = folderById.get(current);
+          if (!folder || seen.has(current)) return null;
+          if (folderLevel(folderPaths.get(current) ?? "") <= settingsRef.current.folderDepth) return current;
+          seen.add(current);
+          current = folder.parentId;
+        }
+        return null;
+      };
+      const visibleFolderIds = new Set(
+        folders.filter((folder) => folderLevel(folderPaths.get(folder.id) ?? "") <= settingsRef.current.folderDepth).map((folder) => folder.id),
+      );
+      const noteNodes: GraphNode[] = textNotes.map((note) => {
         const name = (note.name || "Untitled").trim() || "Untitled";
         const folderPath = folderPaths.get(note.folderId ?? -1) || "";
-        return { id: `note-${note.id}`, name, path: folderPath ? `${folderPath}/${name}` : name };
+        return {
+          id: `note-${note.id}`,
+          name,
+          folder: folderPath,
+          path: folderPath ? `${folderPath}/${name}` : name,
+          kind: "note",
+          inbox: !folderPath,
+        };
       });
+      const folderNodes: GraphNode[] = folders
+        .filter((folder) => visibleFolderIds.has(folder.id))
+        .map((folder) => {
+          const path = folderPaths.get(folder.id) || folder.name;
+          return {
+            id: `folder-${folder.id}`,
+            // The full path keeps the parent visible when the label is drawn.
+            name: path ? path.split("/").join(" / ") : folder.name || "Folder",
+            folder: path,
+            path,
+            kind: "folder",
+          };
+        });
+      const unfiled = textNotes.filter((note) => note.folderId == null || !folderIds.has(note.folderId));
+      const inboxNode: GraphNode | null = unfiled.length
+        ? { id: "folder-inbox", name: "Inbox", folder: "", path: "Inbox", kind: "folder", inbox: true }
+        : null;
+      const nodes = [...noteNodes, ...folderNodes, ...(inboxNode ? [inboxNode] : [])];
+      const nodeIds = new Set(nodes.map((node) => node.id));
 
       const byName = new Map<string, string>();
-      for (const node of nodes) {
+      for (const node of noteNodes) {
         const key = node.name.toLowerCase();
         if (!byName.has(key)) byName.set(key, node.id);
       }
 
       const links: LinkMap = {};
-      for (const node of nodes) {
+      const connect = (a: string, b: string) => {
+        if (a === b || !nodeIds.has(a) || !nodeIds.has(b)) return;
+        const row = links[a] || (links[a] = {});
+        row[b] = 1;
+      };
+      for (const node of noteNodes) {
         const noteId = Number(node.id.slice("note-".length));
         const content = contents.get(noteId);
         if (!content) continue;
         for (const targetName of extractLinkTargets(content)) {
           const targetId = byName.get(targetName.toLowerCase());
-          if (!targetId || targetId === node.id) continue;
-          const row = links[node.id] || (links[node.id] = {});
-          row[targetId] = 1;
+          if (!targetId) continue;
+          connect(node.id, targetId);
         }
+      }
+      // Hierarchy: visible parent -> visible subfolder, and each note -> its nearest visible folder.
+      for (const folder of folders) {
+        if (!visibleFolderIds.has(folder.id) || folder.parentId == null) continue;
+        const parent = visibleFolder(folder.parentId);
+        if (parent != null) connect(`folder-${folder.id}`, `folder-${parent}`);
+      }
+      for (const note of textNotes) {
+        const folder = visibleFolder(note.folderId);
+        if (folder != null) connect(`note-${note.id}`, `folder-${folder}`);
+      }
+      if (inboxNode) {
+        for (const note of unfiled) connect(inboxNode.id, `note-${note.id}`);
       }
 
       if (nodes.length === 0) {
         graphRef.current = undefined;
         regionsRef.current = [];
         setRegions([]);
-        setStats({ notes: 0, links: 0, regions: 0 });
+        setStats({ notes: 0, folders: 0, links: 0, regions: 0 });
         return;
       }
 
       const graph = buildGraphCore(nodes, links, {
         groupBy: settingsRef.current.groupBy,
+        folderDepth: settingsRef.current.folderDepth,
         includeOrphans: settingsRef.current.showOrphans,
       });
       graphRef.current = graph;
 
-      const saved = fresh ? undefined : savedPositionsRef.current;
-      savedPositionsRef.current = undefined;
-      const prev = fresh ? undefined : saved ?? renderer.positionsById();
-
-      const nextRegions = regionsOf(graph, settingsRef.current.groupBy);
+      const nextRegions = regionsOf(graph, settingsRef.current.groupBy, settingsRef.current.folderDepth);
       regionsRef.current = nextRegions;
       setRegions(nextRegions);
 
+      const anchors =
+        fresh && oldGraph && oldPositions
+          ? buildLayoutAnchors(oldGraph, oldRegions, oldPositions, graph, nextRegions)
+          : undefined;
+      const saved = fresh ? undefined : savedPositionsRef.current;
+      savedPositionsRef.current = undefined;
+      const prev = fresh ? (anchors ? oldPositions : undefined) : saved ?? renderer.positionsById();
+
       const match = matchRegionColors(graph, nextRegions, settingsRef.current.regionColors, settingsRef.current.groupBy);
-      renderer.setGraph(graph, prev, match.byGroup);
+      renderer.setGraph(graph, prev, match.byGroup, anchors ?? undefined);
+      renderer.setFolderLabelDepth(settingsRef.current.folderDepth);
+      renderer.setTagFilter(tagIndices(graph));
 
       const activeId = activeNoteIdRef.current;
       renderer.setActive(activeId == null ? -1 : graph.ids.indexOf(`note-${activeId}`));
-      setStats({ notes: graph.ids.length, links: graph.edges.length / 2, regions: graph.groupCount });
+      setStats({
+        notes: textNotes.length,
+        folders: folderNodes.length,
+        links: graph.edges.length / 2,
+        regions: graph.groupCount,
+      });
     },
-    [contents, textNotes, folders],
+    [contents, textNotes, folders, tagIndices],
   );
 
-  const lastGroupByRef = useRef(settings.groupBy);
+  const lastGroupKeyRef = useRef(`${settings.groupBy}:${settings.folderDepth}`);
 
   useEffect(() => {
     if (!contents) return;
     // Switching the grouping changes the region structure, so lay it out from scratch.
-    const groupingChanged = lastGroupByRef.current !== settings.groupBy;
-    lastGroupByRef.current = settings.groupBy;
+    const groupKey = `${settings.groupBy}:${settings.folderDepth}`;
+    const groupingChanged = lastGroupKeyRef.current !== groupKey;
+    lastGroupKeyRef.current = groupKey;
     rebuildGraph(groupingChanged);
-  }, [contents, settings.groupBy, settings.showOrphans, rebuildGraph]);
+  }, [contents, settings.groupBy, settings.folderDepth, settings.showOrphans, rebuildGraph]);
 
   useEffect(() => {
     const graph = graphRef.current;
     if (!graph) return;
     rendererRef.current?.setActive(activeNoteId == null ? -1 : graph.ids.indexOf(`note-${activeNoteId}`));
-  }, [activeNoteId, contents, settings.groupBy, settings.showOrphans]);
+  }, [activeNoteId, contents, settings.groupBy, settings.folderDepth, settings.showOrphans]);
+
+  useEffect(() => {
+    const graph = graphRef.current;
+    if (!graph) return;
+    rendererRef.current?.setTagFilter(tagIndices(graph));
+  }, [activeTag, tagIndices]);
 
   const update = useCallback((patch: Partial<BrainSettings>) => {
     setSettings((current) => ({ ...current, ...patch }));
@@ -404,7 +671,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
   }, [legendOpen, regions, settings.regionColors, settings.groupBy, stats]);
 
   const isLoading = contents === null;
-  const isEmpty = contents !== null && textNotes.length === 0;
+  const isEmpty = contents !== null && textNotes.length === 0 && folders.length === 0;
   const percent = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
   const presets: { key: ViewPreset; label: string }[] = [
     { key: "lateral", label: "Side" },
@@ -458,6 +725,42 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
         >
           {settings.groupBy === "links" ? "Links" : "Folders"}
         </button>
+        {settings.groupBy === "folder" && (
+          <select
+            className="brain-graph-depth"
+            aria-label="Folder depth"
+            title="Folder level to group by: 1 = top-level folders, 2 = subfolders, 3–4 = deeper levels"
+            value={settings.folderDepth}
+            onChange={(event) => update({ folderDepth: Number(event.target.value) })}
+          >
+            {[
+              [1, "1 · Roots"],
+              [2, "2 · Subfolders"],
+              [3, "3 · Deeper"],
+              [4, "4 · Deepest"],
+            ].map(([depth, label]) => (
+              <option key={depth} value={depth}>
+                {label}
+              </option>
+            ))}
+          </select>
+        )}
+        {tagOptions.length > 0 && (
+          <select
+            className="brain-graph-tag"
+            aria-label="Filter by tag"
+            title="Highlight notes with this tag"
+            value={activeTag && tagOptions.some(([tag]) => tag === activeTag) ? activeTag : ""}
+            onChange={(event) => onActiveTagChange(event.target.value || null)}
+          >
+            <option value="">All tags</option>
+            {tagOptions.map(([tag, count]) => (
+              <option key={tag} value={tag}>
+                #{tag} ({count})
+              </option>
+            ))}
+          </select>
+        )}
         <button
           className={toggleButton(settings.showOrphans)}
           onClick={() => update({ showOrphans: !settings.showOrphans })}
@@ -483,7 +786,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
           }}
         />
         <div className="brain-graph-stats">
-          {stats.notes} notes · {stats.links} links · {stats.regions} regions
+          {stats.notes} notes · {stats.folders} folders · {stats.links} links · {stats.regions} regions
         </div>
       </div>
 
@@ -518,7 +821,7 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote }:
                   value={rendererRef.current?.regionSwatch(region.group) || "#000000"}
                   onChange={(event) => paintRegion(region, event.target.value)}
                 />
-                <span className="brain-graph-legend-name" title={region.name}>
+                <span className="brain-graph-legend-name" title={region.folder ?? region.name}>
                   {region.name}
                 </span>
                 <span className="brain-graph-legend-count">{region.members.length}</span>

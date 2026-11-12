@@ -41,6 +41,13 @@
 	background: var(--brain-graph-hub-bg);
 }
 
+.brain-graph-label.is-folder {
+	font-size: 11px;
+	font-weight: 600;
+	color: var(--brain-graph-folder-fg);
+	background: var(--brain-graph-folder-bg);
+}
+
 .brain-graph-label.is-hover,
 .brain-graph-label.is-active {
 	color: var(--brain-graph-hover-fg);
@@ -115,6 +122,19 @@
 	/* border-radius: 6px; */
 }
 
+.brain-graph-toolbar .brain-graph-depth,
+.brain-graph-toolbar .brain-graph-tag {
+	height: 26px;
+	font-size: 12px;
+	color: var(--brain-graph-input-fg);
+	background: var(--brain-graph-btn-bg);
+	border: 1px solid var(--brain-graph-btn-border);
+}
+
+.brain-graph-toolbar .brain-graph-tag {
+	max-width: 160px;
+}
+
 .brain-graph-stats {
 	margin-left: auto;
 	font-size: 11px;
@@ -150,7 +170,7 @@
 	color: var(--brain-graph-btn-fg);
 	background: var(--brain-graph-btn-bg);
 	border: 1px solid var(--brain-graph-btn-border);
-	border-radius: 8px;
+	/* border-radius: 8px; */
 }
 
 .brain-graph-legend.is-hidden {
@@ -278,6 +298,8 @@
 	--brain-graph-label-bg: rgba(26, 26, 26, 0.72);
 	--brain-graph-hub-fg: rgba(200, 210, 230, 0.78);
 	--brain-graph-hub-bg: rgba(26, 26, 26, 0.55);
+	--brain-graph-folder-fg: #eef3ff;
+	--brain-graph-folder-bg: rgba(32, 38, 52, 0.92);
 	--brain-graph-hover-fg: #ffffff;
 	--brain-graph-active-fg: #9fc8ff;
 	--brain-graph-btn-fg: #cfd8e8;
