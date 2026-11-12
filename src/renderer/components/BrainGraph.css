@@ -1,0 +1,348 @@
+.brain-graph-stage {
+	position: absolute;
+	inset: 0;
+	background: var(--brain-graph-stage-bg);
+}
+
+.brain-graph-stage canvas {
+	display: block;
+	outline: none;
+	touch-action: none;
+}
+
+.brain-graph-labels {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	overflow: hidden;
+}
+
+.brain-graph-label {
+	position: absolute;
+	left: 0;
+	top: 0;
+	font-size: 11px;
+	line-height: 1;
+	padding: 2px 5px;
+	border-radius: 4px;
+	color: var(--brain-graph-label-fg);
+	background: var(--brain-graph-label-bg);
+	white-space: nowrap;
+	will-change: transform;
+}
+
+.brain-graph-label.is-hidden {
+	display: none;
+}
+
+.brain-graph-label.is-hub {
+	font-size: 10px;
+	color: var(--brain-graph-hub-fg);
+	background: var(--brain-graph-hub-bg);
+}
+
+.brain-graph-label.is-hover,
+.brain-graph-label.is-active {
+	color: var(--brain-graph-hover-fg);
+	font-weight: 600;
+	font-size: 12px;
+}
+
+.brain-graph-label.is-active {
+	color: var(--brain-graph-active-fg);
+}
+
+.brain-graph-toolbar {
+	position: absolute;
+	top: 8px;
+	left: 8px;
+	right: 8px;
+	z-index: 2;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	align-items: center;
+	pointer-events: none;
+}
+
+.brain-graph-toolbar>* {
+	pointer-events: auto;
+}
+
+.brain-graph-group {
+	display: flex;
+	gap: 2px;
+}
+
+.brain-graph-toolbar .brain-graph-btn {
+	height: 26px;
+	padding: 0 9px;
+	font-size: 12px;
+	color: var(--brain-graph-btn-fg);
+	background: var(--brain-graph-btn-bg);
+	border: 1px solid var(--brain-graph-btn-border);
+	/* border-radius: 6px; */
+	box-shadow: none;
+	cursor: pointer;
+}
+
+.brain-graph-toolbar .brain-graph-btn:hover {
+	background: var(--brain-graph-btn-hover-bg);
+}
+
+.brain-graph-toolbar .brain-graph-btn.is-active {
+	background: var(--brain-graph-btn-active-bg);
+	border-color: var(--brain-graph-btn-active-border);
+}
+
+.brain-graph-toolbar .brain-graph-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.brain-graph-toolbar .brain-graph-mode {
+	font-weight: 700;
+	min-width: 40px;
+}
+
+.brain-graph-toolbar .brain-graph-search {
+	height: 26px;
+	width: 160px;
+	font-size: 12px;
+	color: var(--brain-graph-input-fg);
+	background: var(--brain-graph-btn-bg);
+	border: 1px solid var(--brain-graph-btn-border);
+	/* border-radius: 6px; */
+}
+
+.brain-graph-stats {
+	margin-left: auto;
+	font-size: 11px;
+	color: var(--brain-graph-stats-fg);
+	pointer-events: none;
+}
+
+.brain-graph-perf {
+	position: absolute;
+	left: 10px;
+	bottom: 8px;
+	z-index: 2;
+	font-family: var(--font-monospace);
+	font-size: 11px;
+	color: var(--brain-graph-perf-fg);
+	pointer-events: none;
+}
+
+
+.brain-graph-legend {
+	position: absolute;
+	top: 42px;
+	right: 8px;
+	z-index: 2;
+	width: 250px;
+	max-width: calc(100% - 16px);
+	max-height: calc(100% - 84px);
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 8px;
+	font-size: 12px;
+	color: var(--brain-graph-btn-fg);
+	background: var(--brain-graph-btn-bg);
+	border: 1px solid var(--brain-graph-btn-border);
+	border-radius: 8px;
+}
+
+.brain-graph-legend.is-hidden {
+	display: none;
+}
+
+.brain-graph-legend-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+}
+
+.brain-graph-legend-title {
+	font-weight: 600;
+}
+
+.brain-graph-legend .brain-graph-legend-palette {
+	height: 24px;
+	font-size: 12px;
+	max-width: 150px;
+}
+
+.brain-graph-legend-list {
+	overflow-y: auto;
+	min-height: 0;
+}
+
+.brain-graph-legend-row {
+	display: grid;
+	grid-template-columns: 16px minmax(0, 1fr) auto 20px;
+	align-items: center;
+	gap: 8px;
+	height: 24px;
+	padding: 0 4px;
+	border-radius: 4px;
+}
+
+.brain-graph-legend-row:hover {
+	background: var(--brain-graph-btn-hover-bg);
+}
+
+
+.brain-graph-legend .brain-graph-legend-swatch {
+	appearance: none;
+	width: 14px;
+	height: 14px;
+	padding: 0;
+	border: 1px solid var(--brain-graph-btn-border);
+	border-radius: 50%;
+	background: none;
+	cursor: pointer;
+	overflow: hidden;
+}
+
+.brain-graph-legend-swatch::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+
+.brain-graph-legend-swatch::-webkit-color-swatch {
+	border: none;
+	border-radius: 50%;
+}
+
+.brain-graph-legend-name {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.brain-graph-legend-count,
+.brain-graph-legend-more {
+	color: var(--brain-graph-stats-fg);
+	font-variant-numeric: tabular-nums;
+}
+
+.brain-graph-legend-more {
+	padding: 2px 4px;
+	font-size: 11px;
+}
+
+.brain-graph-legend .brain-graph-legend-reset {
+	grid-column: 4;
+	width: 20px;
+	height: 20px;
+	padding: 2px;
+	color: var(--brain-graph-stats-fg);
+	background: none;
+	box-shadow: none;
+}
+
+.brain-graph-legend .brain-graph-legend-reset svg {
+	width: 13px;
+	height: 13px;
+}
+
+
+.brain-graph-toolbar,
+.brain-graph-legend,
+.brain-graph-perf,
+.brain-graph-labels {
+	transition: opacity 0.25s ease;
+}
+
+.brain-graph-container.is-resting .brain-graph-toolbar,
+.brain-graph-container.is-resting .brain-graph-legend,
+.brain-graph-container.is-resting .brain-graph-perf,
+.brain-graph-container.is-resting .brain-graph-labels {
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 1.5s ease;
+}
+
+.brain-graph-container.is-resting canvas {
+	cursor: none;
+}
+
+/* ---------- NTS integration ---------- */
+
+.brain-graph-container {
+	position: absolute;
+	inset: 0;
+	--brain-graph-stage-bg: #1a1a1a;
+	--brain-graph-label-fg: rgba(232, 236, 245, 0.92);
+	--brain-graph-label-bg: rgba(26, 26, 26, 0.72);
+	--brain-graph-hub-fg: rgba(200, 210, 230, 0.78);
+	--brain-graph-hub-bg: rgba(26, 26, 26, 0.55);
+	--brain-graph-hover-fg: #ffffff;
+	--brain-graph-active-fg: #9fc8ff;
+	--brain-graph-btn-fg: #cfd8e8;
+	--brain-graph-btn-bg: rgba(38, 38, 38, 0.86);
+	--brain-graph-btn-border: rgba(255, 255, 255, 0.12);
+	--brain-graph-btn-hover-bg: rgba(58, 58, 58, 0.92);
+	--brain-graph-btn-active-bg: rgba(74, 158, 255, 0.24);
+	--brain-graph-btn-active-border: rgba(74, 158, 255, 0.65);
+	--brain-graph-input-fg: #e8ecf5;
+	--brain-graph-stats-fg: rgba(190, 200, 220, 0.55);
+	--brain-graph-perf-fg: rgba(190, 200, 220, 0.7);
+	font-family: inherit;
+}
+
+.brain-graph-container .brain-graph-perf {
+	font-family: monospace;
+}
+
+.brain-graph-toolbar .brain-graph-btn {
+	font-family: inherit;
+}
+
+/* Loading and empty states */
+.brain-graph-loading,
+.brain-graph-empty {
+	position: absolute;
+	inset: 0;
+	z-index: 3;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 24px;
+	color: #e5e5e5;
+	background: rgba(26, 26, 26, 0.86);
+	font-size: 13px;
+	text-align: center;
+}
+
+.brain-graph-loading-bar {
+	width: 220px;
+	height: 4px;
+	border-radius: 2px;
+	background: #333;
+	overflow: hidden;
+}
+
+.brain-graph-loading-bar>div {
+	height: 100%;
+	background: #4a9eff;
+	transition: width 0.2s ease;
+}
+
+.brain-graph-loading-detail {
+	color: #9a9a9a;
+	font-size: 12px;
+}
+
+.brain-graph-empty strong {
+	font-size: 15px;
+}
+
+.brain-graph-empty span {
+	color: #9a9a9a;
+	max-width: 360px;
+	line-height: 1.5;
+}
