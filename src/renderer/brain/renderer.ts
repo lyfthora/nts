@@ -32,7 +32,7 @@ import {
 	type SurfaceMesh,
 } from "./brain-shape";
 import type { GraphCore } from "./graph-core";
-import { BrainLayout, type SavedPosition } from "./layout";
+import { BrainLayout, type LayoutAnchors, type SavedPosition } from "./layout";
 import { customColor, darkTheme, groupColor, meshColors, shellColors, type BrainTheme } from "./theme";
 
 export type ViewMode = "3d" | "2d";
@@ -401,11 +401,15 @@ export class BrainRenderer {
 	private edgeFocus = new Float32Array(0);
 	private edgeLen = new Float32Array(0);
 	private hubs: number[] = [];
+	/** Folder levels that may draw a label (1 = roots only; nodes below stay visible). */
+	private folderLabelDepth = 1;
 
 	private fit = 1;
 	private hover = -1;
 	private active = -1;
 	private search: number[] = [];
+	/** Notes highlighted by the tag filter; null = filter off, [] = active with no matches. */
+	private tagFilter: number[] | null = null;
 	/** Region highlighted by the legend (from most connected to least). */
 	private highlight: number[] = [];
 	private labelSet: { i: number; cls: string }[] = [];
@@ -526,27 +530,59 @@ export class BrainRenderer {
 
 	// ---------- Public API ----------
 
-	setGraph(graph: GraphCore, prev?: Map<string, SavedPosition>, overrides: ColorOverrides = NO_OVERRIDES): void {
+	setGraph(
+		graph: GraphCore,
+		prev?: Map<string, SavedPosition>,
+		overrides: ColorOverrides = NO_OVERRIDES,
+		anchors?: LayoutAnchors,
+	): void {
 		this.graph = graph;
 		this.overrides = overrides;
 		this.setGroupColors();
 		this.computeNodeColors();
 		this.layout = new BrainLayout(graph, prev);
+		if (anchors) this.layout.applyAnchors(anchors);
 		this.hover = -1;
 		this.pulseCount = 0;
 		this.buildAmbient();
 		this.search = [];
+		this.tagFilter = null;
 		this.highlight = [];
 		this.active = -1;
 		this.buildNodes();
 		this.buildEdges();
-		this.hubs = [...graph.degree.keys()]
-			.filter((i) => graph.degree[i] >= 3)
-			.sort((a, b) => graph.degree[b] - graph.degree[a])
-			.slice(0, 10);
+		this.updateHubs();
 		this.refreshFocus();
 		this.requestFrame();
 		if (!this.layout.running) queueMicrotask(() => this.callbacks.onLayoutSettled?.(false));
+	}
+
+	/**
+	 * Folder levels to label. The folder nodes are always drawn; this only limits their
+	 * labels, so "1" shows the parent folders and deeper levels appear at 2, 3 and 4.
+	 */
+	setFolderLabelDepth(depth: number): void {
+		const next = Math.max(1, Math.round(depth));
+		if (next === this.folderLabelDepth) return;
+		this.folderLabelDepth = next;
+		this.updateHubs();
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	/** Folder positions are structural: every folder up to the selected depth gets a label. */
+	private updateHubs(): void {
+		const graph = this.graph;
+		if (!graph) {
+			this.hubs = [];
+			return;
+		}
+		const level = (folder: string) => folder.split("/").filter(Boolean).length;
+		const ranked = [...graph.degree.keys()]
+			.filter((i) => graph.degree[i] >= 1)
+			.sort((a, b) => graph.degree[b] - graph.degree[a] || (graph.ids[a] < graph.ids[b] ? -1 : 1));
+		// Notes are labeled on hover/search/selection, not as permanent hubs.
+		this.hubs = ranked.filter((i) => graph.kinds[i] === 1 && level(graph.folders[i]) <= this.folderLabelDepth);
 	}
 
 	/** Current positions by id ([x, y, z, orphan]), to reuse the layout on a rebuild or save it. */
@@ -634,6 +670,13 @@ export class BrainRenderer {
 
 	setSearch(indices: number[]): void {
 		this.search = indices;
+		this.refreshFocus();
+		this.requestFrame();
+	}
+
+	/** Highlights the notes that carry a tag; null clears the filter. */
+	setTagFilter(indices: number[] | null): void {
+		this.tagFilter = indices;
 		this.refreshFocus();
 		this.requestFrame();
 	}
@@ -860,7 +903,12 @@ export class BrainRenderer {
 		const colors = new Float32Array(this.nodeRGB);
 		const sizes = new Float32Array(n);
 		for (let i = 0; i < n; i++) {
-			sizes[i] = Math.min(0.09, 0.018 * this.opts.nodeSize * (0.8 + 0.4 * Math.sqrt(g.degree[i])));
+			const degree = Math.sqrt(g.degree[i]);
+			// Folders read as larger hubs so the hierarchy is visible among the notes.
+			sizes[i] =
+				g.kinds[i] === 1
+					? Math.min(0.115, 0.052 * this.opts.nodeSize * (0.85 + 0.25 * degree))
+					: Math.min(0.09, 0.018 * this.opts.nodeSize * (0.8 + 0.4 * degree));
 		}
 		this.view = new Float32Array(n * 3);
 		this.syncView();
@@ -1545,7 +1593,7 @@ export class BrainRenderer {
 			const nb = [...g.neighbors[this.hover]].sort((a, b) => g.degree[b] - g.degree[a]);
 			for (const j of nb) hl[j] = 0.7;
 			labels.push({ i: this.hover, cls: "is-hover" });
-			for (const j of nb.slice(0, 25)) labels.push({ i: j, cls: "" });
+			for (const j of nb.slice(0, 25)) labels.push({ i: j, cls: g.kinds[j] ? "is-folder" : "" });
 		} else if (this.highlight.length) {
 			focus = 1;
 			for (const i of this.highlight) hl[i] = 1;
@@ -1554,8 +1602,12 @@ export class BrainRenderer {
 			focus = 1;
 			for (const i of this.search) hl[i] = 1;
 			for (const i of this.search.slice(0, 30)) labels.push({ i, cls: "" });
+		} else if (this.tagFilter !== null) {
+			focus = 1;
+			for (const i of this.tagFilter) hl[i] = 1;
+			for (const i of this.tagFilter.slice(0, 30)) labels.push({ i, cls: g.kinds[i] ? "is-folder" : "" });
 		} else if (this.opts.hubLabels) {
-			for (const i of this.hubs) labels.push({ i, cls: "is-hub" });
+			for (const i of this.hubs) if (g.kinds[i]) labels.push({ i, cls: "is-folder" });
 		}
 		if (this.active >= 0 && this.active < hl.length) {
 			hl[this.active] = 1;
@@ -1591,12 +1643,20 @@ export class BrainRenderer {
 		for (let k = 0; k < this.labelPool.length; k++) {
 			const el = this.labelPool[k];
 			const item = set[k];
-			if (!item) {
+			if (!item || item.cls === "is-hub") {
 				el.classList.add("is-hidden");
 				continue;
 			}
 			this.tmp.fromArray(this.view, item.i * 3).project(cam);
 			if (this.tmp.z > 1 || (item.cls !== "is-active" && (!this.facesCamera(item.i) || this.isFar(item.i)))) {
+				el.classList.add("is-hidden");
+				continue;
+			}
+			// Depth limits folder labels, not the nodes: deeper folders keep their shape and links.
+			// Hover and active stay explicit so the node under the pointer is always identifiable.
+			const folderLevel = g.folders[item.i].split("/").filter(Boolean).length;
+			const explicit = item.i === this.hover || item.i === this.active;
+			if (g.kinds[item.i] === 1 && folderLevel > this.folderLabelDepth && !explicit) {
 				el.classList.add("is-hidden");
 				continue;
 			}

@@ -11,7 +11,8 @@ import type { GraphCore } from "./graph-core";
 
 /** Change when the anatomy or the algorithm changes: invalidates saved positions. */
 // 5: grouping independent of file order + community merging by modularity.
-export const LAYOUT_VERSION = 5;
+// 6: folder nodes and hierarchy edges.
+export const LAYOUT_VERSION = 6;
 
 // Notes sit in a thin layer just above the brain surface (which is almost opaque).
 const CORTEX_INNER = 1.012;
@@ -35,6 +36,16 @@ const HUB_DEGREE = 2;
  * The 4th value avoids reusing the position when the note changed structure.
  */
 export type SavedPosition = ArrayLike<number>;
+
+/** Incremental seed for a depth/grouping change: keep stable groups fixed and move only changed ones. */
+export interface LayoutAnchors {
+	/** Last known position of every node, keyed by node id. */
+	positions: Map<string, SavedPosition>;
+	/** Nodes whose group did not change: they keep their exact position. */
+	fixed: Set<string>;
+	/** Target position for nodes in a group that split, merged or appeared. */
+	homes: Map<string, ArrayLike<number>>;
+}
 
 /**
  * Three-phase layout:
@@ -151,6 +162,44 @@ export class BrainLayout {
 
 	get running(): boolean {
 		return this.alpha > ALPHA_MIN && this.n > 0;
+	}
+
+	/**
+	 * Applies an incremental depth/grouping change after the normal constructor. Stable nodes
+	 * stay fixed at their old position; nodes whose region changed get a new home and settle there.
+	 */
+	applyAnchors(anchors: LayoutAnchors): void {
+		let moved = 0;
+		for (let i = 0; i < this.n; i++) {
+			const id = this.g.ids[i];
+			const old = anchors.positions.get(id);
+			const home = anchors.homes.get(id);
+			const o = i * 3;
+			if (old) {
+				this.pos[o] = old[0];
+				this.pos[o + 1] = old[1];
+				this.pos[o + 2] = old[2];
+				this.home[o] = old[0];
+				this.home[o + 1] = old[1];
+				this.home[o + 2] = old[2];
+			}
+			if (anchors.fixed.has(id) && old) {
+				this.fixed[i] = 1;
+				continue;
+			}
+			if (!home) continue;
+			this.fixed[i] = 0;
+			this.home[o] = home[0];
+			this.home[o + 1] = home[1];
+			this.home[o + 2] = home[2];
+			if (!old) {
+				this.pos[o] = home[0];
+				this.pos[o + 1] = home[1];
+				this.pos[o + 2] = home[2];
+			}
+			moved++;
+		}
+		if (moved) this.alpha = Math.max(this.alpha, 0.45);
 	}
 
 	/** Runs iterations until the time budget (ms) is exhausted. Returns true if it has not converged yet. */

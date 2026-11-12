@@ -7,14 +7,24 @@ export interface GraphNode {
 	id: string;
 	name: string;
 	path: string;
+	/** Full folder path ("" = notes root). */
+	folder: string;
+	/** Folder nodes take part in the hierarchy (folder -> subfolder / note). */
+	kind: "note" | "folder";
+	/** Unfiled note or the virtual Inbox node: placed in the cerebellum. */
+	inbox?: boolean;
 }
 
 export interface GraphCore {
 	/** Stable id of each node across rebuilds. */
 	ids: string[];
 	names: string[];
-	/** Note folder (folder grouping and color rules). */
+	/** Note path including its name (ordering and labels). */
 	paths: string[];
+	/** Full folder path ("" = notes root), used for folder grouping. */
+	folders: string[];
+	/** 0 = note, 1 = folder. */
+	kinds: Uint8Array;
 	/** Flattened [a, b] pairs, without duplicates, undirected. */
 	edges: Uint32Array;
 	degree: Uint32Array;
@@ -32,7 +42,7 @@ export type LinkMap = Record<string, Record<string, number>>;
 export function buildGraphCore(
 	nodes: GraphNode[],
 	links: LinkMap,
-	opts: { groupBy: GroupBy; includeOrphans: boolean },
+	opts: { groupBy: GroupBy; includeOrphans: boolean; folderDepth?: number },
 ): GraphCore {
 	const all = nodes.length;
 	const index = new Map<string, number>();
@@ -87,25 +97,31 @@ export function buildGraphCore(
 	const ids = source.map((i) => nodes[i].id);
 	const names = source.map((i) => nodes[i].name);
 	const paths = source.map((i) => nodes[i].path);
+	const folders = source.map((i) => nodes[i].folder);
+	const kinds = Uint8Array.from(source, (i) => (nodes[i].kind === "folder" ? 1 : 0));
+	const inbox = Uint8Array.from(source, (i) => (nodes[i].inbox ? 1 : 0));
 
 	const raw =
 		opts.groupBy === "folder"
-			? folderLabels(paths)
+			? folderLabels(folders, opts.folderDepth ?? 1)
 			: mergeCommunities(labelPropagation(n, neighbors, canonicalOrder(paths)), edges, degree);
 
 	// Compacts labels by size (largest region = 0); orphans stay at -1.
+	// Folder grouping gives every note a folder even when it has no links, so
+	// unlinked notes must not fall into a single "Orphans" region there.
+	const folderMode = opts.groupBy === "folder";
 	const sizes = new Map<number, number>();
 	for (let i = 0; i < n; i++) {
-		if (degree[i] === 0) continue;
+		if (inbox[i] || (degree[i] === 0 && !folderMode)) continue;
 		sizes.set(raw[i], (sizes.get(raw[i]) ?? 0) + 1);
 	}
 	const order = [...sizes.entries()].sort((a, b) => b[1] - a[1] || a[0] - b[0]);
 	const compact = new Map<number, number>();
 	order.forEach(([label], k) => compact.set(label, k));
 	const group = new Int32Array(n);
-	for (let i = 0; i < n; i++) group[i] = degree[i] === 0 ? -1 : compact.get(raw[i])!;
+	for (let i = 0; i < n; i++) group[i] = inbox[i] || (degree[i] === 0 && !folderMode) ? -1 : compact.get(raw[i])!;
 
-	return { ids, names, paths, edges, degree, neighbors, nodeEdges, group, groupCount: order.length, source };
+	return { ids, names, paths, folders, kinds, edges, degree, neighbors, nodeEdges, group, groupCount: order.length, source };
 }
 
 /**
@@ -116,15 +132,18 @@ function canonicalOrder(paths: string[]): number[] {
 	return Array.from(paths.keys()).sort((a, b) => (paths[a] < paths[b] ? -1 : paths[a] > paths[b] ? 1 : 0));
 }
 
-function folderLabels(paths: string[]): Int32Array {
-	const top = paths.map((p) => {
-		const slash = p.indexOf("/");
-		return slash === -1 ? "" : p.slice(0, slash);
-	});
+/** Folder prefix at the selected depth ("" = notes root); shorter paths stay whole. */
+export function folderAtDepth(folder: string, depth: number): string {
+	const parts = folder.split("/").filter(Boolean);
+	return parts.slice(0, Math.max(1, depth)).join("/");
+}
+
+function folderLabels(folders: string[], depth: number): Int32Array {
+	const keys = folders.map((folder) => folderAtDepth(folder, depth));
 	// Label = folder position in alphabetical order: size ties do not depend on file order.
-	const folders = [...new Set(top)].sort();
-	const byFolder = new Map(folders.map((f, k) => [f, k]));
-	return Int32Array.from(top, (f) => byFolder.get(f)!);
+	const unique = [...new Set(keys)].sort();
+	const byFolder = new Map(unique.map((f, k) => [f, k]));
+	return Int32Array.from(keys, (f) => byFolder.get(f)!);
 }
 
 /**

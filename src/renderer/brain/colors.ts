@@ -1,5 +1,5 @@
 import { Color } from "three";
-import type { GraphCore, GroupBy } from "./graph-core";
+import { folderAtDepth, type GraphCore, type GroupBy } from "./graph-core";
 
 export type PaletteId = "nebula" | "aurora" | "ember" | "pastel" | "accent" | "okabe-ito";
 
@@ -119,20 +119,20 @@ export interface Region {
 	members: number[];
 	/** Notes that identify the region across rebuilds (grouped by links). */
 	anchors: string[];
-	/** Top-level folder (grouped by folder; "" = notes root). */
+	/** Folder key at the selected depth (grouped by folder; "" = notes root). */
 	folder?: string;
 }
 
 const ANCHORS = 5;
 
-/** Top-level folder of a path ("" = root), the same one used for folder grouping. */
-export function topFolder(path: string): string {
-	const slash = path.indexOf("/");
-	return slash === -1 ? "" : path.slice(0, slash);
+/** Display label for a folder key: the full path keeps the parent folder visible. */
+export function folderLabel(folder: string): string {
+	const parts = folder.split("/").filter(Boolean);
+	return parts.length ? parts.join(" / ") : "(root)";
 }
 
 /** Regions ordered by size, with orphans last. */
-export function regionsOf(graph: GraphCore, groupBy: GroupBy): Region[] {
+export function regionsOf(graph: GraphCore, groupBy: GroupBy, folderDepth = 1): Region[] {
 	const members: number[][] = Array.from({ length: graph.groupCount }, () => []);
 	const orphans: number[] = [];
 	graph.group.forEach((g, i) => (g < 0 ? orphans : members[g]).push(i));
@@ -143,19 +143,25 @@ export function regionsOf(graph: GraphCore, groupBy: GroupBy): Region[] {
 		list.sort(byDegree);
 		const hub = list[0];
 		if (groupBy === "folder") {
-			const folder = topFolder(graph.paths[hub]);
-			return { group, name: folder || "(root)", members: list, anchors: [], folder };
+			const folder = folderAtDepth(graph.folders[hub], folderDepth);
+			return { group, name: folderLabel(folder), members: list, anchors: [], folder };
 		}
 		return { group, name: graph.names[hub], members: list, anchors: list.slice(0, ANCHORS).map((i) => graph.ids[i]) };
 	});
-	if (orphans.length) regions.push({ group: -1, name: "Orphans", members: orphans.sort(byDegree), anchors: [] });
+	if (orphans.length) {
+		// Unfiled notes live in the cerebellum: in folder mode that region is the Inbox.
+		// In links mode it can also contain notes that simply have no links.
+		const hasInbox = orphans.some((i) => graph.folders[i] === "");
+		const name = groupBy === "folder" ? "Inbox" : hasInbox ? "Inbox / Unlinked" : "Orphans";
+		regions.push({ group: -1, name, members: orphans.sort(byDegree), anchors: [] });
+	}
 	return regions;
 }
 
 /** Color chosen in the legend for a region. */
 export interface RegionColor {
 	color: string;
-	/** Grouped by folder: the top-level folder. */
+	/** Grouped by folder: the folder key at the selected depth. */
 	folder?: string;
 	/** Grouped by links: the region's most connected notes when it was painted. */
 	anchors?: string[];
