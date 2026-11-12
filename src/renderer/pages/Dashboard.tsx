@@ -41,6 +41,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
   const [folders, setFolders] = useState<Folder[]>([]);
   const [view, setView] = useState("all-notes");
   const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [graphTag, setGraphTag] = useState<string | null>(null);
   const [currentId, setCurrentId] = useState<number | null>(null);
   const [linkedNoteId, setLinkedNoteId] = useState<number | null>(null);
   const [folderToUpdate, setFolderToUpdate] = useState<Folder | null>(null);
@@ -1147,6 +1148,8 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
           onFolderRename={onFolderRename}
           counts={counts}
           tags={tags}
+          activeTag={graphTag}
+          onBrainTagChange={setGraphTag}
           onNoteDrop={onNoteDrop}
           onFolderDrop={onFolderDrop}
           userName={userName}
@@ -1170,6 +1173,8 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                 folders={folders}
                 activeNoteId={currentId}
                 onOpenNote={handleOpenBrainNote}
+                activeTag={graphTag}
+                onActiveTagChange={setGraphTag}
               />
             ) : (
             <>
