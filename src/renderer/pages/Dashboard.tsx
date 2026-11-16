@@ -48,59 +48,6 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("error");
 
-  // TODO: remove — dev.. test all toast messages
-  // Usage: __testToast()          → cycles through all toasts automatically
-  //        __testToast("success") → show only success toasts
-  //        __testToast("error")   → show only error toasts
-  //        __testToast("progress")→ show ProgressToast states
-  useEffect(() => {
-    const allToasts: { msg: string; type: "success" | "error" }[] = [
-      { msg: "Premium activated successfully!", type: "success" },
-      { msg: "Payment succeeded! Updating subscription...", type: "success" },
-      { msg: "Waiting for payment confirmation...", type: "success" },
-      { msg: "Payment received! If features aren't unlocked, use Refresh in Settings.", type: "success" },
-      { msg: 'Note "Example" not found', type: "error" },
-      { msg: "Premium feature - subscribe to export notes", type: "error" },
-      { msg: "Premium feature - subscribe to import notes", type: "error" },
-      { msg: "Could not confirm payment. Please refresh in Settings.", type: "error" },
-      { msg: "Error refreshing subscription status.", type: "error" },
-      { msg: "Subscription process was canceled.", type: "error" },
-      { msg: "Error: Failed to save note", type: "error" },
-    ];
-
-    (window as any).__testToast = (filter?: "success" | "error" | "progress") => {
-      if (filter === "progress") {
-        // Test ProgressToast states
-        const steps: ProgressData[] = [
-          { status: "loading", message: "Exporting notes...", percent: 35 },
-          { status: "loading", message: "Importing notes...", percent: 70 },
-          { status: "success", message: "Export complete!", percent: 100 },
-          { status: "error", message: "Import failed", percent: 60 },
-        ];
-        let i = 0;
-        setProgressData(steps[0]);
-        const iv = setInterval(() => {
-          i++;
-          if (i >= steps.length) { clearInterval(iv); setTimeout(() => setProgressData(null), 2500); return; }
-          setProgressData(steps[i]);
-        }, 2500);
-        return;
-      }
-
-      const list = filter ? allToasts.filter(t => t.type === filter) : allToasts;
-      let i = 0;
-
-      const show = () => {
-        if (i >= list.length) { setToastMessage(null); return; }
-        setToastType(list[i].type);
-        setToastMessage(`[${i + 1}/${list.length}] ${list[i].msg}`);
-        i++;
-        setTimeout(show, 2500);
-      };
-      show();
-    };
-    return () => { delete (window as any).__testToast; };
-  }, []);
 
   const showErrorToast = useCallback((msg: string) => {
     setToastType("error");
