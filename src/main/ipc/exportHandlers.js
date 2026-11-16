@@ -12,9 +12,41 @@ function sendProgress(event, data) {
   } catch { }
 }
 
+const PREMIUM_STATUSES = ["active", "trial", "trialing"];
+
+/**
+ * Verifica la suscripción contra la API antes de cada operación premium.
+ * Devuelve null si hay acceso, o el resultado de error listo para el renderer.
+ * El gate de la UI es cosmético: esto es lo que no se puede saltear por IPC.
+ */
+async function checkPremiumAccess() {
+  let status;
+  try {
+    status = await apiRequest("/subscription/status");
+  } catch {
+    return {
+      success: false,
+      code: "SUBSCRIPTION_UNVERIFIED",
+      error: "Could not verify your subscription. Please try again when you are back online.",
+    };
+  }
+
+  if (!PREMIUM_STATUSES.includes(status && status.status)) {
+    return {
+      success: false,
+      code: "PREMIUM_REQUIRED",
+      error: "Premium subscription required for export and import",
+    };
+  }
+
+  return null;
+}
+
 function registerExportHandlers() {
   ipcMain.handle("export-note-json", async (event, noteId) => {
     try {
+      const premiumError = await checkPremiumAccess();
+      if (premiumError) return premiumError;
       sendProgress(event, { status: "loading", percent: 0, message: "Preparing export..." });
       const allData = await apiRequest("/notes/all");
       const note = allData.notes.find((n) => n.id === noteId);
@@ -56,6 +88,8 @@ function registerExportHandlers() {
 
   ipcMain.handle("export-note-md", async (event, noteId) => {
     try {
+      const premiumError = await checkPremiumAccess();
+      if (premiumError) return premiumError;
       sendProgress(event, { status: "loading", percent: 0, message: "Preparing export..." });
       const allData = await apiRequest("/notes/all");
       const note = allData.notes.find((n) => n.id === noteId);
@@ -147,6 +181,8 @@ function registerExportHandlers() {
 
   ipcMain.handle("import-note", async (event) => {
     try {
+      const premiumError = await checkPremiumAccess();
+      if (premiumError) return premiumError;
       const result = await dialog.showOpenDialog({
         title: "Import Note(s)",
         filters: [
@@ -298,6 +334,8 @@ function registerExportHandlers() {
 
   ipcMain.handle("export-all-notes", async (event) => {
     try {
+      const premiumError = await checkPremiumAccess();
+      if (premiumError) return premiumError;
       const result = await dialog.showSaveDialog({
         title: "Export All Notes",
         defaultPath: `nts_export_${new Date().toISOString().split("T")[0]}.zip`,
