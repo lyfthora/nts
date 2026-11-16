@@ -462,7 +462,7 @@ nts/
 │           ├── MarkdownToolbar, MarkdownPreview, TableOfContents
 │           ├── BacklinksPanel, ForwardLinksPanel, LinkedNotePanel
 │           ├── NoteInfoPanel, TagsEditor, StatusDropdown, NoteContextMenu
-│           ├── SubscriptionScreen / SubscriptionModal
+│           ├── SubscriptionModal
 │           ├── InputModal, ConfirmModal, ProgressToast, UpdateIndicator, WindowBar
 │           └── CheckboxWidget, ImagePreviewPlugin, NoteLinkPlugin,
 │               EditorKeymaps, customSetup   # Extensiones de CodeMirror
