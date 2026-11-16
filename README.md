@@ -1,12 +1,12 @@
 <h1 align="center">NTS — Notes</h1>
 
 <p align="center">
-  <b>Aplicación de notas de escritorio con almacenamiento 100% local, editor Markdown avanzado y lienzo de dibujo.</b><br/>
-  Construida con Electron, React y CodeMirror 6.
+  <b>Aplicación de notas de escritorio con editor Markdown avanzado, lienzo de dibujo y sincronización offline-first.</b><br/>
+  Construida con Electron, React y CodeMirror 6 sobre una API REST propia.
 </p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.2.2-blue" />
+  <img alt="Version" src="https://img.shields.io/badge/version-1.2.6-blue" />
   <img alt="License" src="https://img.shields.io/badge/license-ISC-green" />
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" />
   <img alt="Electron" src="https://img.shields.io/badge/Electron-39-9feaf9" />
@@ -21,70 +21,90 @@
 
 ## Descripción
 
-**NTS** es una aplicación de escritorio para tomar notas diseñada para usuarios que valoran la **privacidad** y el **rendimiento**. Todos los datos se almacenan localmente en el sistema de archivos del usuario — sin servidores, sin la nube, sin telemetría. La interfaz oscura y minimalista con animaciones fluidas ofrece una experiencia moderna sin distracciones.
+**NTS** es una aplicación de escritorio para tomar notas. La interfaz está hecha con **Electron + React + CodeMirror 6** y los datos viven en una **API REST propia** (`nts-api`, desplegada en Render):
 
+```
+https://nts-api-3e8i.onrender.com/api
+```
 
+Para entrar hace falta una cuenta (email/contraseña o GitHub). Sobre esa base, la app funciona **offline-first**: mantiene una copia local por cuenta en disco y una cola de operaciones pendientes, así que podés abrir, leer y editar notas sin conexión y los cambios se sincronizan solos cuando vuelve la red.
 
-## Características Principales
+> **Nota:** la app **no** es 100% local ni funciona sin servidor. Sin sesión válida no se pasa de la pantalla de login, y la suscripción/premium se valida contra la API.
 
+---
 
-### Editor de Texto
-- **Editor Markdown avanzado** con CodeMirror 6 (autocompletado, resaltado de sintaxis, plegado de código)
-- **Barra de herramientas Markdown** para formato rápido (negrita, cursiva, encabezados, listas, enlaces, código, etc.)
-- **Vista previa en tiempo real** del Markdown renderizado con highlight.js
-- **Checkboxes interactivos** en Markdown (`- [ ]` / `- [x]`)
-- **Vista previa de imágenes inline** directamente en el editor
-- **Tabla de contenidos** generada automáticamente desde los encabezados
-- **Ir a línea** (`Ctrl+G`) para navegación rápida en documentos largos
+## Características
 
-### Lienzo de Dibujo
-- **Notas tipo dibujo** con lienzo completo basado en `perfect-freehand`
-- Herramientas: **lápiz, borrador, zoom** y barra de herramientas dedicada
-- Fondos configurables: **negro, blanco o cuadrícula**
-- Limpiar lienzo con confirmación
+### Cuenta y sesión
+- **Registro y login** con email/contraseña (`POST /auth/register`, `POST /auth/login`).
+- **OAuth con GitHub** por deep link `nts://` (`GET /auth/github`); el token vuelve por el protocolo `nts://` y lo captura el main process.
+- **JWT cifrado en disco** con `safeStorage` de Electron, dentro de `electron-store` (`nts_secure_token`). Nunca se guarda en `localStorage`.
+- **Refresh automático** del token cuando faltan ≤ 5 minutos (`POST /auth/refresh`); un `401` limpia sesión y caché y recarga la ventana.
+- **Logout** manual; la caché por cuenta se conserva para el próximo login.
+
+### Suscripción / Premium
+- Estado en `GET /subscription/status`.
+  - `active`, `trial`, `trialing` → acceso.
+  - `expired`, `canceled`, `unpaid`, `incomplete` → bloqueado.
+  - Cualquier otro estado, o un fallo de red, → acceso con aviso.
+- **Checkout y portal de pago** (`POST /subscription/checkout`, `POST /subscription/portal`) se abren en el navegador; el retorno llega por `nts://payment-success` / `nts://payment-cancel`.
+- **Funciones premium**: exportar/importar una nota y exportar todo el contenido como ZIP de Markdown.
+
+### Sincronización offline-first
+- **Caché por cuenta** en `electron-store` (store `offline-sync`): `accounts[accountId] = { notes, folders, pending }`. El identificador de cuenta sale del claim `sub` del JWT (o del email normalizado como fallback), así que dos cuentas nunca comparten datos.
+- **Cola de operaciones** FIFO con `Idempotency-Key` (UUID v4) por operación y un campo `revision` para no perder ediciones hechas mientras otra request está en vuelo.
+- **IDs temporales negativos** para notas y carpetas creadas offline; cuando el `POST` confirma, se guarda el `remoteId` y las escrituras dependientes se reescriben al ID real del servidor.
+- **Reintentos con backoff exponencial** (1,5 s → 60 s máx.). `408`, `429`, `5xx`, timeouts y JSON inválido se reintentan; `400`/`403` quedan retenidos exponiendo `lastError`; `401` espera una sesión válida.
+- **Flush coalescido**: varias llamadas concurrentes comparten una única ejecución.
+- **Estado visible** en la UI: `getSyncStatus()` devuelve `{ pending, lastError }`.
+- Los `flush` se disparan al iniciar sesión, al guardar y por temporizador; también manualmente desde la UI (`retryPendingSync`).
+
+### Editor de texto
+- **Editor Markdown** con CodeMirror 6: resaltado, autocompletado, plegado de código, búsqueda y `goto line`.
+- **Barra de herramientas** de formato (negrita, cursiva, encabezados, listas, enlaces, código, citas) y atajos `Alt+…`.
+- **Vista previa** renderizada con `marked` + `highlight.js`.
+- **Checkboxes interactivos** (`- [ ]` / `- [x]`) y **previsualización de imágenes inline**.
+- **Tabla de contenidos** generada desde los encabezados.
+- **Wiki-links** (`[[Nota]]`), panel de **backlinks**, panel de **forward links** y vista lateral de la **nota enlazada**.
+
+### Grafo de notas (Brain view)
+- Vista **3D/2D de las conexiones** entre notas con Three.js, colorizada por tag/estado y con búsqueda dentro del grafo.
+- Los tags del sidebar filtran el grafo cuando estás en esa vista.
+- Click en un nodo abre la nota.
+
+### Lienzo de dibujo
+- Notas de tipo dibujo con canvas basado en `perfect-freehand`.
+- Herramientas de lápiz, borrador y zoom; fondos negro, blanco o cuadrícula.
+- Limpiar lienzo con confirmación.
 
 ### Organización
-- **Carpetas anidadas infinitas** con estructura de árbol expandible/colapsable
-- **Drag & Drop** de notas entre carpetas y de carpetas para reorganizar la jerarquía
-- **Sistema de etiquetas (Tags)** — permite crear, asignar y filtrar por etiquetas
-- **Estados de nota**: `active`, `onhold`, `completed`, `dropped` — cada uno con su icono y color
-- **Notas fijadas (Pinned)** que siempre aparecen primero
-- **Papelera** con opción de restaurar o eliminar permanentemente
-- **Menú contextual** (clic derecho) con acciones: fijar, mover a carpeta, cambiar estado, duplicar, eliminar
-
-### Enlaces entre Notas
-- **Wiki-links** (`[[Nombre de la Nota]]`) para enlazar notas entre sí
-- **Backlinks** — panel que muestra qué notas enlazan a la nota actual
-- **Forward Links** — panel que muestra a qué notas enlaza la nota actual
-- **Nota enlazada en panel lateral** — vista side-by-side de notas vinculadas
-- Click en un enlace para navegar directamente a la nota destino
+- **Carpetas anidadas** con árbol expandible y **drag & drop**.
+- **Tags** con creación, asignación y filtrado.
+- **Estados de nota**: `active`, `onhold`, `completed`, `dropped`.
+- **Notas fijadas**, **papelera** con restaurar y eliminar permanentemente.
+- **Menú contextual** (fijar, mover, estado, duplicar, exportar, eliminar).
+- **Vistas**: All Notes, Brain, Pinned, Trash, por estado y por tag.
+- **Modo enfoque** y búsqueda de carpetas y de notas.
 
 ### Imágenes
-- **Drag & Drop** de imágenes directamente al editor
-- Almacenamiento optimizado en carpeta `assets/` dedicada por nota
-- **Limpieza automática** de assets no referenciados
-- Previsualización inline en el editor
+- **Drag & drop** de imágenes al editor.
+- Subida a la API (`POST /assets/upload`) y limpieza de assets no referenciados (`POST /assets/clean`).
 
 ### Import / Export
-- **Exportar a JSON** — incluye metadatos, contenido y assets (base64)
-- **Exportar a Markdown** — con frontmatter YAML (nombre, color, tags, estado, fechas)
-- **Exportar Markdown con imágenes → ZIP** (`.md` + carpeta `assets/`)
-- **Importar** desde: `.json`, `.md`, `.txt`, `.zip` (Markdown + assets)
+- **Exportar nota a JSON** (metadatos + contenido).
+- **Exportar nota a Markdown** con frontmatter YAML.
+- **Exportar nota a Markdown + imágenes en ZIP** (`.md` + `assets/`).
+- **Exportar todas las notas** como ZIP de Markdown.
+- **Importar** `.json`, `.md`, `.txt` y `.zip`, con progreso por evento (`export-import-progress`).
 
-### Ventanas Múltiples
-- **Abrir notas en ventanas independientes** (pop-out) para multitarea
-- Sincronización bidireccional en tiempo real entre la ventana principal y las ventanas flotantes
-- Barra de título personalizada (frameless) en todas las ventanas
+### Ventanas múltiples
+- **Pop-out de notas** en ventanas independientes (`?mode=note-window`).
+- **Sincronización bidireccional** en tiempo real entre dashboard y ventanas flotantes.
+- Barra de título propia (frameless) en todas las ventanas.
 
-### Búsqueda
-- **Búsqueda global** (`Ctrl+K`) — busca por nombre y contenido de las notas
-- **Búsqueda de carpetas** con modal dedicado para mover notas
-- **Búsqueda dentro del editor** (`Ctrl+F`) con find & replace
-
-### Auto-Actualización
-- Detección automática de nuevas versiones en GitHub Releases
-- Descarga e instalación con un clic (via `electron-updater`)
-- Indicador visual de actualización disponible en la interfaz
+### Auto-actualización
+- `electron-updater` contra GitHub Releases, chequeo al arrancar y descarga/instalación con confirmación.
+- Solo activo en builds empaquetados (`app.isPackaged`).
 
 ---
 
@@ -94,142 +114,135 @@
 |------|-----------|-----|
 | **Runtime** | [Electron 39](https://www.electronjs.org/) | Aplicación de escritorio multiplataforma |
 | **Frontend** | [React 18](https://react.dev/) | UI con componentes funcionales y hooks |
-| **Lenguaje** | [TypeScript](https://www.typescriptlang.org/) | Renderer tipado (el main process usa JavaScript) |
-| **Editor** | [CodeMirror 6](https://codemirror.net/) | Editor de código/markdown avanzado |
-| **Markdown Render** | [marked](https://marked.js.org/) + [highlight.js](https://highlightjs.org/) | Renderizado HTML y syntax highlighting |
-| **Dibujo** | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) | Trazos naturales en el canvas de dibujo |
-| **Animaciones** | [Framer Motion](https://www.framer.com/motion/) | Transiciones y animaciones fluidas |
-| **Routing** | [React Router DOM 7](https://reactrouter.com/) | Navegación entre vistas (Dashboard / NoteWindow) |
-| **Estilos** | CSS vanilla + CSS Variables | Tema oscuro personalizado |
-| **Tipografía** | [Atkinson Hyperlegible](https://brailleinstitute.org/freefont) | Fuente diseñada para máxima legibilidad |
-| **Bundler** | [esbuild](https://esbuild.github.io/) | Compilación ultrarrápida de TSX/CSS |
-| **Almacenamiento** | JSON + sistema de archivos (Split JSON) | Sin base de datos — archivos en `AppData` |
-| **Empaquetado** | [electron-builder](https://www.electron.build/) | Genera instaladores NSIS (Win) y AppImage (Linux) |
-| **Actualizaciones** | [electron-updater](https://www.electron.build/auto-update) | Auto-update via GitHub Releases |
+| **Lenguaje** | [TypeScript](https://www.typescriptlang.org/) | Renderer tipado (el main process es JavaScript) |
+| **Editor** | [CodeMirror 6](https://codemirror.net/) | Editor de Markdown, keymaps, búsqueda y plugins |
+| **Markdown** | [marked](https://marked.js.org/) + [highlight.js](https://highlightjs.org/) | Render HTML y syntax highlighting |
+| **Grafo** | [Three.js](https://threejs.org/) | Vista 3D/2D de conexiones entre notas |
+| **Dibujo** | [perfect-freehand](https://github.com/steveruizok/perfect-freehand) | Trazos naturales en el canvas |
+| **Animaciones** | [Framer Motion](https://www.framer.com/motion/) | Transiciones de UI |
+| **Estilos** | CSS vanilla + variables CSS | Tema oscuro personalizado |
+| **Tipografía** | [Atkinson Hyperlegible](https://brailleinstitute.org/freefont) | Máxima legibilidad |
+| **Bundler** | [esbuild](https://esbuild.github.io/) | Build del renderer (bundle + splitting) |
+| **Persistencia local** | [electron-store](https://github.com/sindresorhus/electron-store) + `localStorage` | Token cifrado, caché por cuenta y contenido |
+| **Backend** | API REST propia (`nts-api`, Render) | Auth, notas, carpetas, assets, suscripción |
+| **Empaquetado** | [electron-builder](https://www.electron.build/) | NSIS (Windows) y AppImage (Linux) |
+| **Actualizaciones** | [electron-updater](https://www.electron.build/auto-update) | Auto-update vía GitHub Releases |
 | **ZIP** | [archiver](https://github.com/archiverjs/node-archiver) + [adm-zip](https://github.com/cthackers/adm-zip) | Export/Import de ZIPs con assets |
-| **Testing** | [Playwright](https://playwright.dev/) | Tests end-to-end de la app Electron |
-| **CI/CD** | GitHub Actions | Build automatizado en Windows y Linux |
+| **Testing** | Node `node:test` + [Playwright](https://playwright.dev/) | Tests unitarios y E2E de Electron |
+| **CI/CD** | GitHub Actions + pnpm 11 | Build y release en Windows y Linux |
 
 ---
 
-## Estructura del Proyecto
+## Arquitectura
 
 ```
-nts/
-├── .github/
-│   └── workflows/
-│       └── release.yml            # CI/CD: build + release para Windows y Linux
-├── scripts/
-│   └── build.js                   # Script de build con esbuild (dev + watch)
-├── src/
-│   ├── main/                      # Proceso principal (Electron - Node.js)
-│   │   ├── main.js                # Entry point: inicialización de la app
-│   │   ├── preload.js             # Bridge seguro (contextBridge API)
-│   │   ├── storage.js             # Sistema de almacenamiento Split JSON
-│   │   ├── ipc/                   # Handlers IPC organizados por dominio
-│   │   │   ├── index.js           # Registro centralizado de handlers
-│   │   │   ├── noteHandlers.js    # CRUD de notas, assets, backlinks
-│   │   │   ├── folderHandlers.js  # CRUD de carpetas (con cascada)
-│   │   │   ├── exportHandlers.js  # Import/Export JSON, MD, ZIP
-│   │   │   ├── updateHandlers.js  # Auto-updater (check, download, install)
-│   │   │   └── windowHandlers.js  # Control de ventanas, pop-out de notas
-│   │   ├── utils/
-│   │   │   └── validation.js      # Validación de datos IPC
-│   │   └── windows/
-│   │       └── windowManager.js   # Creación y gestión de BrowserWindows
-│   │
-│   └── renderer/                  # Proceso de renderizado (React + TypeScript)
-│       ├── index.html             # HTML base
-│       ├── index.tsx              # Entry point React (ReactDOM.createRoot)
-│       ├── App.tsx                # Router: Dashboard o NoteWindow
-│       ├── styles/
-│       │   └── global.css         # Reset, fuentes, tema base
-│       ├── assets/
-│       │   ├── fonts/             # Atkinson Hyperlegible (woff2)
-│       │   └── icons/             # Iconos de la app y de estados
-│       ├── types/
-│       │   ├── models.ts          # Interfaces: Note, Folder, Tag, Stroke, DrawingData
-│       │   ├── api.ts             # Tipado de la API IPC (WindowAPI)
-│       │   ├── global.d.ts        # Declaraciones globales
-│       │   └── images.d.ts        # Tipos para imports de imágenes
-│       ├── pages/
-│       │   ├── Dashboard.tsx      # Página principal: sidebar + lista + editor
-│       │   ├── Dashboard.css
-│       │   ├── NoteWindow.tsx     # Ventana independiente para una nota
-│       │   └── NoteWindow.css
-│       └── components/
-│           ├── Sidebar.tsx / .css           # Panel lateral: navegación, carpetas, tags, estados
-│           ├── NotesListPanel.tsx / .css     # Lista de notas filtrada y ordenada
-│           ├── EditorPanel.tsx / .css        # Editor principal (texto + dibujo + paneles)
-│           ├── FolderTree.tsx / .css         # Árbol de carpetas (recursivo, drag & drop)
-│           ├── DrawingCanvas.tsx / .css      # Canvas de dibujo (perfect-freehand)
-│           ├── DrawingToolbar.tsx / .css     # Barra de herramientas del canvas
-│           ├── MarkdownToolbar.tsx / .css    # Barra de formato Markdown
-│           ├── MarkdownPreview.tsx           # Vista previa renderizada del Markdown
-│           ├── TableOfContents.tsx / .css    # TOC generado desde encabezados
-│           ├── BacklinksPanel.tsx / .css     # Panel de backlinks
-│           ├── ForwardLinksPanel.tsx / .css  # Panel de forward links
-│           ├── LinkedNotePanel.tsx / .css    # Vista side-by-side de nota enlazada
-│           ├── NoteInfoPanel.tsx / .css      # Info de la nota (fechas, carpeta, etc.)
-│           ├── TagsEditor.tsx / .css         # Editor de etiquetas
-│           ├── StatusDropdown.tsx / .css     # Selector de estado
-│           ├── NoteContextMenu.tsx / .css    # Menú contextual (clic derecho)
-│           ├── FolderSearchModal.tsx / .css  # Modal de búsqueda de carpetas
-│           ├── InputModal.tsx / .css         # Modal genérico de input
-│           ├── WindowBar.tsx / .css          # Barra de título personalizada
-│           ├── UpdateIndicator.tsx / .css    # Indicador de actualización
-│           ├── CheckboxWidget.ts            # Widget de checkboxes para CodeMirror
-│           ├── ImagePreviewPlugin.ts        # Plugin de previsualización de imágenes
-│           ├── NoteLinkPlugin.ts            # Plugin de wiki-links [[...]]
-│           ├── EditorKeymaps.ts             # Atajos de teclado personalizados
-│           └── customSetup.ts               # Configuración base de CodeMirror
-├── tests/                         # Tests E2E con Playwright
-│   ├── notes.spec.ts
-│   ├── folders.spec.ts
-│   ├── folders_advanced.spec.ts
-│   ├── editor_formatting.spec.ts
-│   ├── editor_advanced.spec.ts
-│   ├── organization.spec.ts
-│   ├── organization_advanced.spec.ts
-│   └── system.spec.ts
-├── package.json
-├── tsconfig.json
-└── playwright.config.ts
+┌──────────────────────────────────────────────────────────────┐
+│                      Electron Main Process                   │
+│                                                              │
+│  main.js                                                     │
+│   ├── deep links nts:// (OAuth, payment-success/cancel)       │
+│   ├── single instance lock + open-external                    │
+│   └── windows/windowManager.js → dashboard + note windows     │
+│                                                              │
+│  ipc/index.js                                                │
+│   ├── windowHandlers.js   (min/close, pop-out, sync ventanas) │
+│   ├── updateHandlers.js   (auto-updater)                      │
+│   ├── exportHandlers.js   (JSON / MD / ZIP, import, progress) │
+│   └── noteHandlers.js     (stub vacío: el CRUD vive en sync)   │
+│                                                              │
+│  offlineSync.js  ─ cache por cuenta + cola + reintentos       │
+│  apiProxy.js     ─ fetch a la API con el token seguro         │
+│  secureStorage.js─ JWT cifrado con safeStorage (electron-store)│
+│  utils/validation.js                                          │
+│                                                              │
+│  preload.js → contextBridge.exposeInMainWorld("api")          │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ IPC (invoke / send / events)
+┌───────────────────────────▼──────────────────────────────────┐
+│                    Electron Renderer Process                 │
+│                                                              │
+│  App.tsx                                                     │
+│   ├── AuthScreen        (login, registro, OAuth GitHub)       │
+│   ├── Dashboard         (ventana principal)                  │
+│   │    ├── Sidebar           (nav, carpetas, tags, estados)  │
+│   │    ├── NotesListPanel    (lista, filtros, contexto)      │
+│   │    ├── EditorPanel       (CodeMirror, dibujo, preview)   │
+│   │    │    ├── MarkdownPreview / TableOfContents            │
+│   │    │    ├── BacklinksPanel / ForwardLinksPanel           │
+│   │    │    ├── DrawingCanvas / DrawingToolbar               │
+│   │    │    └── NoteInfoPanel, TagsEditor, StatusDropdown    │
+│   │    ├── BrainGraph        (three.js, brain/*)             │
+│   │    └── LinkedNotePanel                                   │
+│   └── NoteWindow         (?mode=note-window, ventana pop-out) │
+│                                                              │
+│  services/apiClient.ts   (fetch directo: auth, suscripción)   │
+│  utils/authUtils.ts      (decode/expiración de JWT)           │
+│  utils/contentCache.ts   (caché de contenido en localStorage) │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ HTTPS (Bearer JWT)
+                 ┌──────────▼──────────┐
+                 │   nts-api (Render)  │
+                 └─────────────────────┘
 ```
+
+**Seguridad:** `contextIsolation: true`, `nodeIntegration: false`, y todo el IPC expuesto explícitamente desde `preload.js` con `contextBridge`. El token nunca se expone al renderer más allá de `getAuthToken()`.
 
 ---
 
-## Sistema de Almacenamiento (Split JSON)
+## Dónde se guardan los datos
 
-NTS utiliza un sistema de almacenamiento propio basado en archivos JSON, sin necesidad de base de datos:
+No hay base de datos local ni archivos JSON por nota. La persistencia local es esta:
+
+| Dónde | Qué guarda |
+|-------|-----------|
+| `electron-store` (config por defecto) | Token JWT cifrado con `safeStorage` bajo la clave `nts_secure_token` |
+| `electron-store` (`offline-sync`) | `accounts[accountId] = { notes, folders, pending }` — caché y cola por cuenta |
+| `localStorage` del renderer | Contenido ya cargado de cada nota (`nts_content_<id>`, `nts_drawing_<id>`) como caché de lectura |
+| API (`nts-api`) | Fuente de verdad: notas, carpetas, assets y estado de suscripción |
+
+La ruta de datos del usuario la maneja `electron-store` (por defecto `%APPDATA%/nts` en Windows y `~/.config/nts` en Linux).
+
+---
+
+## API
+
+Base URL (hardcodeada en `src/main/apiProxy.js`, `src/main/preload.js`, `src/renderer/components/AuthScreen.tsx` y `src/renderer/services/apiClient.ts`):
 
 ```
-%APPDATA%/nts-data/          (producción)
-%APPDATA%/nts-dev-data/      (desarrollo)
-├── metadata.json             # Array de metadatos de todas las notas
-├── folders.json              # Array de carpetas (estructura árbol)
-├── notes/
-│   ├── note-<id>.json        # Contenido de cada nota (content + drawingData)
-│   └── ...
-└── assets/
-    ├── <noteId>/
-    │   ├── imagen1.png       # Imágenes asociadas a la nota
-    │   └── ...
-    └── ...
+https://nts-api-3e8i.onrender.com/api
 ```
 
-- **`metadata.json`** contiene los metadatos de todas las notas (id, nombre, color, tags, estado, fechas, etc.) para carga rápida
-- Cada nota tiene su **archivo individual** `note-<id>.json` con el contenido completo (texto o datos de dibujo)
-- Los **assets** (imágenes) se organizan en subcarpetas por `noteId`
-- Incluye **migración automática** desde `electron-store` (versiones antiguas)
-- **Limpieza automática** de assets no referenciados en el contenido
+| Método | Endpoint | Uso |
+|--------|----------|-----|
+| `POST` | `/auth/register`, `/auth/login` | Registro y login |
+| `GET` | `/auth/github` | Inicio de OAuth (se abre en el navegador) |
+| `POST` | `/auth/refresh` | Renovar JWT |
+| `GET` | `/notes/all` | Todas las notas y carpetas |
+| `GET` | `/notes/:id/content` | Contenido / `drawingData` de una nota |
+| `POST` | `/notes` | Crear nota |
+| `PUT` | `/notes/:id` | Actualizar nota |
+| `DELETE` | `/notes/:id` | Enviar a papelera (soft delete) |
+| `POST` | `/notes/:id/restore` | Restaurar desde papelera |
+| `DELETE` | `/notes/:id/permanent` | Eliminar definitivamente |
+| `GET` | `/notes/:name/backlinks` | Notas que enlazan a `:name` |
+| `GET` | `/folders` | Listar carpetas |
+| `POST` | `/folders` | Crear carpeta |
+| `PUT` | `/folders/:id` | Actualizar carpeta |
+| `DELETE` | `/folders/:id` | Eliminar carpeta |
+| `POST` | `/assets/upload` | Subir imagen (base64) |
+| `POST` | `/assets/clean` | Limpiar assets no referenciados |
+| `GET` | `/subscription/status` | Estado de la suscripción |
+| `POST` | `/subscription/checkout` | Crear sesión de pago |
+| `POST` | `/subscription/portal` | Abrir portal de facturación |
+
+Todas las llamadas autenticadas envían `Authorization: Bearer <jwt>`; las de la cola de sync añaden `Idempotency-Key`.
 
 ---
 
 ## Requisitos Previos
 
-- **Node.js** ≥ 18 (recomendado: 20 LTS)
-- **npm** ≥ 9
+- **Node.js** ≥ 20 (el CI usa **22**)
+- **pnpm 11** (el proyecto usa pnpm; hay `pnpm-lock.yaml`)
 - **Git**
 
 ### Requisitos adicionales por plataforma
@@ -238,7 +251,7 @@ NTS utiliza un sistema de almacenamiento propio basado en archivos JSON, sin nec
 - No se requiere nada adicional
 
 #### Linux
-- Paquetes de desarrollo necesarios para compilar módulos nativos:
+- Paquetes necesarios para Electron:
   ```bash
   # Debian/Ubuntu
   sudo apt install build-essential libnss3 libatk-bridge2.0-0 libdrm2 libxkbcommon0 libgbm1
@@ -261,35 +274,33 @@ cd nts
 ### 2. Instalar dependencias
 
 ```bash
-npm install
+pnpm install
 ```
 
-### 3. Compilar el código (renderer)
+### 3. Compilar el renderer
 
 ```bash
-npm run build
+pnpm run build
 ```
 
-Esto compila el código TypeScript/React del renderer con esbuild y copia los assets a la carpeta `dist/`.
+esbuild genera el bundle en `dist/` (con splitting, CSS, fuentes e iconos) y copia `index.html`.
 
 ### 4. Iniciar la aplicación
 
 ```bash
-npm start
+pnpm start
 ```
 
-> **Nota:** Siempre ejecuta `npm run build` antes de `npm start`. El proceso principal (Electron) carga los archivos compilados desde `dist/`.
+> **Nota:** el main process carga siempre `dist/index.html`, así que hay que correr `pnpm run build` antes de `pnpm start`.
 
 ### Modo desarrollo con watch
 
-Para desarrollo activo, abre dos terminales:
-
 ```bash
-# Terminal 1: Compilación con watch (recompila al guardar)
-npm run dev
+# Terminal 1: recompila al guardar
+pnpm run dev
 
-# Terminal 2: Iniciar Electron
-npm start
+# Terminal 2: inicia Electron
+pnpm start
 ```
 
 ---
@@ -298,43 +309,65 @@ npm start
 
 | Comando | Descripción |
 |---------|-------------|
-| `npm run build` | Compila el renderer (TSX → JS) con esbuild |
-| `npm run dev` | Compilación con watch (recompila al guardar cambios) |
-| `npm start` | Inicia la aplicación Electron |
-| `npm run dist` | Build + genera instalador con electron-builder |
-| `npm run typecheck` | Verificación de tipos TypeScript (`tsc --noEmit`) |
-| `npm test` | Ejecuta tests E2E con Playwright |
-| `npm run clean:test` | Limpia datos de tests |
-| `npm run clean:dist` | Limpia carpetas `dist/` y `release/` |
+| `pnpm run build` | Compila el renderer con esbuild |
+| `pnpm run dev` | Build con watch |
+| `pnpm start` | Inicia Electron |
+| `pnpm run dist` | Build + instalador con electron-builder (salida en `release/`) |
+| `pnpm run typecheck` | `tsc --noEmit` sobre el renderer |
+| `pnpm test` | Tests E2E de Playwright (`tests/offline/*.spec.js`) |
+| `pnpm run test:unit` | Tests unitarios con `node:test` (`tests/offline/*.test.js`) |
+| `pnpm run clean:test` | Borra directorios `test-data-*` |
+| `pnpm run clean:dist` | Borra `dist/` y `release/` |
+
+---
+
+## Testing
+
+El proyecto tiene dos suites, ambas en `tests/offline/`:
+
+| Archivo | Tipo | Cobertura |
+|---------|------|-----------|
+| `offlineSync.test.js` | `node:test` | Caché offline, cola y reintentos, resolución de IDs locales → remotos, aislamiento por cuenta, coalescencia de flush, manejo de 400/401/403/408/429/5xx |
+| `apiProxy.test.js` | `node:test` | Token Bearer, propagación de status HTTP y de JSON inválido |
+| `electron-offline.spec.js` | Playwright + Electron | E2E: editar offline, arrastrar/mover a carpeta, renombrar, reiniciar la app, reconectar y sincronizar de forma idempotente contra una API simulada |
+
+```bash
+# Unitarios (rápidos, sin Electron)
+pnpm run test:unit
+
+# E2E (levanta la app)
+pnpm test
+
+# Limpiar datos de tests
+pnpm run clean:test
+```
 
 ---
 
 ## Generar Instalador
 
-### Windows (NSIS Installer)
+### Windows (NSIS)
 
 ```bash
-npm run dist
+pnpm run dist
 ```
 
-El instalador `.exe` se genera en la carpeta `release/`.
+El instalador `.exe` queda en `release/`.
 
 ### Linux (AppImage)
 
 ```bash
-npm run build
-npx electron-builder --linux
+pnpm run build
+pnpm exec electron-builder --linux
 ```
 
-El archivo `.AppImage` se genera en `release/`.
+### CI/CD automático
 
-### CI/CD Automático
+Al pushear un tag `v*`, GitHub Actions (`.github/workflows/release.yml`):
 
-Al crear un tag con formato `v*` (ej: `v1.2.2`) y hacer push, GitHub Actions ejecuta automáticamente:
-
-1. Build en **Windows** → genera `.exe`
-2. Build en **Linux** → genera `.AppImage`
-3. Crea un **GitHub Release** con ambos binarios
+1. Compila en **Windows** → `.exe`
+2. Compila en **Linux** → `.AppImage`
+3. Publica un **GitHub Release** con ambos binarios (`softprops/action-gh-release`)
 
 ---
 
@@ -342,87 +375,99 @@ Al crear un tag con formato `v*` (ej: `v1.2.2`) y hacer push, GitHub Actions eje
 
 | Atajo | Acción |
 |-------|--------|
-| `Ctrl + N` | Crear nueva nota |
-| `Ctrl + K` | Búsqueda global de notas |
-| `Ctrl + G` | Ir a línea (en el editor) |
-| `Ctrl + F` | Buscar en el editor |
-| `Ctrl + H` | Buscar y reemplazar |
-| `Ctrl + B` | Negrita |
-| `Ctrl + I` | Cursiva |
-| `Ctrl + E` | Código inline |
-| `Ctrl + Shift + K` | Tachado |
-| `Ctrl + Shift + .` | Cita (blockquote) |
-| `Ctrl + Shift + 7` | Lista ordenada |
-| `Ctrl + Shift + 8` | Lista desordenada |
-| `Ctrl + Shift + 9` | Checkbox |
-| `Ctrl + D` | Duplicar línea |
-| `Alt + ↑/↓` | Mover línea arriba/abajo |
-| `Tab` | Indentar |
-| `Shift + Tab` | Des-indentar |
+| `Ctrl + F` | Abrir la búsqueda de carpetas (dashboard) |
+| `Ctrl + Shift + D` | Crear nota de dibujo |
+| `Ctrl + Shift + N` | Activar/desactivar modo enfoque |
+| `Ctrl + G` | Ir a línea (editor) |
+| `Ctrl + P` | Mostrar/ocultar vista previa (editor) |
+| `Ctrl + Shift + M` | Mostrar/ocultar barra de herramientas (editor y ventana pop-out) |
+| `Alt + B` / `Alt + I` | Negrita / cursiva |
+| `Alt + H` | Encabezado H1 |
+| `Alt + K` | Enlace |
+| `Alt + E` | Código inline |
+| `Alt + T` | Bloque de código |
+| `Alt + U` | Tachado |
+| `Alt + .` | Cita |
+| `Alt + 8` / `Alt + 9` / `Alt + 7` | Lista desordenada / ordenada / checkbox |
+| `Ctrl + +` / `Ctrl + -` / `Ctrl + 0` | Zoom in / out / reset (lienzo de dibujo) |
+| `Ctrl + Shift + P` | Ver solo preview (ventana pop-out) |
+| `Esc` | Cerrar modales y paneles de búsqueda |
 
 ---
 
-## Testing
-
-El proyecto incluye tests E2E con Playwright que cubren:
-
-- **Notas**: creación, edición, eliminación, papelera
-- **Carpetas**: creación, anidamiento, eliminación en cascada
-- **Editor**: formato Markdown, atajos de teclado, checkboxes
-- **Organización**: etiquetas, estados, pins, filtros
-- **Sistema**: almacenamiento, integridad de datos
-
-```bash
-# Ejecutar todos los tests
-npm test
-
-# Limpiar datos de tests previos
-npm run clean:test
-```
-
----
-
-## Arquitectura
+## Estructura del Proyecto
 
 ```
-┌───────────────────────────────────────────────────────────┐
-│                    Electron Main Process                  │
-│                                                           │
-│  main.js ──> windowManager.js ──> BrowserWindow(s)        │
-│     │                                                     │
-│     ├──> storage.js (Split JSON en AppData)               │
-│     │                                                     │
-│     └──> ipc/ (Handlers)                                  │
-│           ├── noteHandlers.js                             │
-│           ├── folderHandlers.js                           │
-│           ├── exportHandlers.js                           │
-│           ├── updateHandlers.js                           │
-│           └── windowHandlers.js                           │
-│                                                           │
-│  preload.js ──> contextBridge.exposeInMainWorld("api")    │
-└───────────────────────┬───────────────────────────────────┘
-                        │ IPC (invoke/send)
-┌───────────────────────▼────────────────────────────────────┐
-│                  Electron Renderer Process                 │
-│                                                            │
-│  index.tsx ──> App.tsx                                     │
-│                 ├── Dashboard.tsx (ventana principal)      │
-│                 │     ├── Sidebar (nav + carpetas + tags)  │
-│                 │     ├── NotesListPanel                   │
-│                 │     ├── EditorPanel                      │
-│                 │     │     ├── CodeMirror 6 (texto)       │
-│                 │     │     ├── DrawingCanvas (dibujo)     │
-│                 │     │     ├── MarkdownPreview            │
-│                 │     │     ├── BacklinksPanel             │
-│                 │     │     └── TableOfContents            │
-│                 │     └── LinkedNotePanel                  │
-│                 │                                          │
-│                 └── NoteWindow.tsx (ventana pop-out)       │
-│                       └── EditorPanel (misma funcional.)   │
-└────────────────────────────────────────────────────────────┘
+nts/
+├── .github/
+│   └── workflows/
+│       └── release.yml             # CI/CD: build + release Windows/Linux
+├── scripts/
+│   └── build.js                    # Build del renderer con esbuild (dev + watch)
+├── src/
+│   ├── main/                       # Proceso principal (Node.js)
+│   │   ├── main.js                 # Entry point: deep links, single instance, IPC global
+│   │   ├── preload.js              # Puente contextBridge: window.api
+│   │   ├── apiProxy.js             # fetch a la API con el token seguro
+│   │   ├── offlineSync.js          # Caché por cuenta, cola y sincronización
+│   │   ├── secureStorage.js        # JWT cifrado con safeStorage + electron-store
+│   │   ├── ipc/
+│   │   │   ├── index.js            # Registro centralizado de handlers
+│   │   │   ├── noteHandlers.js     # Sin handlers (el CRUD de notas vive en offlineSync)
+│   │   │   ├── windowHandlers.js   # Ventanas, pop-out y sync entre ventanas
+│   │   │   ├── updateHandlers.js   # Auto-updater
+│   │   │   └── exportHandlers.js   # Export/Import JSON, Markdown y ZIP
+│   │   ├── utils/
+│   │   │   └── validation.js       # Validadores de payloads IPC
+│   │   └── windows/
+│   │       └── windowManager.js    # BrowserWindows (dashboard + notas)
+│   │
+│   └── renderer/                   # Proceso de renderizado (React + TypeScript)
+│       ├── index.html
+│       ├── index.tsx               # Entry point React
+│       ├── App.tsx                 # Sesión, suscripción y ruteo dashboard/note-window
+│       ├── styles/global.css
+│       ├── assets/                 # Fuentes (Atkinson Hyperlegible) e iconos
+│       ├── types/
+│       │   ├── models.ts           # Note, Folder, Tag, Stroke, DrawingData, SubscriptionStatus
+│       │   ├── api.ts              # Tipado de window.api
+│       │   ├── global.d.ts
+│       │   └── images.d.ts
+│       ├── services/
+│       │   └── apiClient.ts        # Llamadas directas: auth refresh, notas, assets, suscripción
+│       ├── utils/
+│       │   ├── authUtils.ts        # decodeJwt, expiración y refresh window
+│       │   ├── contentCache.ts     # Caché de contenido en localStorage
+│       │   └── subscription.ts     # Mapeo de estados y textos de suscripción
+│       ├── brain/                  # Grafo: brain-shape, layout, graph-core, renderer, colors, theme
+│       ├── pages/
+│       │   ├── Dashboard.tsx / .css
+│       │   └── NoteWindow.tsx / .css
+│       └── components/
+│           ├── AuthScreen                  # Login, registro, OAuth GitHub
+│           ├── Sidebar, NotesListPanel     # Navegación y listado
+│           ├── EditorPanel                 # Editor, preview, paneles laterales
+│           ├── BrainGraph                  # Vista de grafo
+│           ├── FolderTree, FolderSearchModal
+│           ├── DrawingCanvas, DrawingToolbar
+│           ├── MarkdownToolbar, MarkdownPreview, TableOfContents
+│           ├── BacklinksPanel, ForwardLinksPanel, LinkedNotePanel
+│           ├── NoteInfoPanel, TagsEditor, StatusDropdown, NoteContextMenu
+│           ├── SubscriptionScreen / SubscriptionModal
+│           ├── InputModal, ConfirmModal, ProgressToast, UpdateIndicator, WindowBar
+│           └── CheckboxWidget, ImagePreviewPlugin, NoteLinkPlugin,
+│               EditorKeymaps, customSetup   # Extensiones de CodeMirror
+├── tests/
+│   └── offline/
+│       ├── offlineSync.test.js
+│       ├── apiProxy.test.js
+│       └── electron-offline.spec.js
+├── package.json
+├── playwright.config.js
+├── pnpm-workspace.yaml
+├── tsconfig.json
+└── README.md
 ```
-
-**Comunicación:** Todo el IPC entre main y renderer pasa por `preload.js` usando `contextBridge` con `contextIsolation: true` (sin `nodeIntegration`), siguiendo las mejores prácticas de seguridad de Electron.
 
 ---
 
@@ -433,6 +478,14 @@ npm run clean:test
 3. Commit tus cambios: `git commit -m 'feat: agregar nueva funcionalidad'`
 4. Push a tu rama: `git push origin feature/mi-nueva-feature`
 5. Abre un Pull Request
+
+Antes de abrir el PR conviene correr:
+
+```bash
+pnpm run typecheck
+pnpm run test:unit
+pnpm run build
+```
 
 ---
 
