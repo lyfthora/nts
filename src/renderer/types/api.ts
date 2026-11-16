@@ -48,9 +48,15 @@ export interface WindowAPI {
   exportNote: (
     noteId: number,
     format: string,
-  ) => Promise<{ success: boolean; path?: string; error?: string }>;
-  importNote: () => Promise<{ success: boolean; note?: Note; notes?: Note[]; error?: string }>;
-  exportAllNotes: () => Promise<{ success: boolean; path?: string; error?: string }>;
+  ) => Promise<{ success: boolean; path?: string; error?: string; code?: string }>;
+  importNote: () => Promise<{
+    success: boolean;
+    note?: Note;
+    notes?: Note[];
+    error?: string;
+    code?: string;
+  }>;
+  exportAllNotes: () => Promise<{ success: boolean; path?: string; error?: string; code?: string }>;
   onExportImportProgress: (callback: (data: ProgressData) => void) => () => void;
 
   // Backlinks

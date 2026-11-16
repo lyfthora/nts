@@ -3,6 +3,23 @@ import { SubscriptionStatus } from "../types/models";
 // La lista de estados vive en un módulo compartido con el main process.
 export { getSubscriptionStatusKind } from "../../shared/subscriptionStatus";
 
+/**
+ * Mensaje a mostrar cuando el backend rechaza una operación premium.
+ * Devuelve null cuando el código de error no es de suscripción.
+ */
+export function getPremiumRejectionMessage(
+  code: string | null | undefined,
+  feature: "export" | "import",
+): string | null {
+  if (code === "PREMIUM_REQUIRED") {
+    return `Premium feature — subscribe to ${feature} notes`;
+  }
+  if (code === "SUBSCRIPTION_UNVERIFIED") {
+    return "Couldn't verify your subscription. Check your connection and try again.";
+  }
+  return null;
+}
+
 export function getSubscriptionAction(status: SubscriptionStatus["status"]) {
   if (status === "active") {
     return {

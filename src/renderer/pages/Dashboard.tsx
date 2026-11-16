@@ -26,7 +26,7 @@ import ProgressToast from "../components/ProgressToast";
 import BrainGraph from "../components/BrainGraph";
 import type { ProgressData } from "../types/models";
 import { apiClient } from "../services/apiClient";
-import { getSubscriptionSummary, getSubscriptionAction, } from "../utils/subscription";
+import { getSubscriptionSummary, getSubscriptionAction, getPremiumRejectionMessage } from "../utils/subscription";
 import { getCachedContent, setCachedContent } from "../utils/contentCache";
 
 interface DashboardProps {
@@ -798,8 +798,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       setTimeout(() => setToastMessage(null), 3000);
       return;
     }
-    await window.api.exportNote(note.id, format);
-  }, [isPremium]);
+    const result = await window.api.exportNote(note.id, format);
+    const rejection = getPremiumRejectionMessage(result?.code, "export");
+    if (rejection) showErrorToast(rejection);
+  }, [isPremium, showErrorToast]);
 
   const onImport = useCallback(async () => {
     if (!isPremium) {
@@ -808,25 +810,28 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       return;
     }
     const result = await window.api.importNote();
-    if (result?.success) {
-      const data = await window.api.getAllData();
-      setFolders(data.folders || []);
-      setNotes((prevNotes) => {
-        return (data.notes || []).map((n: Note) => {
-          const existing = prevNotes.find((p) => p.id === n.id);
-          if (existing && existing.content !== undefined) {
-            return { ...n, content: existing.content };
-          }
-          return n;
-        });
-      });
-      if (result.notes && result.notes.length > 0) {
-        setCurrentId(result.notes[0].id);
-      } else if (result.note) {
-        setCurrentId(result.note.id);
-      }
+    if (!result?.success) {
+      const rejection = getPremiumRejectionMessage(result?.code, "import");
+      if (rejection) showErrorToast(rejection);
+      return;
     }
-  }, [isPremium]);
+    const data = await window.api.getAllData();
+    setFolders(data.folders || []);
+    setNotes((prevNotes) => {
+      return (data.notes || []).map((n: Note) => {
+        const existing = prevNotes.find((p) => p.id === n.id);
+        if (existing && existing.content !== undefined) {
+          return { ...n, content: existing.content };
+        }
+        return n;
+      });
+    });
+    if (result.notes && result.notes.length > 0) {
+      setCurrentId(result.notes[0].id);
+    } else if (result.note) {
+      setCurrentId(result.note.id);
+    }
+  }, [isPremium, showErrorToast]);
 
   const onMoveToFolder = useCallback(
     async (noteId: number, folderId: number | null) => {
@@ -1110,6 +1115,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
           onCloseSettings={handleCloseSettings}
           onSettingsSectionChange={handleSettingsSectionChange}
           isPremium={isPremium}
+          onErrorToast={showErrorToast}
         />
       )}
       <div className="main-content">

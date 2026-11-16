@@ -8,6 +8,7 @@ import buttonIcon from "../assets/icons/button.png";
 import pauseIcon from "../assets/icons/pause.png";
 import checkedIcon from "../assets/icons/checked.png";
 import removeIcon from "../assets/icons/remove.png";
+import { getPremiumRejectionMessage } from "../utils/subscription";
 
 interface NavItemProps {
   itemView: string;
@@ -65,6 +66,7 @@ interface SidebarProps {
   onCloseSettings: () => void;
   onSettingsSectionChange: (section: "account") => void;
   isPremium: boolean;
+  onErrorToast?: (message: string) => void;
 }
 
 const Sidebar = memo(function Sidebar({
@@ -94,6 +96,7 @@ const Sidebar = memo(function Sidebar({
   onCloseSettings,
   onSettingsSectionChange,
   isPremium,
+  onErrorToast,
 }: SidebarProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<
@@ -145,6 +148,9 @@ const Sidebar = memo(function Sidebar({
       const result = await window.api.exportAllNotes();
       if (result.success) {
         console.log("Exported all notes to:", result.path);
+      } else {
+        const rejection = getPremiumRejectionMessage(result.code, "export");
+        if (rejection) onErrorToast?.(rejection);
       }
     } catch (error) {
       console.error("Failed to export all notes:", error);
