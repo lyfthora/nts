@@ -5,14 +5,13 @@ const fsSync = require("fs");
 const archiver = require("archiver");
 const AdmZip = require("adm-zip");
 const { apiRequest } = require("../apiProxy.js");
+const { hasPremiumAccess } = require("../../shared/subscriptionStatus.js");
 
 function sendProgress(event, data) {
   try {
     event.sender.send("export-import-progress", data);
   } catch { }
 }
-
-const PREMIUM_STATUSES = ["active", "trial", "trialing"];
 
 /**
  * Verifica la suscripción contra la API antes de cada operación premium.
@@ -31,7 +30,7 @@ async function checkPremiumAccess() {
     };
   }
 
-  if (!PREMIUM_STATUSES.includes(status && status.status)) {
+  if (!hasPremiumAccess(status && status.status)) {
     return {
       success: false,
       code: "PREMIUM_REQUIRED",
@@ -442,4 +441,4 @@ function parseFrontmatter(str) {
   }
   return result;
 }
-module.exports = { registerExportHandlers };
+module.exports = { registerExportHandlers, checkPremiumAccess };

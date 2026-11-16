@@ -1,15 +1,9 @@
 import { SubscriptionStatus } from "../types/models";
 
-export function getSubscriptionStatusKind(
-  status: SubscriptionStatus["status"],
-) {
-  if (["active", "trial", "trialing"].includes(status))
-    return "access" as const;
-  if (["expired", "canceled", "unpaid", "incomplete"].includes(status))
-    return "blocked" as const;
-  // "past_due" (pago rechazado): necesita atención y no habilita acceso.
-  return "warning" as const;
-}
+// La lista de estados vive en un módulo compartido con el main process.
+import { getSubscriptionStatusKind } from "../../shared/subscriptionStatus";
+
+export { getSubscriptionStatusKind };
 
 export function canAccessApp(status: SubscriptionStatus["status"]) {
   return getSubscriptionStatusKind(status) === "access";
