@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 const { getOfflineSync } = require("./offlineSync.js");
 const isDev = !process.resourcesPath || !process.resourcesPath.includes("app.asar");
-const API_URL = "https://nts-api-3e8i.onrender.com/api";
+const { API_URL } = require("../shared/apiConfig.js");
 
 // Obtener el token de forma síncrona al arrancar y guardarlo en memoria local
 let cachedToken = ipcRenderer.sendSync("get-auth-token-sync") || null;

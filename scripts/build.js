@@ -51,6 +51,9 @@ async function buildAll(watch = false) {
         ".gif": "file",
       },
       sourcemap: false,
+      define: {
+        "process.env.NTS_API_URL": JSON.stringify(process.env.NTS_API_URL || ""),
+      },
     };
 
     if (watch) {

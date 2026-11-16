@@ -1,6 +1,5 @@
 const { getSecureToken, saveSecureToken } = require("./secureStorage.js");
-
-const API_URL = "https://nts-api-3e8i.onrender.com/api";
+const { API_URL } = require("../shared/apiConfig.js");
 
 function setToken(token) {
   saveSecureToken(token);

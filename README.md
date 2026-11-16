@@ -206,7 +206,16 @@ La ruta de datos del usuario la maneja `electron-store` (por defecto `%APPDATA%/
 
 ## API
 
-Base URL (hardcodeada en `src/main/apiProxy.js`, `src/main/preload.js`, `src/renderer/components/AuthScreen.tsx` y `src/renderer/services/apiClient.ts`):
+Base URL: un único módulo la resuelve (`src/shared/apiConfig.js`), con override por variable de entorno.
+
+```bash
+# main process y preload la leen en runtime;
+# el renderer la recibe inyectada en build (esbuild), así que hay que recompilar
+NTS_API_URL=http://localhost:5099/api pnpm run build
+pnpm start
+```
+
+Por defecto (sin la variable):
 
 ```
 https://nts-api-3e8i.onrender.com/api
