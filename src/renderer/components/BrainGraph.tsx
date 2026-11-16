@@ -123,6 +123,116 @@ function extractLinkTargets(content: string): string[] {
 
 type Point = [number, number, number];
 
+interface GraphSelectOption {
+  value: string;
+  label: string;
+}
+
+interface GraphSelectProps {
+  options: GraphSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  title?: string;
+  className?: string;
+}
+
+/** Custom select so its menu and scrollbar follow the app's dark style. */
+function GraphSelect({ options, value, onChange, ariaLabel, title, className = "" }: GraphSelectProps) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  const selected = options.some((option) => option.value === value) ? value : (options[0]?.value ?? "");
+  const selectedOption = options.find((option) => option.value === selected);
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (open) selectedRef.current?.scrollIntoView({ block: "nearest" });
+  }, [open]);
+
+  const choose = (next: string) => {
+    onChange(next);
+    setOpen(false);
+  };
+
+  return (
+    <div className="brain-graph-select" ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`brain-graph-select-trigger${className ? ` ${className}` : ""}${open ? " is-open" : ""}`}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        title={title}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className="brain-graph-select-label">{selectedOption?.label}</span>
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && (
+        <div className="brain-graph-select-menu" role="listbox" aria-label={ariaLabel}>
+          {options.map((option) => (
+            <button
+              key={option.value}
+              ref={selected === option.value ? selectedRef : undefined}
+              type="button"
+              role="option"
+              aria-selected={selected === option.value}
+              className={`brain-graph-select-option${selected === option.value ? " is-selected" : ""}`}
+              onClick={() => choose(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface TagFilterProps {
+  options: [string, number][];
+  value: string | null;
+  onChange: (tag: string | null) => void;
+}
+
+function TagFilter({ options, value, onChange }: TagFilterProps) {
+  return (
+    <GraphSelect
+      options={[
+        { value: "", label: "All tags" },
+        ...options.map(([tag, count]) => ({ value: tag, label: `#${tag} (${count})` })),
+      ]}
+      value={value ?? ""}
+      onChange={(tag) => onChange(tag || null)}
+      ariaLabel="Filter by tag"
+      title="Highlight notes with this tag"
+      className="brain-graph-tag"
+    />
+  );
+}
+
 const pointOf = (position: ArrayLike<number> | undefined): Point | undefined =>
   position ? [position[0], position[1], position[2]] : undefined;
 
@@ -726,40 +836,22 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote, a
           {settings.groupBy === "links" ? "Links" : "Folders"}
         </button>
         {settings.groupBy === "folder" && (
-          <select
+          <GraphSelect
             className="brain-graph-depth"
-            aria-label="Folder depth"
+            ariaLabel="Folder depth"
             title="Folder level to group by: 1 = top-level folders, 2 = subfolders, 3–4 = deeper levels"
-            value={settings.folderDepth}
-            onChange={(event) => update({ folderDepth: Number(event.target.value) })}
-          >
-            {[
-              [1, "1 · Roots"],
-              [2, "2 · Subfolders"],
-              [3, "3 · Deeper"],
-              [4, "4 · Deepest"],
-            ].map(([depth, label]) => (
-              <option key={depth} value={depth}>
-                {label}
-              </option>
-            ))}
-          </select>
+            value={String(settings.folderDepth)}
+            options={[
+              { value: "1", label: "1 · Roots" },
+              { value: "2", label: "2 · Subfolders" },
+              { value: "3", label: "3 · Deeper" },
+              { value: "4", label: "4 · Deepest" },
+            ]}
+            onChange={(value) => update({ folderDepth: Number(value) })}
+          />
         )}
         {tagOptions.length > 0 && (
-          <select
-            className="brain-graph-tag"
-            aria-label="Filter by tag"
-            title="Highlight notes with this tag"
-            value={activeTag && tagOptions.some(([tag]) => tag === activeTag) ? activeTag : ""}
-            onChange={(event) => onActiveTagChange(event.target.value || null)}
-          >
-            <option value="">All tags</option>
-            {tagOptions.map(([tag, count]) => (
-              <option key={tag} value={tag}>
-                #{tag} ({count})
-              </option>
-            ))}
-          </select>
+          <TagFilter options={tagOptions} value={activeTag} onChange={onActiveTagChange} />
         )}
         <button
           className={toggleButton(settings.showOrphans)}
@@ -794,18 +886,13 @@ export default function BrainGraph({ notes, folders, activeNoteId, onOpenNote, a
         <div className="brain-graph-legend">
           <div className="brain-graph-legend-head">
             <span className="brain-graph-legend-title">Regions</span>
-            <select
+            <GraphSelect
               className="brain-graph-legend-palette"
-              aria-label="Color palette"
+              ariaLabel="Color palette"
               value={settings.palette}
-              onChange={(event) => update({ palette: event.target.value as PaletteId })}
-            >
-              {Object.entries(PALETTE_NAMES).map(([id, name]) => (
-                <option key={id} value={id}>
-                  {name}
-                </option>
-              ))}
-            </select>
+              options={Object.entries(PALETTE_NAMES).map(([value, label]) => ({ value, label }))}
+              onChange={(value) => update({ palette: value as PaletteId })}
+            />
           </div>
           <div className="brain-graph-legend-list" onMouseLeave={() => rendererRef.current?.setHighlight([])}>
             {legendRegions.map((region) => (
