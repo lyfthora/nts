@@ -317,7 +317,7 @@ test("deleting an uncreated offline note cancels its queued create without a rem
 });
 
 test("getOfflineSync uses the same stored token and API proxy contract as preload after token changes", async () => {
-  const paths = [require.resolve("electron"), require.resolve("electron-store"), require.resolve("./secureStorage.js"), require.resolve("./apiProxy.js"), require.resolve("./offlineSync.js")];
+  const paths = [require.resolve("electron"), require.resolve("electron-store"), require.resolve("../../src/main/secureStorage.js"), require.resolve("../../src/main/apiProxy.js"), require.resolve("../../src/main/offlineSync.js")];
   const apiProxyPath = paths[3];
   const apiProxyFile = require("node:fs").readFileSync(apiProxyPath, "utf8");
   const apiProxyUsesMainToken = apiProxyFile.includes("getSecureToken");
