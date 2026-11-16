@@ -1,13 +1,7 @@
 import { SubscriptionStatus } from "../types/models";
 
 // La lista de estados vive en un módulo compartido con el main process.
-import { getSubscriptionStatusKind } from "../../shared/subscriptionStatus";
-
-export { getSubscriptionStatusKind };
-
-export function canAccessApp(status: SubscriptionStatus["status"]) {
-  return getSubscriptionStatusKind(status) === "access";
-}
+export { getSubscriptionStatusKind } from "../../shared/subscriptionStatus";
 
 export function getSubscriptionAction(status: SubscriptionStatus["status"]) {
   if (status === "active") {
