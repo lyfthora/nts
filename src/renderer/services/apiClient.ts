@@ -1,7 +1,6 @@
 import { SubscriptionStatus } from "../types/models";
 import { isTokenExpiringSoon } from "../utils/authUtils";
-
-const API_URL = "https://nts-api-3e8i.onrender.com/api";
+import { API_URL } from "../../shared/apiConfig";
 
 let activeRefreshPromise: Promise<string | null> | null = null;
 
