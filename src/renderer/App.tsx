@@ -49,21 +49,12 @@ export default function App() {
   const checkAccess = useCallback(async () => {
     try {
       const status = await apiClient.getSubscriptionStatus();
-      const kind = getSubscriptionStatusKind(status.status);
-
-      if (kind === "access") {
-        setHasAccess(true);
-        return;
-      }
-
-      if (kind === "blocked") {
-        setHasAccess(false);
-        return;
-      }
-
-      setHasAccess(true);
+      // Solo "access" habilita premium; "warning" (p. ej. past_due) no.
+      setHasAccess(getSubscriptionStatusKind(status.status) === "access");
     } catch {
-      setHasAccess(true);
+      // Nunca conceder premium por un fallo de red/API: se conserva el último
+      // estado conocido y, si todavía no hay ninguno, se arranca bloqueado.
+      setHasAccess((previous) => previous ?? false);
     }
   }, []);
 

@@ -7,6 +7,7 @@ export function getSubscriptionStatusKind(
     return "access" as const;
   if (["expired", "canceled", "unpaid", "incomplete"].includes(status))
     return "blocked" as const;
+  // "past_due" (pago rechazado): necesita atención y no habilita acceso.
   return "warning" as const;
 }
 
@@ -15,15 +16,25 @@ export function canAccessApp(status: SubscriptionStatus["status"]) {
 }
 
 export function getSubscriptionAction(status: SubscriptionStatus["status"]) {
-  return status === "active"
-    ? {
-        label: "Pay",
-        mode: "portal" as const,
-      }
-    : {
-        label: "Subscribe",
-        mode: "checkout" as const,
-      };
+  if (status === "active") {
+    return {
+      label: "Pay",
+      mode: "portal" as const,
+    };
+  }
+
+  // Un pago rechazado se resuelve actualizando el método de pago en el portal.
+  if (status === "past_due") {
+    return {
+      label: "Update payment",
+      mode: "portal" as const,
+    };
+  }
+
+  return {
+    label: "Subscribe",
+    mode: "checkout" as const,
+  };
 }
 
 export function formatSubscriptionDate(dateString: string | null) {
@@ -71,6 +82,10 @@ export function getSubscriptionSummary(status: SubscriptionStatus) {
     if (daysRemaining === 1)
       return `1 day left in your trial · ends ${trialEndDate}`;
     return `${daysRemaining} days left in your trial · ends ${trialEndDate}`;
+  }
+
+  if (status.status === "past_due") {
+    return "Payment failed — update your payment method to keep your subscription.";
   }
 
   if (status.status === "expired") {

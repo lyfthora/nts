@@ -983,11 +983,11 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                 setToastType("success");
                 setToastMessage("Waiting for payment confirmation...");
               } else if (attempt >= 15) {
+                // Sin confirmación del backend no se concede acceso.
                 clearInterval(interval);
                 setIsSubscriptionLoading(false);
-                onAccessChanged(true);
-                setToastType("success");
-                setToastMessage("Payment received! If features aren't unlocked, use Refresh in Settings.");
+                setToastType("error");
+                setToastMessage("We couldn't confirm the payment yet. Check your status in Settings.");
                 setTimeout(() => setToastMessage(null), 6000);
               }
             } catch {
@@ -995,6 +995,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
               if (attempt >= 15) {
                 clearInterval(interval);
                 setIsSubscriptionLoading(false);
+                setToastType("error");
                 setToastMessage("Could not confirm payment. Please refresh in Settings.");
                 setTimeout(() => setToastMessage(null), 5000);
               }
@@ -1020,8 +1021,9 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
 
     try {
       const status = subscriptionStatus ?? (await loadSubscriptionStatus());
+      const action = getSubscriptionAction(status.status);
       const { url } =
-        status.status === "active"
+        action.mode === "portal"
           ? await apiClient.createPortalSession()
           : await apiClient.createCheckoutSession();
       window.api.openExternal(url);
