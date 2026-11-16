@@ -2,8 +2,8 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 async function withMockedApi({ token = "test-token", fetch, run }) {
-  const secureStoragePath = require.resolve("./secureStorage.js");
-  const apiProxyPath = require.resolve("./apiProxy.js");
+  const secureStoragePath = require.resolve("../../src/main/secureStorage.js");
+  const apiProxyPath = require.resolve("../../src/main/apiProxy.js");
   const previousSecureStorage = require.cache[secureStoragePath];
   const previousApiProxy = require.cache[apiProxyPath];
   const previousFetch = global.fetch;
