@@ -53,6 +53,10 @@ export function getDaysRemaining(dateString: string | null) {
 }
 
 export function getSubscriptionSummary(status: SubscriptionStatus) {
+  if (status.owner) {
+    return "Owner account — premium is permanent and not billed.";
+  }
+
   if (status.status === "active") {
     const renewalDate = formatSubscriptionDate(status.currentPeriodEnd);
     if (!renewalDate) return null;

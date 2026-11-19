@@ -1248,13 +1248,15 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                         <p className="settings-sub-error">{subscriptionError}</p>
                       )}
                       <div className="settings-sub-actions">
-                        <button
-                          className="settings-primary-btn"
-                          onClick={handleSubscriptionPrimaryAction}
-                          disabled={isSubscriptionLoading}
-                        >
-                          {getSubscriptionAction(subscriptionStatus.status).label}
-                        </button>
+                        {!subscriptionStatus.owner && (
+                          <button
+                            className="settings-primary-btn"
+                            onClick={handleSubscriptionPrimaryAction}
+                            disabled={isSubscriptionLoading}
+                          >
+                            {getSubscriptionAction(subscriptionStatus.status).label}
+                          </button>
+                        )}
                         <button
                           className="settings-secondary-btn"
                           onClick={handleRefreshSubscriptionStatus}
