@@ -301,6 +301,14 @@
 	background: var(--brain-graph-btn-hover-bg);
 }
 
+/* The palette select sits at the right edge of the legend and is as wide as its label.
+   Its menu is positioned from the trigger: anchor it on that same right edge, or a short
+   label ("Nebula") shifts the menu right and it spills outside the panel. */
+.brain-graph-legend .brain-graph-select-menu {
+	left: auto;
+	right: 0;
+}
+
 .brain-graph-legend-list {
 	overflow-y: auto;
 	min-height: 0;
