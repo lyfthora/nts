@@ -2,6 +2,27 @@ const { randomUUID } = require("crypto");
 const { EventEmitter } = require("events");
 
 const emptyState = () => ({ notes: [], folders: [], pending: [] });
+
+// La API entrega `createdAt`/`updatedAt` como cadenas ISO, mientras que las
+// notas creadas en local usan epoch ms. Restar ambos formatos devuelve NaN, y
+// un comparador que devuelve NaN no ordena nada: por eso una nota nueva se
+// quedaba al final de la lista. Se normaliza a epoch ms al entrar al store.
+function toEpoch(value) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Date.parse(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return value;
+}
+
+function normalizeDates(records) {
+  for (const record of records) {
+    if (record.createdAt !== undefined) record.createdAt = toEpoch(record.createdAt);
+    if (record.updatedAt !== undefined) record.updatedAt = toEpoch(record.updatedAt);
+  }
+  return records;
+}
 let sharedInstance;
 
 function getAccountId(token) {
@@ -43,7 +64,7 @@ class OfflineSync {
   _read(accountId) {
     const stored = this.store.get("accounts", {})[accountId] || emptyState();
     return {
-      notes: Array.isArray(stored.notes) ? stored.notes : [],
+      notes: normalizeDates(Array.isArray(stored.notes) ? stored.notes : []),
       folders: Array.isArray(stored.folders) ? stored.folders : [],
       pending: Array.isArray(stored.pending) ? stored.pending : [],
     };
@@ -53,8 +74,10 @@ class OfflineSync {
     this.store.set("accounts", { ...this.store.get("accounts", {}), [accountId]: state });
   }
 
-  _emit(accountId) {
-    const { notes, folders } = this._read(accountId);
+  _emit(accountId, state) {
+    // `state` ya está en memoria cuando lo acaba de escribir el llamador: leer
+    // otra vez el archivo completo costaba ~1,3 ms por emisión.
+    const { notes, folders } = state ?? this._read(accountId);
     this.events.emit("data", { notes, folders });
   }
 
@@ -108,6 +131,7 @@ class OfflineSync {
     for (const note of notes) {
       if (note.folderId != null) note.folderId = localFolderIdByRemote.get(note.folderId) ?? note.folderId;
     }
+    normalizeDates(notes);
     state.notes = notes;
     state.folders = folders;
     this._write(accountId, state);
@@ -119,9 +143,9 @@ class OfflineSync {
     const accountId = this._accountId();
     const state = this._read(accountId);
     this._upsert(state.notes, note);
+    this._enqueueInState(state, "PUT", `/notes/${note.id}`, note, note.id);
     this._write(accountId, state);
-    this._enqueue(accountId, "PUT", `/notes/${note.id}`, note, note.id);
-    this._emit(accountId);
+    this._emit(accountId, state);
     this._scheduleRetry(accountId, 250);
     return true;
   }
@@ -191,9 +215,9 @@ class OfflineSync {
     const now = Date.now();
     const note = { id, name: "Untitled", color: "#ffffff", content: "", noteType, tags: [], images: [], createdAt: now, updatedAt: now };
     state.notes.push(note);
+    this._enqueueInState(state, "POST", "/notes", { noteType }, id);
     this._write(accountId, state);
-    this._enqueue(accountId, "POST", "/notes", { noteType }, id);
-    this._emit(accountId);
+    this._emit(accountId, state);
     this._scheduleRetry(accountId, 100);
     return note;
   }
@@ -202,11 +226,11 @@ class OfflineSync {
     const accountId = this._accountId();
     const state = this._read(accountId);
     this._upsert(state.notes, note);
+    const operationId = this._enqueueInState(state, "PUT", `/notes/${note.id}`, note, note.id);
     this._write(accountId, state);
-    const operationId = this._enqueue(accountId, "PUT", `/notes/${note.id}`, note, note.id);
-    this._emit(accountId);
+    this._emit(accountId, state);
     this._scheduleRetry(accountId, 100);
-    return { ...note, pendingSync: this._read(accountId).pending.some((op) => op.id === operationId) };
+    return { ...note, pendingSync: state.pending.some((op) => op.id === operationId) };
   }
 
   async deleteNote(noteId) {
@@ -262,9 +286,9 @@ class OfflineSync {
     const id = Math.min(0, ...state.folders.map((folder) => Number(folder.id) || 0)) - 1;
     const folder = { id, name: data.name, parentId: data.parentId ?? null };
     state.folders.push(folder);
+    this._enqueueInState(state, "POST", "/folders", { name: folder.name, parentId: folder.parentId }, id);
     this._write(accountId, state);
-    this._enqueue(accountId, "POST", "/folders", { name: folder.name, parentId: folder.parentId }, id);
-    this._emit(accountId);
+    this._emit(accountId, state);
     this._scheduleRetry(accountId, 100);
     return folder;
   }
@@ -273,11 +297,11 @@ class OfflineSync {
     const accountId = this._accountId();
     const state = this._read(accountId);
     this._upsert(state.folders, folder);
+    const operationId = this._enqueueInState(state, "PUT", `/folders/${folder.id}`, folder, folder.id);
     this._write(accountId, state);
-    const operationId = this._enqueue(accountId, "PUT", `/folders/${folder.id}`, folder, folder.id);
-    this._emit(accountId);
+    this._emit(accountId, state);
     this._scheduleRetry(accountId, 100);
-    return { success: true, pendingSync: this._read(accountId).pending.some((op) => op.id === operationId) };
+    return { success: true, pendingSync: state.pending.some((op) => op.id === operationId) };
   }
 
   async deleteFolder(folderId) {
@@ -304,6 +328,14 @@ class OfflineSync {
 
   _enqueue(accountId, method, path, body, entityId) {
     const state = this._read(accountId);
+    const operationId = this._enqueueInState(state, method, path, body, entityId);
+    this._write(accountId, state);
+    return operationId;
+  }
+
+  // Igual que `_enqueue`, pero trabaja sobre un estado ya leído y no escribe:
+  // así una mutación hace una sola lectura y una sola escritura del store.
+  _enqueueInState(state, method, path, body, entityId) {
     if (method === "POST" && path === "/notes") {
       body = { ...body, name: "Untitled", color: "#ffffff", content: "", noteType: body?.noteType || "text", tags: [], images: [] };
     }
@@ -321,7 +353,6 @@ class OfflineSync {
           create.body = isNote
             ? { noteType: entity.noteType || "text", name: entity.name, color: entity.color, content: entity.content, drawingData: entity.drawingData, tags: entity.tags, folderId: entity.folderId, status: entity.status, pinned: entity.pinned, images: entity.images }
             : { name: entity.name, parentId: entity.parentId };
-          this._write(accountId, state);
           return create.id;
         }
       }
@@ -331,12 +362,10 @@ class OfflineSync {
       existing.body = body;
       existing.revision += 1;
       existing.lastError = null;
-      this._write(accountId, state);
       return existing.id;
     }
     const operation = { id: randomUUID(), method, path, body, entityId, revision: 1, lastError: null };
     state.pending.push(operation);
-    this._write(accountId, state);
     return operation.id;
   }
 

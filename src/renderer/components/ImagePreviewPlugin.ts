@@ -141,31 +141,40 @@ class ImageWidget extends WidgetType {
 }
 
 const hideWidthMark = Decoration.mark({ class: "cm-image-width-hidden" });
+
 function buildDecorations(view: EditorView, dataPath: string): DecorationSet {
   const decorations: Range<Decoration>[] = [];
   const regex = /!\[.*?\]\((assets\/[^)]+)\)(\{width=(\d+)\})?/g;
-  for (let i = 1; i <= view.state.doc.lines; i++) {
-    const line = view.state.doc.line(i);
-    let match;
-    regex.lastIndex = 0;
-    while ((match = regex.exec(line.text)) !== null) {
-      const relativePath = match[1];
-      const width = match[3] ? parseInt(match[3], 10) : null;
-      const fullPath = `file:///${dataPath}/${relativePath}`.replace(
-        /\\/g,
-        "/",
-      );
-      const deco = Decoration.widget({
-        widget: new ImageWidget(fullPath, width, line.from, match[0]),
-        side: 1,
-        block: false,
-      });
-      decorations.push(deco.range(line.to));
-      if (match[2]) {
-        const widthStart = line.from + match.index + match[0].indexOf(match[2]);
-        const widthEnd = widthStart + match[2].length;
-        decorations.push(hideWidthMark.range(widthStart, widthEnd));
+
+  // Solo se recorren las líneas visibles: antes se escaneaba todo el documento
+  // (con un `lineAt` por línea) en cada tecla, que es lo que hacía lento escribir.
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from;
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos);
+      let match;
+      regex.lastIndex = 0;
+      while ((match = regex.exec(line.text)) !== null) {
+        const relativePath = match[1];
+        const width = match[3] ? parseInt(match[3], 10) : null;
+        const fullPath = `file:///${dataPath}/${relativePath}`.replace(
+          /\\/g,
+          "/",
+        );
+        const deco = Decoration.widget({
+          widget: new ImageWidget(fullPath, width, line.from, match[0]),
+          side: 1,
+          block: false,
+        });
+        decorations.push(deco.range(line.to));
+        if (match[2]) {
+          const widthStart = line.from + match.index + match[0].indexOf(match[2]);
+          const widthEnd = widthStart + match[2].length;
+          decorations.push(hideWidthMark.range(widthStart, widthEnd));
+        }
       }
+      if (line.to >= to) break;
+      pos = line.to + 1;
     }
   }
   return Decoration.set(

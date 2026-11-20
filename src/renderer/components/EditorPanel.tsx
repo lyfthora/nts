@@ -80,6 +80,40 @@ const EditorPanel = memo(function EditorPanel({
   const editorRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const noteRef = useRef(note);
+  const dirtyRef = useRef(false);
+  const changeTimerRef = useRef<number | undefined>(undefined);
+  const lastLocalContentRef = useRef<string>(note?.content ?? "");
+
+  const flushPendingChange = useCallback(() => {
+    if (changeTimerRef.current !== undefined) {
+      clearTimeout(changeTimerRef.current);
+      changeTimerRef.current = undefined;
+    }
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    if (noteRef.current) onChange(noteRef.current);
+  }, [onChange]);
+
+  // Diferir el envío a onChange: escribir no debe re-renderizar toda la app
+  const emitChange = useCallback(
+    (next: Note, immediate = false) => {
+      noteRef.current = next;
+      dirtyRef.current = true;
+      if (immediate) {
+        flushPendingChange();
+        return;
+      }
+      if (changeTimerRef.current !== undefined) clearTimeout(changeTimerRef.current);
+      changeTimerRef.current = window.setTimeout(() => {
+        changeTimerRef.current = undefined;
+        flushPendingChange();
+      }, 200);
+    },
+    [flushPendingChange],
+  );
+
+  // Al desmontar (cambio de nota incluido) no perder lo pendiente
+  useEffect(() => flushPendingChange, [flushPendingChange]);
   const [isDragging, setIsDragging] = useState(false);
   const [showLineNumbers, setShowLineNumbers] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -95,6 +129,7 @@ const EditorPanel = memo(function EditorPanel({
   const [zoomLevel, setZoomLevel] = useState(1);
   const isResizingPreview = useRef(false);
   const [hideEditor, setHideEditor] = useState(false);
+  const [titleDraft, setTitleDraft] = useState<string | null>(null);
   const showPreviewRef = useRef(showPreview);
   const hideEditorRef = useRef(hideEditor);
 
@@ -137,9 +172,10 @@ const EditorPanel = memo(function EditorPanel({
 
 
   const handleDrawingChange = useCallback((canvasJSON: string) => {
-    if (!note) return;
-    onChange({ ...note, drawingData: canvasJSON });
-  }, [note, onChange]);
+    const draft = noteRef.current;
+    if (!draft) return;
+    emitChange({ ...draft, drawingData: canvasJSON });
+  }, [emitChange]);
 
   const handleBackgroundChange = useCallback((bg: 'black' | 'white' | 'grid') => {
     setDrawingBackground(bg);
@@ -156,9 +192,9 @@ const EditorPanel = memo(function EditorPanel({
         } catch {
         }
       }
-      onChange({ ...note, drawingData: JSON.stringify(currentData) });
+      emitChange({ ...(noteRef.current ?? note), drawingData: JSON.stringify(currentData) }, true);
     }
-  }, [note, onChange]);
+  }, [note, emitChange]);
 
   const handleClearCanvas = useCallback(() => {
     setShowClearConfirm(true);
@@ -166,16 +202,16 @@ const EditorPanel = memo(function EditorPanel({
 
   const confirmClearCanvas = useCallback(() => {
     if (note) {
-      onChange({
-        ...note, drawingData: JSON.stringify({
+      emitChange({
+        ...(noteRef.current ?? note), drawingData: JSON.stringify({
           version: '1.0',
           background: drawingBackground,
           strokes: []
         })
-      });
+      }, true);
     }
     setShowClearConfirm(false);
-  }, [note, onChange, drawingBackground]);
+  }, [note, emitChange, drawingBackground]);
 
   const handleZoomIn = useCallback(() => {
     setZoomLevel(prev => Math.min(5.0, prev * 1.1));
@@ -236,8 +272,20 @@ const EditorPanel = memo(function EditorPanel({
     }
   }, [showPreview, previewWidth]);
 
+  const noteIdRef = useRef(note?.id);
+
   useEffect(() => {
+    if (noteIdRef.current === note?.id) return;
+    // Cambió la nota: enviar lo pendiente de la anterior antes de adoptar la nueva
+    flushPendingChange();
+    noteIdRef.current = note?.id;
+    dirtyRef.current = false;
     noteRef.current = note;
+    setTitleDraft(null);
+  }, [note?.id, note, flushPendingChange]);
+
+  useEffect(() => {
+    if (!dirtyRef.current) noteRef.current = note;
   }, [note]);
 
   const getFolderPath = useCallback((folderId: number | null | undefined): string => {
@@ -309,13 +357,16 @@ const EditorPanel = memo(function EditorPanel({
               const newContent = update.state.doc.toString();
               const currentNote = noteRef.current;
               if (currentNote && newContent !== currentNote.content) {
-                onChange({ ...currentNote, content: newContent });
+                lastLocalContentRef.current = newContent;
+                emitChange({ ...currentNote, content: newContent });
               }
             }
           }),
           ...(onNoteLinkClick ? [noteLinkPlugin(onNoteLinkClick)] : []),
         ],
       });
+
+      lastLocalContentRef.current = note.content || "";
 
       const view = new EditorView({
         state: startState,
@@ -407,23 +458,30 @@ const EditorPanel = memo(function EditorPanel({
   useEffect(() => {
     if (!viewRef.current || !note) return;
     const currentContent = viewRef.current.state.doc.toString();
-    if (currentContent !== note.content) {
-      const scrollInfo = viewRef.current.scrollDOM.scrollTop;
+    if (currentContent === note.content) return;
 
-      viewRef.current.dispatch({
-        changes: {
-          from: 0,
-          to: currentContent.length,
-          insert: note.content || "",
-        },
-      });
+    // Si el documento ya contiene lo último que escribió el usuario, no se
+    // reemplaza: el envío a onChange está diferido y la prop llega con retraso.
+    // Sustituir todo el documento en ese momento provoca tirones y saltos de cursor.
+    if (currentContent === lastLocalContentRef.current) return;
 
-      requestAnimationFrame(() => {
-        if (viewRef.current) {
-          viewRef.current.scrollDOM.scrollTop = scrollInfo;
-        }
-      });
-    }
+    const scrollInfo = viewRef.current.scrollDOM.scrollTop;
+    const nextContent = note.content || "";
+
+    viewRef.current.dispatch({
+      changes: {
+        from: 0,
+        to: currentContent.length,
+        insert: nextContent,
+      },
+    });
+    lastLocalContentRef.current = nextContent;
+
+    requestAnimationFrame(() => {
+      if (viewRef.current) {
+        viewRef.current.scrollDOM.scrollTop = scrollInfo;
+      }
+    });
   }, [note?.content]);
 
   const handleFormat = (type: string) => {
@@ -526,14 +584,12 @@ const EditorPanel = memo(function EditorPanel({
           className={`note-title-input ${isLinkedNote ? 'linked-note-title' : ''}`}
           id="noteTitleInput"
           placeholder="Untitled"
-          value={isLinkedNote ? `@${note.name || ""}` : (note.name || "")}
+          value={titleDraft ?? (isLinkedNote ? `@${note.name || ""}` : (note.name || ""))}
           onChange={(e) => {
-            if (isLinkedNote) {
-              const value = e.target.value.startsWith('@') ? e.target.value.slice(1) : e.target.value;
-              onChange({ ...note, name: value });
-            } else {
-              onChange({ ...note, name: e.target.value });
-            }
+            const value = e.target.value;
+            setTitleDraft(value);
+            const name = isLinkedNote && value.startsWith('@') ? value.slice(1) : value;
+            emitChange({ ...(noteRef.current ?? note), name });
           }}
           readOnly={isLinkedNote}
         />
@@ -817,7 +873,10 @@ const EditorPanel = memo(function EditorPanel({
                   />
                   <MarkdownPreview
                     content={note?.content || ""}
-                    onContentChange={(newContent) => onChange({ ...note, content: newContent })}
+                    onContentChange={(newContent) => {
+                      lastLocalContentRef.current = newContent;
+                      emitChange({ ...(noteRef.current ?? note), content: newContent }, true);
+                    }}
                   />
                 </div>
               )}
