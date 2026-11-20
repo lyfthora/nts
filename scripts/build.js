@@ -42,6 +42,19 @@ async function buildAll(watch = false) {
     }
   };
 
+  // Limpia bundles con hash de builds anteriores (ej. BrainGraph-*.js
+  // huérfanos): solo en build release, nunca en watch.
+  if (!watch) {
+    const distDir = path.join(__dirname, "../dist");
+    if (fs.existsSync(distDir)) {
+      for (const f of fs.readdirSync(distDir)) {
+        if (/\.(js|css|map)$/.test(f)) {
+          fs.rmSync(path.join(distDir, f), { force: true });
+        }
+      }
+    }
+  }
+
   for (const e of entries) {
     const buildOptions = {
       entryPoints: [e.in],
@@ -62,6 +75,8 @@ async function buildAll(watch = false) {
         ".gif": "file",
       },
       sourcemap: false,
+      // Release minificado (menor parse/heap); en dev/watch se mantiene legible y rápido.
+      minify: !devBuild,
       define: {
         "process.env.NODE_ENV": JSON.stringify(devBuild ? "development" : "production"),
         "process.env.NTS_API_URL": JSON.stringify(process.env.NTS_API_URL || ""),
