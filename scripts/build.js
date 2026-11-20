@@ -2,6 +2,17 @@ const esbuild = require("esbuild");
 const fs = require("fs");
 const path = require("path");
 
+// esbuild define `process.env.NODE_ENV` como "development" salvo que se
+// minifique, así que el bundle de release incluía React de desarrollo: cada
+// render se duplicaba por StrictMode y arrastraba comprobaciones y avisos que
+// no existen en producción. En release se compila en modo producción; con
+// `pnpm dev` (--watch) se mantiene desarrollo para conservar esos mensajes.
+const watchMode = process.argv.includes("--watch");
+const devBuild =
+  watchMode ||
+  process.argv.includes("--dev") ||
+  process.env.NODE_ENV === "development";
+
 async function buildAll(watch = false) {
   const entries = [
     { in: "src/renderer/index.tsx", out: "src/renderer/index.js" },
@@ -52,6 +63,7 @@ async function buildAll(watch = false) {
       },
       sourcemap: false,
       define: {
+        "process.env.NODE_ENV": JSON.stringify(devBuild ? "development" : "production"),
         "process.env.NTS_API_URL": JSON.stringify(process.env.NTS_API_URL || ""),
       },
     };
@@ -71,7 +83,6 @@ async function buildAll(watch = false) {
   }
 }
 
-const watchMode = process.argv.includes("--watch");
 buildAll(watchMode).catch((err) => {
   console.error(err);
   process.exit(1);

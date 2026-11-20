@@ -54,7 +54,7 @@
     "codemirror": "^6.0.2",
     "electron-store": "^8.2.0",
     "electron-updater": "^6.6.2",
-    "framer-motion": "^12.23.25",
+    "framer-motion": "^12.43.0",
     "highlight.js": "^11.11.1",
     "marked": "^17.0.1",
     "perfect-freehand": "^1.2.3",
