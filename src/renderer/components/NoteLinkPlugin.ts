@@ -7,25 +7,28 @@ import {
 } from "@codemirror/view";
 import { Range } from "@codemirror/state";
 
+const linkMarker = Decoration.mark({ class: "cm-note-link" });
+
 function findNoteLinks(view: EditorView): Range<Decoration>[] {
   const decorations: Range<Decoration>[] = [];
-  const text = view.state.doc.toString();
   const regex = /@"([^"]+)"|@([^\s]+)/g;
-  let match;
 
-  while ((match = regex.exec(text)) !== null) {
-    const from = match.index;
-    const to = from + match[0].length;
-    const noteName = match[1] || match[2];
-
-    const deco = Decoration.mark({
-      class: "cm-note-link",
-      attributes: {
-        title: `Click to open "@${noteName}"`,
-      },
-    });
-
-    decorations.push(deco.range(from, to));
+  // Solo el texto visible: convertir el documento entero a string y recorrerlo
+  // con regex en cada tecla es lo que frenaba la escritura en notas largas.
+  for (const { from, to } of view.visibleRanges) {
+    let pos = from;
+    while (pos <= to) {
+      const line = view.state.doc.lineAt(pos);
+      regex.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = regex.exec(line.text)) !== null) {
+        const start = line.from + match.index;
+        const end = start + match[0].length;
+        decorations.push(linkMarker.range(start, end));
+      }
+      if (line.to >= to) break;
+      pos = line.to + 1;
+    }
   }
 
   return decorations;
@@ -65,6 +68,7 @@ export function noteLinkPlugin(onClick: (noteName: string) => void) {
           this.decorations = Decoration.set(findNoteLinks(update.view));
         }
       }
+
       destroy() {
         const view = this as any;
         if (view.view) {

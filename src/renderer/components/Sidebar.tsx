@@ -1,6 +1,6 @@
 import React, { useState, memo, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Note, Folder, StatusCounts, Tag } from "../types/models";
+import type { Folder, StatusCounts, Tag } from "../types/models";
 import "./Sidebar.css";
 import FolderTree from "./FolderTree";
 import InputModal from "./InputModal";
@@ -9,6 +9,27 @@ import pauseIcon from "../assets/icons/pause.png";
 import checkedIcon from "../assets/icons/checked.png";
 import removeIcon from "../assets/icons/remove.png";
 import { getPremiumRejectionMessage } from "../utils/subscription";
+
+// Formateadores creados una sola vez: `toLocale*` en cada render es caro.
+const syncTimeFormatter = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
+const syncDateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+});
+
+function formatSyncDate(timestamp: number): string {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const timeStr = syncTimeFormatter.format(date);
+  if (date.toDateString() === new Date().toDateString()) {
+    return timeStr;
+  }
+  return `${syncDateFormatter.format(date)}, ${timeStr}`;
+}
 
 interface NavItemProps {
   itemView: string;
@@ -38,7 +59,12 @@ const NavItem = memo(function NavItem({
 });
 
 interface SidebarProps {
-  notes: Note[];
+  /** Conteos y hora de sincronización como escalares: si llegara el arreglo de
+   * notas, el memo del sidebar se rompería en cada guardado mientras se escribe. */
+  allNotesCount: number;
+  pinnedCount: number;
+  trashCount: number;
+  lastSyncTime: number;
   folders: Folder[];
   view: string;
   selectedFolderId: number | null;
@@ -70,7 +96,10 @@ interface SidebarProps {
 }
 
 const Sidebar = memo(function Sidebar({
-  notes,
+  allNotesCount,
+  pinnedCount,
+  trashCount,
+  lastSyncTime,
   folders,
   view,
   selectedFolderId,
@@ -109,36 +138,6 @@ const Sidebar = memo(function Sidebar({
   const [hasMoreSidebarContent, setHasMoreSidebarContent] = useState(false);
   const isResizing = useRef(false);
   const [isExporting, setIsExporting] = useState(false);
-
-  const lastSyncTime = React.useMemo(() => {
-    const timestamps = notes
-      .filter((n) => !n.deleted && n.updatedAt)
-      .map((n) => {
-        const t = n.updatedAt;
-        return typeof t === "number"
-          ? t
-          : new Date(t as unknown as string).getTime();
-      });
-    return timestamps.length > 0 ? Math.max(...timestamps) : 0;
-  }, [notes]);
-  const formatSyncDate = (timestamp: number): string => {
-    if (!timestamp) return "";
-    const date = new Date(timestamp);
-    const now = new Date();
-    const timeStr = date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    });
-    if (date.toDateString() === now.toDateString()) {
-      return timeStr;
-    }
-    const dateStr = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-    });
-    return `${dateStr}, ${timeStr}`;
-  };
 
   const handleExportAllNotes = async () => {
     if (!isPremium) return;
@@ -264,7 +263,7 @@ const Sidebar = memo(function Sidebar({
                 </svg>
                 <span>All Notes</span>
                 <span className="nav-count" id="allNotesCount">
-                  {String(notes.filter((n) => !n.deleted).length)}
+                  {String(allNotesCount)}
                 </span>
               </NavItem>
 
@@ -307,7 +306,7 @@ const Sidebar = memo(function Sidebar({
                 </svg>
                 <span>Pinned Notes</span>
                 <span className="nav-count" id="pinnedCount">
-                  {String(notes.filter((n) => !n.deleted && n.pinned).length)}
+                  {String(pinnedCount)}
                 </span>
               </NavItem>
 
@@ -329,7 +328,7 @@ const Sidebar = memo(function Sidebar({
                 </svg>
                 <span>Trash</span>
                 <span className="nav-count" id="trashCount">
-                  {String(notes.filter((n) => n.deleted).length)}
+                  {String(trashCount)}
                 </span>
               </NavItem>
             </div>
