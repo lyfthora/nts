@@ -23,7 +23,7 @@ import FolderSearchModal from "../components/FolderSearchModal";
 import ConfirmModal from "../components/ConfirmModal";
 import SubscriptionModal from "../components/SubscriptionModal";
 import ProgressToast from "../components/ProgressToast";
-import BrainGraph from "../components/BrainGraph";
+const BrainGraph = React.lazy(() => import("../components/BrainGraph"));
 import type { ProgressData } from "../types/models";
 import { apiClient } from "../services/apiClient";
 import { getSubscriptionSummary, getSubscriptionAction, getPremiumRejectionMessage } from "../utils/subscription";
@@ -1249,14 +1249,16 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         <div className="content-container">
           {!isSettingsView ? (
             view === "brain" ? (
-              <BrainGraph
-                notes={notes}
-                folders={folders}
-                activeNoteId={currentId}
-                onOpenNote={handleOpenBrainNote}
-                activeTag={graphTag}
-                onActiveTagChange={setGraphTag}
-              />
+              <React.Suspense fallback={null}>
+                <BrainGraph
+                  notes={notes}
+                  folders={folders}
+                  activeNoteId={currentId}
+                  onOpenNote={handleOpenBrainNote}
+                  activeTag={graphTag}
+                  onActiveTagChange={setGraphTag}
+                />
+              </React.Suspense>
             ) : (
             <>
               {!isFocusMode && (

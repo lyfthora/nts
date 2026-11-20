@@ -20,7 +20,7 @@ import { checkboxPlugin } from "./CheckboxWidget";
 import MarkdownPreview from "./MarkdownPreview";
 import { noteLinkPlugin } from "./NoteLinkPlugin";
 import "./EditorPanel.css";
-import { languages } from "@codemirror/language-data";
+import { codeLanguages } from "./codeLanguages";
 import { imagePreviewPlugin } from "./ImagePreviewPlugin";
 import { setupWithoutKeymaps } from "./customSetup";
 import NoteInfoPanel from "./NoteInfoPanel";
@@ -322,7 +322,9 @@ const EditorPanel = memo(function EditorPanel({
         doc: note.content || "",
         extensions: [
           ...setupWithoutKeymaps,
-          markdown({ extensions: [Strikethrough], codeLanguages: languages }),
+          // Lista curada con carga lazy (7 lenguajes): evita los ~100
+          // chunks legacy de @codemirror/language-data en dist.
+          markdown({ extensions: [Strikethrough], codeLanguages }),
           oneDark,
           syntaxHighlighting(classHighlighter),
 
