@@ -29,6 +29,61 @@ import { apiClient } from "../services/apiClient";
 import { getSubscriptionSummary, getSubscriptionAction, getPremiumRejectionMessage } from "../utils/subscription";
 import { getCachedContent, setCachedContent } from "../utils/contentCache";
 
+// Devuelve la misma referencia mientras el valor sea equivalente: evita que
+// Sidebar vuelva a medir el layout en cada guardado mientras se escribe.
+function useStableValue<T>(value: T, isEqual: (a: T, b: T) => boolean): T {
+  const ref = useRef(value);
+  if (!isEqual(ref.current, value)) ref.current = value;
+  return ref.current;
+}
+
+// Cada emisión del store llega como objetos nuevos (el preload los copia), así
+// que la lista, el sidebar y la nota activa se repintaban aunque nada hubiera
+// cambiado. Se reutiliza el objeto anterior cuando los datos son equivalentes.
+function recordsEqual(a: object, b: object): boolean {
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+  keys.delete("content");
+  keys.delete("drawingData");
+  for (const key of keys) {
+    if (!Object.is(left[key], right[key])) return false;
+  }
+  // El contenido cargado en memoria sí importa (puede venir de otra ventana o
+  // de la API). Cuando está desalojado (`undefined`) se ignora, para que una
+  // emisión no vuelva a hidratar las notas que el editor acaba de vaciar.
+  for (const field of ["content", "drawingData"]) {
+    const previous = left[field];
+    if (previous !== undefined && previous !== right[field]) return false;
+  }
+  return true;
+}
+
+function reconcileById<T extends { id: number }>(
+  prev: T[],
+  incoming: T[],
+  isEqual: (a: T, b: T) => boolean = recordsEqual,
+): T[] {
+  if (prev === incoming) return prev;
+  const previousById = new Map(prev.map((item) => [item.id, item]));
+  let changed = prev.length !== incoming.length;
+  const next = incoming.map((item) => {
+    const previous = previousById.get(item.id);
+    if (previous && isEqual(previous, item)) return previous;
+    changed = true;
+    return item;
+  });
+  if (!changed) {
+    for (let i = 0; i < next.length; i++) {
+      if (next[i] !== prev[i]) {
+        changed = true;
+        break;
+      }
+    }
+  }
+  return changed ? next : prev;
+}
+
 interface DashboardProps {
   userName: string;
   userEmail: string;
@@ -101,7 +156,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
     [notes, currentId],
   );
 
-  const counts = useMemo<StatusCounts>(() => {
+  const computedCounts = useMemo<StatusCounts>(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
     const c: StatusCounts = {
       active: 0,
@@ -115,12 +170,49 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
     return c;
   }, [notes]);
 
+  // Sidebar está memoizado: recibe escalares (y la hora redondeada al minuto)
+  // para que escribir una nota no lo vuelva a renderizar en cada guardado.
+  const sidebarStats = useMemo(() => {
+    let allNotes = 0;
+    let pinned = 0;
+    let trash = 0;
+    let lastSync = 0;
+    for (const n of notes) {
+      if (n.deleted) {
+        trash++;
+        continue;
+      }
+      allNotes++;
+      if (n.pinned) pinned++;
+      const t = n.updatedAt;
+      if (!t) continue;
+      const ms =
+        typeof t === "number" ? t : new Date(t as unknown as string).getTime();
+      if (Number.isFinite(ms) && ms > lastSync) lastSync = ms;
+    }
+    return {
+      allNotes,
+      pinned,
+      trash,
+      lastSync: Math.floor(lastSync / 60000) * 60000,
+    };
+  }, [notes]);
+
+  const counts = useStableValue(
+    computedCounts,
+    (a, b) =>
+      a.active === b.active &&
+      a.onhold === b.onhold &&
+      a.completed === b.completed &&
+      a.dropped === b.dropped,
+  );
+
   const linkedNote = useMemo<Note | null>(
     () => notes.find((n) => n.id === linkedNoteId) || null,
     [notes, linkedNoteId],
   );
 
-  const folderCounts = useMemo<FolderCounts>(() => {
+  const computedFolderCounts = useMemo<FolderCounts>(() => {
     // 1. Count direct notes per folder in a single pass over notes
     const directCounts: Record<number, number> = {};
     folders.forEach((f) => {
@@ -185,7 +277,13 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
     return counts;
   }, [notes, folders]);
 
-  const tags = useMemo<Tag[]>(() => {
+  const folderCounts = useStableValue(computedFolderCounts, (a, b) => {
+    const keys = Object.keys(a);
+    if (keys.length !== Object.keys(b).length) return false;
+    return keys.every((key) => a[Number(key)] === b[Number(key)]);
+  });
+
+  const computedTags = useMemo<Tag[]>(() => {
     const activeNotes = notes.filter((n) => !n.deleted);
     const m: Record<string, number> = {};
     activeNotes.forEach((n) =>
@@ -197,7 +295,16 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       .sort()
       .map((name) => ({ name, count: m[name] }));
   }, [notes]);
-  const debRef = useRef<number | undefined>(undefined);
+
+  const tags = useStableValue(
+    computedTags,
+    (a, b) => a.length === b.length && a.every((tag, i) => tag.name === b[i].name && tag.count === b[i].count),
+  );
+
+  // `tags.map(...)` crea un arreglo nuevo en cada render y rompía el memo de
+  // EditorPanel, que así se repintaba (con su TOC y su preview) en cada guardado.
+  const existingTagNames = useMemo(() => tags.map((t) => t.name), [tags]);
+  const saveTimersRef = useRef<Map<number, number>>(new Map());
 
   useEffect(() => {
     let mounted = true;
@@ -222,8 +329,8 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       });
     const unsubscribeOfflineData = window.api.onOfflineDataChanged((data) => {
       if (!mounted) return;
-      setNotes(data.notes || []);
-      setFolders(data.folders || []);
+      setNotes((prev) => reconcileById(prev, data.notes || []));
+      setFolders((prev) => reconcileById(prev, data.folders || []));
     });
     return () => {
       mounted = false;
@@ -284,28 +391,30 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       }
     }
 
-    // 3. Desalojar de memoria RAM el contenido de otras notas para optimizar consumo
-    const needsEviction = notes.some(
-      (n) =>
-        n.id !== currentId &&
-        n.id !== linkedNoteId &&
-        (n.content !== undefined || n.drawingData !== undefined)
-    );
-    if (needsEviction) {
-      setNotes((prev) =>
-        prev.map((n) => {
-          if (
-            n.id !== currentId &&
-            n.id !== linkedNoteId &&
-            (n.content !== undefined || n.drawingData !== undefined)
-          ) {
-            return { ...n, content: undefined, drawingData: undefined };
-          }
-          return n;
-        })
-      );
-    }
   }, [currentId, notes, linkedNoteId]);
+
+  // 3. Desalojar de memoria el contenido de las demás notas. Está separado del
+  // efecto anterior porque, al depender de `notes`, lanzaba un render extra en
+  // cada guardado; ahora solo reacciona al cambio de nota y devuelve el mismo
+  // estado cuando no hay nada que desalojar.
+  useEffect(() => {
+    if (!currentId) return;
+    setNotes((prev) => {
+      let changed = false;
+      const next = prev.map((n) => {
+        if (
+          n.id !== currentId &&
+          n.id !== linkedNoteId &&
+          (n.content !== undefined || n.drawingData !== undefined)
+        ) {
+          changed = true;
+          return { ...n, content: undefined, drawingData: undefined };
+        }
+        return n;
+      });
+      return changed ? next : prev;
+    });
+  }, [currentId, linkedNoteId]);
 
   useEffect(() => {
     if (!linkedNoteId) return;
@@ -419,36 +528,34 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       if (newNote) {
         newNote.noteType = noteType;
         fetchedNotesRef.current.add(newNote.id);
-        setNotes((prev) => [...prev, newNote]);
+        // createNote ya emite la nota desde el store local; insertarla solo si no existe
+        setNotes((prev) =>
+          prev.some((n) => n.id === newNote.id)
+            ? prev.map((n) => (n.id === newNote.id ? { ...n, ...newNote } : n))
+            : [...prev, newNote],
+        );
         setCurrentId(newNote.id);
       }
     },
     [selectedFolderId, safeUpdate],
   );
 
+  const handleAddTextNote = useCallback(() => onAddNote("text"), [onAddNote]);
+
   const saveNote = useCallback((note: Note) => {
-    // Guardar inmediatamente en caché local
+    // La persistencia local se agenda más abajo, una sola vez por ráfaga de tecleo
     const durableNote = {
       ...note,
       preview: (note.content || "").replace(/!\\[.*?\\]\\(.*?\\)/g, "").replace(/[#*_`~\\[\\]]/g, "").trim().substring(0, 150),
       updatedAt: Date.now(),
       ...(note.noteType === "drawing" && note.drawingData !== undefined ? { drawingData: note.drawingData } : {}),
     };
-    if (!window.api.saveNoteLocally(durableNote)) {
-      showErrorToast("Could not save note locally. Changes may be lost if the app closes.");
-    }
     if (note.noteType !== "drawing" && note.content !== undefined) {
       setCachedContent(note.id, note.content, "text");
     }
 
     // Asegurar que no hagamos fetch en segundo plano de lo que acabamos de guardar
     fetchedNotesRef.current.add(note.id);
-
-    const preview = (note.content || "")
-      .replace(/!\[.*?\]\(.*?\)/g, "")
-      .replace(/[#*_`~\[\]]/g, "")
-      .trim()
-      .substring(0, 150);
 
     const hasDrawingData =
       note.noteType === "drawing" && note.drawingData
@@ -463,8 +570,6 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
         : note.hasDrawingData;
     const noteWithPreview = {
       ...durableNote,
-      preview,
-      updatedAt: Date.now(),
       hasDrawingData,
     };
 
@@ -472,29 +577,43 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       prev.map((n) => (n.id === note.id ? noteWithPreview : n)),
     );
 
-    if (debRef.current !== undefined) clearTimeout(debRef.current);
-    debRef.current = setTimeout(async () => {
-      const imageRegex = /!\[.*?\]\((assets\/.*?)\)/g;
-      const referencedImages: string[] = [];
-      let match;
-      while ((match = imageRegex.exec(note.content || "")) !== null) {
-        referencedImages.push(match[1]);
-      }
+    const pending = saveTimersRef.current;
+    const scheduled = pending.get(note.id);
+    if (scheduled !== undefined) clearTimeout(scheduled);
+    pending.set(
+      note.id,
+      window.setTimeout(async () => {
+        pending.delete(note.id);
 
-      if (note.images && note.images.length > 0 && navigator.onLine) {
-        await window.api.cleanUnusedAssets({
-          noteId: note.id,
-          referencedImages,
-        });
-      }
+        const imageRegex = /!\[.*?\]\((assets\/.*?)\)/g;
+        const referencedImages: string[] = [];
+        let match;
+        while ((match = imageRegex.exec(note.content || "")) !== null) {
+          referencedImages.push(match[1]);
+        }
+        noteWithPreview.images = referencedImages;
 
-      noteWithPreview.images = referencedImages;
+        // `updateNote` ya persiste en el store local y encola la subida, así
+        // que se guarda una sola vez por ráfaga: cada escritura del store es un
+        // fsync síncrono sobre el hilo de la UI.
+        const saved = await safeUpdate(
+          () => window.api.updateNote(noteWithPreview),
+          "Could not save note locally. Changes may be lost if the app closes."
+        );
+        if (!saved) return;
 
-      await safeUpdate(
-        () => window.api.updateNote(noteWithPreview),
-        "Could not queue note sync"
-      );
-    }, 200);
+        if (note.images && note.images.length > 0 && navigator.onLine) {
+          try {
+            await window.api.cleanUnusedAssets({
+              noteId: note.id,
+              referencedImages,
+            });
+          } catch {
+            // Limpiar assets no debe impedir que la nota quede guardada.
+          }
+        }
+      }, 250),
+    );
   }, [safeUpdate]);
 
   const onDelete = useCallback(async (note: Note) => {
@@ -787,7 +906,11 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
       "Could not duplicate note"
     );
     if (result) {
-      setNotes((prev) => [...prev, duplicated]);
+      setNotes((prev) =>
+        prev.some((n) => n.id === duplicated.id)
+          ? prev.map((n) => (n.id === duplicated.id ? { ...n, ...duplicated } : n))
+          : [...prev, duplicated],
+      );
       setCurrentId(duplicated.id);
     }
   }, [safeUpdate]);
@@ -1089,7 +1212,10 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
     <div className="dashboard-container">
       {!isFocusMode && (
         <Sidebar
-          notes={notes}
+          allNotesCount={sidebarStats.allNotes}
+          pinnedCount={sidebarStats.pinned}
+          trashCount={sidebarStats.trash}
+          lastSyncTime={sidebarStats.lastSync}
           folders={folders}
           view={view}
           selectedFolderId={selectedFolderId}
@@ -1137,7 +1263,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                 <NotesListPanel
                   notes={filteredNotes}
                   currentNoteId={currentId}
-                  onAddNote={() => onAddNote("text")}
+                  onAddNote={handleAddTextNote}
                   onSelect={onSelect}
                   isTrashView={view === "trash"}
                   title={panelTitle}
@@ -1168,7 +1294,7 @@ export default function Dashboard({ userName, userEmail, onLogout, isPremium, on
                 onPin={onPin}
                 isTrashView={view === "trash"}
                 onNoteLinkClick={handleNoteLinkClick}
-                existingTags={tags.map((t) => t.name)}
+                existingTags={existingTagNames}
                 onNoteTypeChange={onNoteTypeChange}
               />
 
